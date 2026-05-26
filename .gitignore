@@ -1,0 +1,28 @@
+# Virtualenvs and tooling caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Local reports and demos
+reports/
+
+# macOS noise
+.DS_Store
+
+# Audio files dropped into the repo by accident.
+# Note: the golden fixture under tests/fixtures/ IS committed - it's
+# negated below.
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+!tests/fixtures/*.wav
