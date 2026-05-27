@@ -72,7 +72,7 @@ def plot_rms_timeline(
     out_path: str | Path,
     config: AnalysisConfig | None = None,
     *,
-    title: str = "RMS Timeline (dBFS)",
+    title: str = "Frame RMS Timeline (dBFS)",
 ) -> Path:
     """Save the v0.1 RMS dBFS timeline.
 

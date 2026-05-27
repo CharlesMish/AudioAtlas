@@ -16,6 +16,7 @@ Current schema version: **`0.1.0`**.
   "rms_envelope":    { ... RmsEnvelopeResult.to_summary_dict() ... },
   "average_spectrum":{ ... AverageSpectrumResult.to_summary_dict() ... },
   "stereo_correlation": { ... StereoCorrelationResult.to_summary_dict() ... },
+  "mid_side_energy": { ... MidSideEnergyResult.to_summary_dict() ... },
   "plots":           ["01_waveform_rms.png", ...]
 }
 ```
@@ -41,7 +42,7 @@ Current schema version: **`0.1.0`**.
 Frozen dataclass, serialized via `dataclasses.asdict`. Includes
 `n_fft`, `hop_length`, `window`, `db_floor`, `rms_frame_length`,
 `clipping_threshold`, `near_clipping_threshold`, `true_peak_oversample`,
-`welch_nperseg`, `max_plot_points`.
+`welch_nperseg`, `max_plot_points`, `correlation_min_rms_dbfs`.
 
 ### `levels` (from `audioatlas.analysis.levels.ScalarLevelsResult`)
 
@@ -90,15 +91,16 @@ All `*_dbfs` and `*_dbtp` fields are clamped to `analysis_config.db_floor` at th
 | `nperseg` | int | Welch segment length used. |
 | `bins` | int | Number of frequency bins. |
 | `strongest_bin_hz` | float | Only present if any bin ≥ 20 Hz exists. |
-| `strongest_bin_db` | float | Power in dB of the strongest bin. |
+| `strongest_bin_db` | float | Relative power in dB of the strongest displayed bin. This is `0.0` by definition for non-silent spectra because the spectrum is normalized to the strongest bin at or above 20 Hz. |
 
 ### `stereo_correlation` (from `StereoCorrelationResult.to_summary_dict`)
 
 Per-frame Pearson correlation between input channels 0 and 1. Mono input
 is reported as `+1.0` by convention with a warning. For stereo
-zero-variance frames, the in-memory timeline uses `NaN`; summary
-statistics exclude those undefined frames. For inputs with more than two
-channels, only channels 0 and 1 are used.
+zero-variance frames or frames below `analysis_config.correlation_min_rms_dbfs`,
+the in-memory timeline uses `NaN`; summary statistics exclude those
+undefined frames. For inputs with more than two channels, only channels 0
+and 1 are used.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -106,12 +108,34 @@ channels, only channels 0 and 1 are used.
 | `hop_length` | int | Hop between correlation windows. |
 | `frames` | int | Number of correlation values produced. |
 | `defined_frames` | int | Frames included in summary statistics. |
-| `undefined_frames` | int | Zero-variance frames excluded from summary statistics. |
+| `undefined_frames` | int | Zero-variance or below-threshold frames excluded from summary statistics. |
 | `correlation_min` | float \| null \| absent | Minimum Pearson r over defined frames. `null` when no frames are defined; absent when `frames` is 0. |
 | `correlation_max` | float \| null \| absent | Maximum Pearson r over defined frames. `null` when no frames are defined; absent when `frames` is 0. |
 | `correlation_mean` | float \| null \| absent | Mean Pearson r over defined frames. `null` when no frames are defined; absent when `frames` is 0. |
 | `correlation_median` | float \| null \| absent | Median Pearson r over defined frames. `null` when no frames are defined; absent when `frames` is 0. |
 | `overall_correlation` | float \| null \| absent | Pearson r over the full left/right channel arrays. `null` when the full-channel value is undefined; absent when `frames` is 0. |
+| `warnings` | list[str] | Human-readable caveats; safe to ignore programmatically. |
+
+### `mid_side_energy` (from `MidSideEnergyResult.to_summary_dict`)
+
+Frame-wise RMS for mid and side signals. For stereo input, mid is
+`(L + R) / 2` and side is `(L - R) / 2`. For mono input, mid is the
+mono signal and side is zero by convention with a warning.
+
+| Field | Type | Notes |
+|---|---|---|
+| `frame_length` | int | Samples per mid/side RMS window. |
+| `hop_length` | int | Hop between mid/side RMS windows. |
+| `frames` | int | Number of mid/side RMS values produced. |
+| `mid_rms_dbfs_min` | float \| null | Minimum mid RMS in dBFS, floored to `db_floor`. |
+| `mid_rms_dbfs_max` | float \| null | Maximum mid RMS in dBFS. |
+| `mid_rms_dbfs_mean` | float \| null | Mean mid RMS in dBFS. |
+| `side_rms_dbfs_min` | float \| null | Minimum side RMS in dBFS, floored to `db_floor`. |
+| `side_rms_dbfs_max` | float \| null | Maximum side RMS in dBFS. |
+| `side_rms_dbfs_mean` | float \| null | Mean side RMS in dBFS. |
+| `side_to_mid_ratio_db_median` | float \| null | Median `20 * log10(side_rms / mid_rms)` over frames with nonzero mid energy. |
+| `side_to_mid_ratio_db_mean` | float \| null | Mean side/mid ratio over frames with nonzero mid energy. |
+| `undefined_ratio_frames` | int | Frames where side/mid ratio is undefined because mid RMS is zero. |
 | `warnings` | list[str] | Human-readable caveats; safe to ignore programmatically. |
 
 ### `plots`
@@ -126,10 +150,11 @@ order is fixed:
 04_average_spectrum.png
 05_sample_histogram.png
 06_stereo_correlation.png
+07_mid_side_energy.png
 ```
 
-New plots from future feature slices append numbered prefixes (`07_*`,
-`08_*`, ...) and are added to `plot_paths` in `pipeline.py`.
+New plots from future feature slices append numbered prefixes (`08_*`,
+`09_*`, ...) and are added to `plot_paths` in `pipeline.py`.
 
 ## Example
 

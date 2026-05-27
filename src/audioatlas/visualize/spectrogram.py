@@ -17,13 +17,12 @@ def plot_log_spectrogram(
     spec: SpectrogramResult,
     out_path: str | Path,
     *,
-    title: str = "Log-Frequency Spectrogram (relative STFT magnitude, dB)",
+    title: str = "Log-Frequency Spectrogram (relative to track max, dB)",
 ) -> Path:
     """Save a log-frequency dB spectrogram.
 
-    The color scale is relative STFT magnitude in dB, not a calibrated
-    dBFS meter. Sample rate is taken from ``spec.sample_rate`` so no extra argument is
-    needed - this is the v0.2 contract for visualization functions.
+    The color scale is relative to the maximum STFT magnitude in this
+    track, not a calibrated dBFS meter.
     """
 
     fig, ax = plt.subplots(figsize=(14, 6))
@@ -35,10 +34,13 @@ def plot_log_spectrogram(
         y_axis="log",
         cmap="magma",
         ax=ax,
+        vmin=spec.db_floor,
+        vmax=0.0,
     )
     ax.set_title(title)
     ax.set_xlabel("Time")
-    ax.set_ylabel("Frequency")
+    ax.set_ylabel("Frequency (Hz)")
+    ax.set_ylim(20, spec.sample_rate / 2)
     fig.colorbar(img, ax=ax, format="%+2.0f dB")
     fig.tight_layout()
     out = Path(out_path)

@@ -10,12 +10,12 @@ from numpy.typing import NDArray
 from scipy import signal
 
 from audioatlas.config import AnalysisConfig
-from audioatlas.utils import power_to_db, to_mono
+from audioatlas.utils import EPS, power_to_db, to_mono
 
 
 @dataclass(frozen=True)
 class SpectrogramResult:
-    """Log-frequency spectrogram data.
+    """Log-frequency spectrogram data, relative to the track's max bin.
 
     ``sample_rate`` is carried on the dataclass so visualization functions
     don't need ``sr`` threaded through them separately - this enforces the
@@ -58,12 +58,11 @@ class AverageSpectrumResult:
 def compute_log_spectrogram(
     y: NDArray[np.floating], sr: int, config: AnalysisConfig | None = None
 ) -> SpectrogramResult:
-    """Compute a dB STFT spectrogram from a mono downmix.
+    """Compute a relative dB STFT spectrogram from a mono downmix.
 
-    The returned dB values are relative to STFT magnitude with ``ref=1.0``
-    and are not a calibrated dBFS meter because raw STFT magnitudes depend
-    on FFT/window scaling. Values are floored by ``config.db_floor`` so
-    different tracks remain visually comparable.
+    The returned dB values are relative to the maximum STFT magnitude in
+    this track: the brightest bin is 0 dB and quieter bins are negative.
+    This is not a calibrated dBFS meter.
     """
 
     cfg = config or AnalysisConfig()
@@ -77,8 +76,13 @@ def compute_log_spectrogram(
         center=True,
     )
     magnitude = np.abs(stft)
-    db = librosa.amplitude_to_db(magnitude, ref=1.0, top_db=None).astype(np.float64)
-    db = np.maximum(db, cfg.db_floor)
+    ref = float(np.max(magnitude)) if magnitude.size else 0.0
+    if ref <= EPS:
+        db = np.full(magnitude.shape, cfg.db_floor, dtype=np.float64)
+    else:
+        db = librosa.amplitude_to_db(magnitude, ref=ref, top_db=None).astype(np.float64)
+        db = db - float(np.max(db))
+        db = np.maximum(db, cfg.db_floor)
     freqs = librosa.fft_frequencies(sr=sr, n_fft=cfg.n_fft).astype(np.float64)
     times = librosa.frames_to_time(
         np.arange(db.shape[1]), sr=sr, hop_length=cfg.hop_length
@@ -97,7 +101,7 @@ def compute_log_spectrogram(
 def compute_average_spectrum(
     y: NDArray[np.floating], sr: int, config: AnalysisConfig | None = None
 ) -> AverageSpectrumResult:
-    """Compute a Welch average power spectrum from a mono downmix."""
+    """Compute a relative Welch average power spectrum from a mono downmix."""
 
     cfg = config or AnalysisConfig()
     cfg.validate()
@@ -116,7 +120,13 @@ def compute_average_spectrum(
         scaling="spectrum",
         average="mean",
     )
-    power_db = np.asarray(power_to_db(pxx, floor_db=cfg.db_floor), dtype=np.float64)
+    if float(np.max(pxx)) <= EPS:
+        power_db = np.full(len(pxx), cfg.db_floor, dtype=np.float64)
+    else:
+        raw_power_db = np.asarray(power_to_db(pxx, floor_db=None), dtype=np.float64)
+        valid = freqs >= 20
+        ref_db = float(np.max(raw_power_db[valid])) if np.any(valid) else float(np.max(raw_power_db))
+        power_db = np.maximum(raw_power_db - ref_db, cfg.db_floor)
     return AverageSpectrumResult(
         freqs_hz=freqs.astype(np.float64),
         power_db=power_db,

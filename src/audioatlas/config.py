@@ -22,6 +22,7 @@ class AnalysisConfig:
     true_peak_oversample: int = 4
     welch_nperseg: int = 8192
     max_plot_points: int = 250_000
+    correlation_min_rms_dbfs: float = -80.0
 
     def validate(self) -> None:
         if self.n_fft <= 0:
@@ -32,3 +33,5 @@ class AnalysisConfig:
             raise ValueError("Expected 0 < near_clipping_threshold < clipping_threshold <= 1.0")
         if self.true_peak_oversample < 1:
             raise ValueError("true_peak_oversample must be >= 1")
+        if self.correlation_min_rms_dbfs > 0:
+            raise ValueError("correlation_min_rms_dbfs must be <= 0")

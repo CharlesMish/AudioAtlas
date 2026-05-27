@@ -26,5 +26,7 @@ def test_pipeline_writes_expected_outputs(tmp_path, sr):
     assert "levels" in summary
     assert "metadata" in summary
     assert "stereo_correlation" in summary
-    assert len(summary["plots"]) == 6
+    assert "mid_side_energy" in summary
+    assert len(summary["plots"]) == 7
     assert "06_stereo_correlation.png" in summary["plots"]
+    assert "07_mid_side_energy.png" in summary["plots"]

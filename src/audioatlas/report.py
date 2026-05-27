@@ -69,6 +69,7 @@ def write_report_md(
     rms = summary.get("rms_envelope", {})
     spectrum = summary.get("average_spectrum", {})
     stereo = summary.get("stereo_correlation", {})
+    mid_side = summary.get("mid_side_energy", {})
 
     lines: list[str] = []
     lines.append(f"# AudioAtlas Report: {metadata.get('filename', 'unknown')}\n")
@@ -128,7 +129,7 @@ def write_report_md(
             lines.append(f"- {warning}")
         lines.append("")
 
-    lines.append("## RMS envelope summary\n")
+    lines.append("## Frame RMS envelope summary\n")
     for key, value in rms.items():
         lines.append(f"- {key}: {_fmt_value(value)}")
     lines.append("")
@@ -146,6 +147,17 @@ def write_report_md(
             lines.append(f"- {key}: {_fmt_value(value)}")
         stereo_warnings = stereo.get("warnings") or []
         for warning in stereo_warnings:
+            lines.append(f"- warning: {warning}")
+        lines.append("")
+
+    if mid_side:
+        lines.append("## Mid/side energy summary\n")
+        for key, value in mid_side.items():
+            if key == "warnings":
+                continue
+            lines.append(f"- {key}: {_fmt_value(value)}")
+        mid_side_warnings = mid_side.get("warnings") or []
+        for warning in mid_side_warnings:
             lines.append(f"- warning: {warning}")
         lines.append("")
 

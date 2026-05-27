@@ -10,6 +10,8 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   output, a Markdown report section, and `06_stereo_correlation.png`.
   Undefined zero-variance frames remain `NaN` internally and are excluded
   from summary statistics.
+- Mid/side RMS energy timeline analysis with `mid_side_energy` summary
+  output, a Markdown report section, and `07_mid_side_energy.png`.
 - `docs/AGENT_START_PROMPT.md` with a ready-to-paste first prompt for
   Codex/Grok Build, defaulting to the stereo-correlation feature slice.
 - `true_peak_linear_per_channel` and `true_peak_dbtp_per_channel` fields
@@ -27,6 +29,14 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Relabeled spectrogram and average-spectrum wording to avoid implying
   calibrated dBFS where the plotted STFT/Welch values are relative.
+- Normalized spectrogram and average-spectrum dB displays to the track
+  maximum so the strongest displayed bin is 0 dB.
+- Stereo correlation now treats frames below `correlation_min_rms_dbfs`
+  as undefined so low-energy fade-outs do not dominate plot or summary
+  readings.
+- Mid/side energy plot now includes a side-to-mid ratio panel.
+- RMS timeline plot title now says "Frame RMS Timeline" to avoid implying
+  a loudness model.
 - Sample histogram x-axis now expands beyond ±1.0 for float WAV or other
   over-nominal-full-scale input.
 - Reprioritized the agent backlog so stereo correlation is the recommended

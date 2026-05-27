@@ -57,6 +57,8 @@ def _make_summary() -> dict:
             "frame_length": 4096,
             "hop_length": 1024,
             "frames": 100,
+            "defined_frames": 100,
+            "undefined_frames": 0,
             "correlation_min": 0.9,
             "correlation_max": 1.0,
             "correlation_mean": 0.98,
@@ -64,10 +66,26 @@ def _make_summary() -> dict:
             "overall_correlation": 0.98,
             "warnings": [],
         },
+        "mid_side_energy": {
+            "frame_length": 4096,
+            "hop_length": 1024,
+            "frames": 100,
+            "mid_rms_dbfs_min": -20.0,
+            "mid_rms_dbfs_max": -10.0,
+            "mid_rms_dbfs_mean": -14.0,
+            "side_rms_dbfs_min": -40.0,
+            "side_rms_dbfs_max": -25.0,
+            "side_rms_dbfs_mean": -30.0,
+            "side_to_mid_ratio_db_median": -16.0,
+            "side_to_mid_ratio_db_mean": -15.5,
+            "undefined_ratio_frames": 0,
+            "warnings": [],
+        },
         "plots": [
             "01_waveform_rms.png",
             "02_rms_timeline.png",
             "06_stereo_correlation.png",
+            "07_mid_side_energy.png",
         ],
     }
 
@@ -97,9 +115,10 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Level metrics" in text
     assert "## Per-channel breakdown" in text
     assert "## Warnings / caveats" in text
-    assert "## RMS envelope summary" in text
+    assert "## Frame RMS envelope summary" in text
     assert "## Average spectrum summary" in text
     assert "## Stereo correlation summary" in text
+    assert "## Mid/side energy summary" in text
     assert "## Plots" in text
     assert "## Human notes" in text
 

@@ -8,7 +8,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import numpy as np
 
 from audioatlas.analysis.spectral import AverageSpectrumResult
 from audioatlas.config import AnalysisConfig
@@ -30,9 +29,9 @@ def plot_average_spectrum(
     ax.semilogx(freqs[mask], spectrum.power_db[mask], linewidth=1.1)
     ax.set_title(title)
     ax.set_xlabel("Frequency (Hz)")
-    ax.set_ylabel("Welch power (dB, relative)")
+    ax.set_ylabel("Welch power (relative to track max, dB)")
     ax.set_xlim(20, max(20, float(freqs[-1])))
-    ax.set_ylim(cfg.db_floor, max(0, float(np.nanmax(spectrum.power_db)) + 3))
+    ax.set_ylim(cfg.db_floor, 3)
     ax.grid(True, which="both", alpha=0.25)
 
     for freq, label in [
