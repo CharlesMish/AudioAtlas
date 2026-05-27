@@ -20,6 +20,7 @@ class Finding:
     unit: str
     evidence: str
     why_it_matters: str
+    does_not_mean: str
     suggested_checks: list[str]
     confidence: Confidence
     time_ranges: list[dict[str, float]] = field(default_factory=list)
@@ -64,18 +65,9 @@ def generate_findings(summary: dict) -> FindingsResult:
         summary.get("analysis_config") if isinstance(summary.get("analysis_config"), dict) else {}
     )
     max_findings = _positive_int(analysis_config, "max_findings", default=8)
-    band_min_duration = _non_negative_number(
-        analysis_config, "band_finding_min_duration_seconds", default=0.5
-    )
     min_range_duration = _non_negative_number(
         analysis_config, "finding_min_time_range_seconds", default=0.25
     )
-    db_floor = _number(analysis_config, "db_floor")
-    if db_floor is None:
-        db_floor = -100.0
-    band_min_relative_db = _number(analysis_config, "band_finding_min_relative_db")
-    if band_min_relative_db is None:
-        band_min_relative_db = max(float(db_floor) + 20.0, -80.0)
 
     levels = summary.get("levels") if isinstance(summary.get("levels"), dict) else {}
     metadata = summary.get("metadata") if isinstance(summary.get("metadata"), dict) else {}
@@ -96,15 +88,6 @@ def generate_findings(summary: dict) -> FindingsResult:
     spectral_shape = (
         summary.get("spectral_shape") if isinstance(summary.get("spectral_shape"), dict) else {}
     )
-    band_energy_timeline = (
-        summary.get("band_energy_timeline")
-        if isinstance(summary.get("band_energy_timeline"), dict)
-        else {}
-    )
-    onset_density = (
-        summary.get("onset_density") if isinstance(summary.get("onset_density"), dict) else {}
-    )
-
     findings: list[Finding] = []
     track_duration = _number(levels, "duration_seconds")
     is_lossy = _is_lossy_metadata(metadata)
@@ -126,6 +109,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                     "Samples reconstructed by downstream playback or encoding can exceed "
                     "nominal full scale when true peak is above 0 dBTP."
                 ),
+                does_not_mean="This does not mean the file is audibly distorting.",
                 suggested_checks=[
                     "Check a dedicated true-peak meter if this file will be encoded or limited.",
                     "Inspect the loudest passage for inter-sample peak behavior.",
@@ -159,9 +143,10 @@ def generate_findings(summary: dict) -> FindingsResult:
                 unit="samples",
                 evidence=f"near_clipping_samples measured {int(near_clipping)} in {sample_label}.",
                 why_it_matters=(
-                    f"Near-full-scale {sample_label} can indicate limited headroom, even when no "
-                    "sample reaches the clipping threshold."
+                    f"Near-full-scale {sample_label} can leave little margin for later encoding, "
+                    "sample-rate conversion, or level changes."
                 ),
+                does_not_mean="This does not mean the passage is clipped or audibly distorted.",
                 suggested_checks=[
                     "Inspect the sample histogram and peak values.",
                     "Check whether near-full-scale samples cluster in a specific passage.",
@@ -186,6 +171,9 @@ def generate_findings(summary: dict) -> FindingsResult:
                     "Samples at or beyond the clipping threshold can indicate flattened "
                     f"waveform peaks in the {audio_label}."
                 ),
+                does_not_mean=(
+                    "This does not identify the cause of the clipping or whether it was intentional."
+                ),
                 suggested_checks=[
                     "Inspect the waveform around peak sections.",
                     "Check whether clipping is intentional source material or processing.",
@@ -206,8 +194,11 @@ def generate_findings(summary: dict) -> FindingsResult:
                 unit="LUFS",
                 evidence=f"integrated_lufs measured {_fmt_measure(integrated_lufs)} LUFS.",
                 why_it_matters=(
-                    "Integrated LUFS is a whole-track loudness measurement; values above "
-                    "-10 LUFS indicate a high measured loudness for this file."
+                    "Some delivery systems apply loudness normalization, so a high integrated "
+                    "LUFS value is useful context for expected playback gain changes."
+                ),
+                does_not_mean=(
+                    "This does not mean the track is too loud or unsuitable for its genre."
                 ),
                 suggested_checks=[
                     "Compare this measured loudness with the intended delivery context.",
@@ -219,9 +210,16 @@ def generate_findings(summary: dict) -> FindingsResult:
 
     plr = _number(levels, "plr_db")
     if plr is not None and plr < 8.0:
+        plr_severity: Severity = "info"
+        if (
+            (true_peak is not None and true_peak > 0.0)
+            or (near_clipping is not None and near_clipping >= 100)
+            or (clipped is not None and clipped > 0)
+        ):
+            plr_severity = "warning"
         findings.append(
             Finding(
-                severity="warning",
+                severity=plr_severity,
                 category="dynamics",
                 title="Peak-to-loudness ratio is below 8 dB",
                 measured_value=plr,
@@ -229,12 +227,13 @@ def generate_findings(summary: dict) -> FindingsResult:
                 unit="dB",
                 evidence=f"plr_db measured {_fmt_measure(plr)} dB.",
                 why_it_matters=(
-                    "PLR is the difference between true peak and integrated LUFS; lower "
-                    "values indicate less peak headroom relative to measured loudness."
+                    "Lower PLR means peaks sit closer to the track's integrated loudness, which "
+                    "can change how much short-term impact remains after level normalization."
                 ),
+                does_not_mean="This does not mean the track is over-compressed by itself.",
                 suggested_checks=[
                     "Inspect the frame RMS timeline alongside peak metrics.",
-                    "Check whether this PLR matches the intended production style.",
+                    "Listen for whether dense sections and transient sections feel distinct enough for the intent.",
                 ],
                 confidence="medium",
             )
@@ -288,9 +287,12 @@ def generate_findings(summary: dict) -> FindingsResult:
                 unit="Pearson r",
                 evidence=f"correlation_min measured {_fmt_measure(corr_min)}.",
                 why_it_matters=(
-                    "Negative L/R correlation marks regions where channel relationship "
-                    "differs by this measurement; duration and median correlation affect "
-                    "how much weight to give it."
+                    "Sustained negative correlation can reduce mono compatibility because left "
+                    "and right content may partially cancel when summed."
+                ),
+                does_not_mean=(
+                    "This does not mean the stereo image is wrong; brief dips can be normal "
+                    "for panned effects."
                 ),
                 suggested_checks=[
                     "Inspect the stereo correlation plot around the low-correlation region.",
@@ -316,8 +318,12 @@ def generate_findings(summary: dict) -> FindingsResult:
                     f"total duration is {_fmt_measure(low_corr_duration)} seconds."
                 ),
                 why_it_matters=(
-                    "Low L/R correlation marks regions where the two channels are less "
-                    "similar by this measurement."
+                    "Low L/R correlation can point to passages where mono playback may change "
+                    "tone, level, or apparent width."
+                ),
+                does_not_mean=(
+                    "This does not mean the stereo image is wrong; brief dips can be normal "
+                    "for panned effects."
                 ),
                 suggested_checks=[
                     "Inspect the stereo correlation plot around these regions.",
@@ -339,8 +345,12 @@ def generate_findings(summary: dict) -> FindingsResult:
                 unit="Pearson r",
                 evidence=f"correlation_median measured {_fmt_measure(corr_median)}.",
                 why_it_matters=(
-                    "A lower median L/R correlation indicates less similarity between the "
-                    "left and right channels over the measured frames."
+                    "A low median correlation means the stereo relationship is less similar "
+                    "through much of the track, which can make mono compatibility worth checking."
+                ),
+                does_not_mean=(
+                    "This does not mean the stereo image is wrong; wide or phase-rich material "
+                    "can be intentional."
                 ),
                 suggested_checks=[
                     "Inspect the stereo correlation timeline for persistent low-correlation sections.",
@@ -365,8 +375,11 @@ def generate_findings(summary: dict) -> FindingsResult:
                 unit="dB",
                 evidence=f"side_to_mid_ratio_db_median measured {_fmt_measure(side_ratio)} dB.",
                 why_it_matters=(
-                    "Side energy is relatively high compared with mid energy by this "
-                    "measurement."
+                    "Higher side energy can make mono playback and center-image translation "
+                    "more important to check, especially when paired with low correlation."
+                ),
+                does_not_mean=(
+                    "This does not mean the track is too wide or that the stereo field is incorrect."
                 ),
                 suggested_checks=[
                     "Inspect the mid/side energy plot and side-to-mid ratio panel.",
@@ -389,75 +402,17 @@ def generate_findings(summary: dict) -> FindingsResult:
                 unit="Hz",
                 evidence=f"strongest_bin_hz measured {_fmt_measure(strongest_bin)} Hz.",
                 why_it_matters=(
-                    "This identifies where the strongest Welch average-spectrum bin falls; "
-                    "it does not describe whether the balance is desirable."
+                    "A strongest average-spectrum bin in this range can point to sustained "
+                    "low-mid content that may dominate the measured long-term spectrum."
+                ),
+                does_not_mean=(
+                    "This does not mean the mix is muddy or that the low-mid balance is wrong."
                 ),
                 suggested_checks=[
                     "Inspect the average spectrum plot around 120-350 Hz.",
                     "Listen for which instruments or sources occupy that region.",
                 ],
                 confidence="medium",
-            )
-        )
-
-    centroid_median = _number(spectral_shape, "centroid_median_hz")
-    elevated_ranges = _ranges_at_least(
-        spectral_shape, "centroid_elevated_time_ranges", min_range_duration
-    )
-    if centroid_median is not None and elevated_ranges:
-        findings.append(
-            Finding(
-                severity="info",
-                category="spectrum",
-                title="Spectral centroid is elevated relative to this track's median",
-                measured_value=centroid_median,
-                threshold=_number(spectral_shape, "centroid_elevated_threshold_hz") or 0,
-                unit="Hz",
-                evidence=(
-                    f"centroid_median_hz measured {_fmt_measure(centroid_median)} Hz; "
-                    f"{len(elevated_ranges)} time range(s) exceed the relative threshold."
-                ),
-                why_it_matters=(
-                    "Spectral centroid is a frequency-distribution statistic; elevated "
-                    "regions indicate the centroid is higher than this track's median by "
-                    "the configured heuristic."
-                ),
-                suggested_checks=[
-                    "Inspect EQ, arrangement density, cymbals, distortion, or vocal presence in these regions.",
-                    "Check whether these sections sound brighter or denser; centroid is only a proxy.",
-                ],
-                confidence="medium",
-                time_ranges=elevated_ranges,
-            )
-        )
-
-    reduced_ranges = _ranges_at_least(
-        spectral_shape, "centroid_reduced_time_ranges", min_range_duration
-    )
-    if centroid_median is not None and reduced_ranges:
-        findings.append(
-            Finding(
-                severity="info",
-                category="spectrum",
-                title="Spectral centroid is reduced relative to this track's median",
-                measured_value=centroid_median,
-                threshold=_number(spectral_shape, "centroid_reduced_threshold_hz") or 0,
-                unit="Hz",
-                evidence=(
-                    f"centroid_median_hz measured {_fmt_measure(centroid_median)} Hz; "
-                    f"{len(reduced_ranges)} time range(s) fall below the relative threshold."
-                ),
-                why_it_matters=(
-                    "Spectral centroid is a frequency-distribution statistic; reduced "
-                    "regions indicate the centroid is lower than this track's median by "
-                    "the configured heuristic."
-                ),
-                suggested_checks=[
-                    "Inspect EQ, arrangement density, instrumentation, or source changes in these regions.",
-                    "Check whether these sections sound less high-frequency-weighted; centroid is only a proxy.",
-                ],
-                confidence="medium",
-                time_ranges=reduced_ranges,
             )
         )
 
@@ -475,188 +430,17 @@ def generate_findings(summary: dict) -> FindingsResult:
                     f"rolloff_95_median_hz measured {_fmt_measure(rolloff_95_median)} Hz."
                 ),
                 why_it_matters=(
-                    "Rolloff 95% marks the frequency below which 95% of measured spectral "
-                    "energy falls for each frame; this finding describes concentration of "
-                    "energy, not quality."
+                    "A lower 95% rolloff can indicate that less measured energy reaches the "
+                    "upper spectrum over the track, which may affect perceived openness or source detail."
+                ),
+                does_not_mean=(
+                    "This does not mean the track is dull or that high-frequency content is missing."
                 ),
                 suggested_checks=[
                     "Inspect the spectral shape timeline and log spectrogram.",
                     "Check whether instrumentation, cymbals, distortion, or vocal presence explain the measured rolloff.",
                 ],
                 confidence="medium",
-            )
-        )
-
-    shift_ranges = _ranges_at_least(
-        spectral_shape, "centroid_large_shift_time_ranges", min_range_duration
-    )
-    if shift_ranges:
-        findings.append(
-            Finding(
-                severity="info",
-                category="spectrum",
-                title="Spectral centroid changes sharply in some regions",
-                measured_value=len(shift_ranges),
-                threshold=_number(spectral_shape, "centroid_large_shift_threshold_hz") or 0,
-                unit="regions",
-                evidence=(
-                    f"{len(shift_ranges)} time range(s) exceed the relative centroid-change heuristic."
-                ),
-                why_it_matters=(
-                    "Sharp centroid changes can mark transitions in arrangement, instrumentation, "
-                    "or processing by this frequency-distribution measurement."
-                ),
-                suggested_checks=[
-                    "Inspect the spectral shape timeline around these regions.",
-                    "Check whether arrangement or source changes align with the measured shifts.",
-                ],
-                confidence="medium",
-                time_ranges=shift_ranges,
-            )
-        )
-
-    band_timeline_bands = band_energy_timeline.get("bands")
-    band_observations: list[dict[str, object]] = []
-    if isinstance(band_timeline_bands, dict):
-        for band, band_values in band_timeline_bands.items():
-            if not isinstance(band_values, dict):
-                continue
-            elevated_ranges = _ranges_at_least(
-                band_values, "elevated_time_ranges", band_min_duration
-            )
-            median_db = _number(band_values, "median_db")
-            max_db = _number(band_values, "max_db")
-            elevated_threshold = _number(band_values, "elevated_threshold_db")
-            if (
-                elevated_ranges
-                and median_db is not None
-                and max_db is not None
-                and elevated_threshold is not None
-                and median_db > band_min_relative_db
-                and max_db > band_min_relative_db
-            ):
-                band_observations.append(
-                    {
-                        "band": str(band),
-                        "direction": "elevated",
-                        "median_db": median_db,
-                        "threshold_db": elevated_threshold,
-                        "time_ranges": elevated_ranges,
-                    }
-                )
-
-            if band in {"high", "air"}:
-                reduced_ranges = _ranges_at_least(
-                    band_values, "reduced_time_ranges", band_min_duration
-                )
-                reduced_threshold = _number(band_values, "reduced_threshold_db")
-                if (
-                    reduced_ranges
-                    and median_db is not None
-                    and reduced_threshold is not None
-                    and median_db > band_min_relative_db
-                ):
-                    band_observations.append(
-                        {
-                            "band": str(band),
-                            "direction": "reduced",
-                            "median_db": median_db,
-                            "threshold_db": reduced_threshold,
-                            "time_ranges": reduced_ranges,
-                        }
-                    )
-
-    if band_observations:
-        ranges: list[dict[str, float]] = []
-        for observation in band_observations:
-            observation_ranges = observation.get("time_ranges")
-            if isinstance(observation_ranges, list):
-                ranges.extend(observation_ranges)
-        if len(band_observations) == 1:
-            observation = band_observations[0]
-            band = observation["band"]
-            direction = observation["direction"]
-            median_db = float(observation["median_db"])
-            threshold_db = float(observation["threshold_db"])
-            findings.append(
-                Finding(
-                    severity="info",
-                    category="spectrum",
-                    title=f"{band} band energy is {direction} relative to this track's median",
-                    measured_value=median_db,
-                    threshold=threshold_db,
-                    unit="dB relative",
-                    evidence=(
-                        f"{band} median band energy measured {_fmt_measure(median_db)} dB; "
-                        f"{len(ranges)} time range(s) exceed the duration and energy filters."
-                    ),
-                    why_it_matters=(
-                        "This marks regions where a broad frequency band differs from its "
-                        "own track-level median by a heuristic threshold."
-                    ),
-                    suggested_checks=[
-                        f"Inspect the band energy timeline around the {band} band in these regions.",
-                        "Listen for arrangement or EQ density changes in these regions.",
-                    ],
-                    confidence="medium",
-                    time_ranges=ranges,
-                )
-            )
-        else:
-            labels = [f"{item['band']} {item['direction']}" for item in band_observations]
-            findings.append(
-                Finding(
-                    severity="info",
-                    category="spectrum",
-                    title="Multiple band-energy changes detected",
-                    measured_value=len(band_observations),
-                    threshold=1,
-                    unit="band observations",
-                    evidence=(
-                        "Affected bands after duration and energy filters: "
-                        + ", ".join(labels)
-                        + "."
-                    ),
-                    why_it_matters=(
-                        "This groups broad frequency-band changes that crossed relative "
-                        "track-level thresholds."
-                    ),
-                    suggested_checks=[
-                        "Inspect the frequency band energy timeline around the listed regions.",
-                        "Check whether arrangement, source content, or processing changes align with these regions.",
-                    ],
-                    confidence="medium",
-                    time_ranges=ranges,
-                )
-            )
-
-    high_onset_ranges = _ranges_at_least(
-        onset_density, "high_onset_density_time_ranges", min_range_duration
-    )
-    onset_density_median = _number(onset_density, "onset_density_median")
-    if high_onset_ranges and onset_density_median is not None:
-        findings.append(
-            Finding(
-                severity="info",
-                category="dynamics",
-                title="Onset density is elevated relative to this track's median",
-                measured_value=onset_density_median,
-                threshold=_number(onset_density, "high_onset_density_threshold") or 0,
-                unit="onset strength",
-                evidence=(
-                    f"onset_density_median measured {_fmt_measure(onset_density_median)}; "
-                    f"{len(high_onset_ranges)} time range(s) exceed the relative threshold."
-                ),
-                why_it_matters=(
-                    "This marks regions with higher onset-strength activity by a relative "
-                    "track-level heuristic."
-                ),
-                suggested_checks=[
-                    "Check whether these sections feel rhythmically dense or transient-heavy.",
-                    "Inspect drums, strums, plucks, consonants, or percussive elements in these regions.",
-                ],
-                confidence="medium",
-                time_ranges=high_onset_ranges,
             )
         )
 

@@ -49,6 +49,22 @@ PLOT_DISPLAY_NAMES: dict[str, str] = {
     "10_onset_density.png": "Onset / Transient Density Timeline",
 }
 
+RELATIVE_DB_NOTE = (
+    "Relative dB values use this track's strongest measured content as 0 dB. "
+    "They show shape within this song and are not calibrated dBFS."
+)
+
+PLOT_NOTES: dict[str, str] = {
+    "04_average_spectrum.png": RELATIVE_DB_NOTE,
+    "09_band_energy_timeline.png": RELATIVE_DB_NOTE,
+}
+
+SEVERITY_DISPLAY: dict[str, str] = {
+    "issue": "check before delivery",
+    "warning": "worth a listen",
+    "info": "for reference",
+}
+
 TIME_RANGE_KEYS: set[str] = {
     "correlation_below_0_time_ranges",
     "correlation_below_0_3_time_ranges",
@@ -254,7 +270,7 @@ def write_report_md(
     lines.append("")
 
     lines.append("## Average spectrum summary\n")
-    lines.append("Relative dB plots use track max = 0 dB and are not calibrated dBFS.\n")
+    lines.append(f"{RELATIVE_DB_NOTE}\n")
     for key, value in spectrum.items():
         if key == "band_energies":
             continue
@@ -264,6 +280,7 @@ def write_report_md(
     band_energies = spectrum.get("band_energies")
     if isinstance(band_energies, dict) and band_energies:
         lines.append("## Band energy summary\n")
+        lines.append(f"{RELATIVE_DB_NOTE}\n")
         lines.append("| Band | Range | Energy |")
         lines.append("|---|---|---|")
         for band, values in band_energies.items():
@@ -288,7 +305,7 @@ def write_report_md(
 
     if band_energy_timeline:
         lines.append("## Band energy timeline summary\n")
-        lines.append("Relative dB values use this analysis view's maximum as 0 dB and are not calibrated dBFS.\n")
+        lines.append(f"{RELATIVE_DB_NOTE}\n")
         lines.append(f"- frames: {_fmt_value(band_energy_timeline.get('frames'))}")
         lines.append(f"- valid_frames: {_fmt_value(band_energy_timeline.get('valid_frames'))}")
         lines.append(f"- strongest_band_by_median: {_fmt_value(band_energy_timeline.get('strongest_band_by_median'))}")
@@ -344,10 +361,10 @@ def write_report_md(
         lines.append("")
 
     if findings is not None:
-        lines.append("## Findings\n")
+        lines.append("## Listening prompts\n")
         lines.append(
-            "Findings are prioritized factual observations. Some lower-priority "
-            "observations may be omitted from this report."
+            "Listening prompts are measurement-based pointers for where to listen or "
+            "inspect. They are not quality judgments."
         )
         lines.append(
             "Long lists of time ranges are summarized here; see findings.json for "
@@ -360,7 +377,7 @@ def write_report_md(
         suppressed = findings.get("findings_suppressed_count") if isinstance(findings, dict) else 0
         if isinstance(suppressed, int) and suppressed > 0:
             lines.append(
-                f"{suppressed} lower-priority finding(s) suppressed; see findings.json for details."
+                f"{suppressed} lower-priority prompt(s) suppressed; see findings.json for details."
             )
         lines.append("")
         finding_items = findings.get("findings_shown") if isinstance(findings, dict) else None
@@ -370,8 +387,9 @@ def write_report_md(
             for item in finding_items:
                 if not isinstance(item, dict):
                     continue
-                lines.append(f"### {item.get('title', 'Finding')}\n")
-                lines.append(f"- Severity: {item.get('severity', 'unknown')}")
+                lines.append(f"### {item.get('title', 'Listening prompt')}\n")
+                severity = str(item.get("severity", "unknown"))
+                lines.append(f"- Prompt level: {SEVERITY_DISPLAY.get(severity, severity)}")
                 lines.append(f"- Category: {item.get('category', 'unknown')}")
                 lines.append(
                     f"- Measured value: {_fmt_value(item.get('measured_value'))} "
@@ -380,9 +398,12 @@ def write_report_md(
                 lines.append(f"- Threshold: {_fmt_value(item.get('threshold'))}")
                 lines.append(f"- Evidence: {item.get('evidence', '')}")
                 lines.append(f"- Why it matters: {item.get('why_it_matters', '')}")
+                does_not_mean = item.get("does_not_mean")
+                if isinstance(does_not_mean, str) and does_not_mean:
+                    lines.append(f"- Does not mean: {does_not_mean}")
                 suggested_checks = item.get("suggested_checks")
                 if isinstance(suggested_checks, list) and suggested_checks:
-                    lines.append("- Suggested checks:")
+                    lines.append("- Suggested listening checks:")
                     for check in suggested_checks:
                         lines.append(f"  - {check}")
                 time_ranges = item.get("time_ranges")
@@ -396,12 +417,15 @@ def write_report_md(
                 lines.append(f"- Confidence: {item.get('confidence', 'unknown')}")
                 lines.append("")
         else:
-            lines.append("- No findings triggered by the current rule set.\n")
+            lines.append("- No listening prompts triggered by the current rule set.\n")
 
     lines.append("## Plots\n")
     for filename in plot_files:
         title = PLOT_DISPLAY_NAMES.get(filename, Path(filename).stem.replace("_", " ").title())
         lines.append(f"### {title}\n")
+        note = PLOT_NOTES.get(filename)
+        if note is not None:
+            lines.append(f"{note}\n")
         lines.append(f"![{title}]({filename})\n")
 
     lines.append("## Human notes\n")

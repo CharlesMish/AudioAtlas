@@ -245,7 +245,7 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Human notes" in text
 
 
-def test_write_report_md_contains_findings_section(tmp_path: Path):
+def test_write_report_md_contains_listening_prompts_section(tmp_path: Path):
     summary = _make_summary()
     findings = {
         "count": 1,
@@ -259,6 +259,7 @@ def test_write_report_md_contains_findings_section(tmp_path: Path):
                 "unit": "samples",
                 "evidence": "near_clipping_samples measured 12.",
                 "why_it_matters": "Measured sample values are near full scale.",
+                "does_not_mean": "This does not mean the passage is clipped.",
                 "suggested_checks": ["Inspect the sample histogram."],
                 "time_ranges": [{"start": 1.0, "end": 1.5, "duration": 0.5}],
                 "confidence": "high",
@@ -267,11 +268,17 @@ def test_write_report_md_contains_findings_section(tmp_path: Path):
     }
     path = write_report_md(summary, summary["plots"], tmp_path, findings)
     text = path.read_text(encoding="utf-8")
-    assert "## Findings" in text
-    assert "Findings are prioritized factual observations" in text
+    assert "## Listening prompts" in text
+    assert "## Findings" not in text
+    assert (
+        "Listening prompts are measurement-based pointers for where to listen or inspect. "
+        "They are not quality judgments."
+    ) in text
     assert "Brief low-correlation events can be normal for panned effects" in text
     assert "Near-full-scale samples detected" in text
-    assert "Suggested checks" in text
+    assert "Prompt level: worth a listen" in text
+    assert "Does not mean: This does not mean the passage is clipped." in text
+    assert "Suggested listening checks" in text
     assert "Time ranges" in text
     assert "1.000s-1.500s" in text
 
@@ -343,6 +350,20 @@ def test_report_summary_sections_show_range_counts_not_raw_lists(tmp_path: Path)
     assert "{'start':" not in text
 
 
+def test_report_repeats_relative_db_explanation_near_relative_sections(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_md(summary, summary["plots"], tmp_path)
+    text = path.read_text(encoding="utf-8")
+    note = (
+        "Relative dB values use this track's strongest measured content as 0 dB. "
+        "They show shape within this song and are not calibrated dBFS."
+    )
+
+    assert text.count(note) >= 4
+    assert text.index(note) > text.index("## Average spectrum summary")
+    assert text.index(note) < text.index("- nperseg:")
+
+
 def test_write_report_md_reports_suppressed_findings(tmp_path: Path):
     summary = _make_summary()
     findings = {
@@ -372,8 +393,9 @@ def test_write_report_md_reports_suppressed_findings(tmp_path: Path):
     path = write_report_md(summary, summary["plots"], tmp_path, findings)
     text = path.read_text(encoding="utf-8")
 
-    assert "1 lower-priority finding(s) suppressed" in text
+    assert "1 lower-priority prompt(s) suppressed" in text
     assert "Sample clipping detected" in text
+    assert "Prompt level: check before delivery" in text
 
 
 def test_report_per_channel_section_has_one_column_per_channel(tmp_path: Path):
@@ -437,6 +459,37 @@ def test_report_does_not_make_verdicts(tmp_path: Path):
     banned = ["mix is bad", "fix your mud", "well mastered", "needs more", "too loud", "mix health"]
     for phrase in banned:
         assert phrase not in text, f"Banned verdict phrase appeared in report.md: {phrase!r}"
+
+
+def test_report_uses_friendly_prompt_labels_not_internal_severity_labels(
+    tmp_path: Path,
+):
+    summary = _make_summary()
+    findings = {
+        "count": 1,
+        "findings": [
+            {
+                "severity": "info",
+                "category": "levels",
+                "title": "Integrated loudness is above -10 LUFS",
+                "measured_value": -9.5,
+                "threshold": -10.0,
+                "unit": "LUFS",
+                "evidence": "integrated_lufs measured -9.500 LUFS.",
+                "why_it_matters": "Delivery systems may apply loudness normalization.",
+                "does_not_mean": "This does not mean the track is too loud.",
+                "suggested_checks": ["Compare with the intended delivery context."],
+                "time_ranges": [],
+                "confidence": "high",
+            }
+        ],
+    }
+    path = write_report_md(summary, summary["plots"], tmp_path, findings)
+    text = path.read_text(encoding="utf-8")
+
+    assert "Prompt level: for reference" in text
+    assert "Severity:" not in text
+    assert "Suggested checks:" not in text
 
 
 def test_report_renders_plot_links_in_order(tmp_path: Path):

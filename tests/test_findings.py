@@ -80,6 +80,7 @@ def test_true_peak_above_zero_generates_warning():
     assert findings[0].severity == "warning"
     assert findings[0].category == "levels"
     assert "true peak" in findings[0].title.lower()
+    assert findings[0].does_not_mean
 
 
 def test_near_clipping_samples_generate_info_for_small_counts():
@@ -179,12 +180,23 @@ def test_high_integrated_lufs_generates_info():
     assert findings[0].unit == "LUFS"
 
 
-def test_low_plr_generates_warning():
+def test_low_plr_generates_info_without_other_delivery_evidence():
     findings = generate_findings(_summary(levels={"plr_db": 7.5})).findings
 
     assert len(findings) == 1
-    assert findings[0].severity == "warning"
+    assert findings[0].severity == "info"
     assert findings[0].category == "dynamics"
+    assert "over-compressed" in findings[0].does_not_mean
+
+
+def test_low_plr_with_headroom_evidence_generates_warning():
+    findings = generate_findings(
+        _summary(levels={"plr_db": 7.5, "true_peak_dbtp": 0.2})
+    ).findings
+
+    plr = [finding for finding in findings if finding.title.startswith("Peak-to-loudness")]
+    assert len(plr) == 1
+    assert plr[0].severity == "warning"
 
 
 def test_negative_minimum_correlation_generates_warning():
@@ -384,7 +396,7 @@ def test_strongest_band_summary_fact_does_not_generate_default_finding():
     assert findings == []
 
 
-def test_spectral_centroid_elevated_ranges_generate_info():
+def test_spectral_centroid_elevated_ranges_do_not_generate_default_prompt():
     findings = generate_findings(
         _summary(
             spectral_shape={
@@ -395,11 +407,7 @@ def test_spectral_centroid_elevated_ranges_generate_info():
         )
     ).findings
 
-    assert len(findings) == 1
-    assert findings[0].category == "spectrum"
-    assert "elevated" in findings[0].title
-    assert findings[0].time_ranges == [{"start": 8.0, "end": 9.0, "duration": 1.0}]
-    assert "proxy" in " ".join(findings[0].suggested_checks)
+    assert findings == []
 
 
 def test_tiny_spectral_centroid_range_is_filtered():
@@ -416,7 +424,7 @@ def test_tiny_spectral_centroid_range_is_filtered():
     assert findings == []
 
 
-def test_spectral_centroid_reduced_ranges_generate_info():
+def test_spectral_centroid_reduced_ranges_do_not_generate_default_prompt():
     findings = generate_findings(
         _summary(
             spectral_shape={
@@ -427,9 +435,7 @@ def test_spectral_centroid_reduced_ranges_generate_info():
         )
     ).findings
 
-    assert len(findings) == 1
-    assert "reduced" in findings[0].title
-    assert findings[0].time_ranges == [{"start": 10.0, "end": 11.0, "duration": 1.0}]
+    assert findings == []
 
 
 def test_low_rolloff_95_generates_factual_info():
@@ -442,7 +448,7 @@ def test_low_rolloff_95_generates_factual_info():
     assert findings[0].unit == "Hz"
 
 
-def test_large_centroid_shift_ranges_generate_info():
+def test_large_centroid_shift_ranges_do_not_generate_default_prompt():
     findings = generate_findings(
         _summary(
             spectral_shape={
@@ -453,12 +459,10 @@ def test_large_centroid_shift_ranges_generate_info():
         )
     ).findings
 
-    assert len(findings) == 1
-    assert "changes sharply" in findings[0].title
-    assert findings[0].time_ranges == [{"start": 12.0, "end": 13.0, "duration": 1.0}]
+    assert findings == []
 
 
-def test_band_energy_elevated_ranges_generate_info():
+def test_band_energy_elevated_ranges_do_not_generate_default_prompt():
     findings = generate_findings(
         _summary(
             band_energy_timeline={
@@ -478,14 +482,10 @@ def test_band_energy_elevated_ranges_generate_info():
         )
     ).findings
 
-    assert len(findings) == 1
-    assert "low_mid band energy is elevated" in findings[0].title
-    assert findings[0].time_ranges == [{"start": 14.0, "end": 15.0, "duration": 1.0}]
-    text = " ".join([findings[0].title, " ".join(findings[0].suggested_checks)]).lower()
-    assert "muddy" not in text and "too much" not in text
+    assert findings == []
 
 
-def test_high_band_reduced_ranges_generate_info():
+def test_high_band_reduced_ranges_do_not_generate_default_prompt():
     findings = generate_findings(
         _summary(
             band_energy_timeline={
@@ -505,9 +505,7 @@ def test_high_band_reduced_ranges_generate_info():
         )
     ).findings
 
-    assert len(findings) == 1
-    assert "high band energy is reduced" in findings[0].title
-    assert findings[0].time_ranges == [{"start": 16.0, "end": 17.0, "duration": 1.0}]
+    assert findings == []
 
 
 def test_strongest_time_varying_band_does_not_generate_default_finding():
@@ -529,7 +527,7 @@ def test_strongest_time_varying_band_does_not_generate_default_finding():
     assert findings == []
 
 
-def test_onset_density_elevated_ranges_generate_info():
+def test_onset_density_elevated_ranges_do_not_generate_default_prompt():
     findings = generate_findings(
         _summary(
             onset_density={
@@ -544,12 +542,7 @@ def test_onset_density_elevated_ranges_generate_info():
         )
     ).findings
 
-    assert len(findings) == 1
-    assert "Onset density is elevated" in findings[0].title
-    assert findings[0].category == "dynamics"
-    assert findings[0].time_ranges == [{"start": 18.0, "end": 19.0, "duration": 1.0}]
-    text = " ".join([findings[0].title, " ".join(findings[0].suggested_checks)]).lower()
-    assert "punch" not in text and "bad transients" not in text
+    assert findings == []
 
 
 def test_tiny_onset_density_range_is_filtered():
@@ -640,7 +633,7 @@ def test_tiny_band_edge_ranges_are_filtered():
     assert findings == []
 
 
-def test_multiple_band_findings_are_grouped():
+def test_multiple_relative_band_ranges_do_not_generate_grouped_prompt():
     findings = generate_findings(
         _summary(
             band_energy_timeline={
@@ -670,9 +663,47 @@ def test_multiple_band_findings_are_grouped():
         )
     ).findings
 
-    assert len(findings) == 1
-    assert findings[0].title == "Multiple band-energy changes detected"
-    assert findings[0].measured_value == 2
+    assert findings == []
+
+
+def test_relative_to_track_shape_prompts_are_not_generated_for_normal_movement():
+    findings = generate_findings(
+        _summary(
+            spectral_shape={
+                "centroid_elevated_time_ranges": [
+                    {"start": 8.0, "end": 10.0, "duration": 2.0}
+                ],
+                "centroid_reduced_time_ranges": [
+                    {"start": 12.0, "end": 14.0, "duration": 2.0}
+                ],
+                "centroid_large_shift_time_ranges": [
+                    {"start": 16.0, "end": 18.0, "duration": 2.0}
+                ],
+            },
+            band_energy_timeline={
+                "bands": {
+                    "presence": {
+                        "median_db": -16.0,
+                        "max_db": -4.0,
+                        "elevated_threshold_db": -10.0,
+                        "elevated_time_ranges": [
+                            {"start": 20.0, "end": 22.0, "duration": 2.0}
+                        ],
+                        "reduced_time_ranges": [],
+                    }
+                }
+            },
+            onset_density={
+                "onset_density_median": 0.25,
+                "high_onset_density_threshold": 0.5,
+                "high_onset_density_time_ranges": [
+                    {"start": 24.0, "end": 26.0, "duration": 2.0}
+                ],
+            },
+        )
+    ).findings
+
+    assert findings == []
 
 
 def test_findings_are_sorted_deterministically_by_priority():
@@ -746,3 +777,39 @@ def test_findings_result_serializes_to_json_safe_dict():
     assert data["count"] == 1
     assert data["findings"][0]["severity"] == "issue"
     assert data["findings"][0]["time_ranges"] == []
+    assert data["findings"][0]["does_not_mean"]
+
+
+def test_generated_findings_include_does_not_mean_field():
+    result = generate_findings(
+        _summary(
+            levels={
+                "true_peak_dbtp": 0.2,
+                "near_clipping_samples": 200,
+                "clipped_samples": 2,
+                "integrated_lufs": -9.0,
+                "plr_db": 7.0,
+            },
+            stereo_correlation={
+                "correlation_min": -0.2,
+                "correlation_median": 0.4,
+                "correlation_below_0_time_ranges": [
+                    {"start": 2.0, "end": 3.0, "duration": 1.0}
+                ],
+                "correlation_below_0_3_time_ranges": [
+                    {"start": 4.0, "end": 5.0, "duration": 1.0}
+                ],
+            },
+            mid_side_energy={
+                "side_to_mid_ratio_db_median": -4.0,
+                "side_to_mid_ratio_above_minus_6_time_ranges": [
+                    {"start": 6.0, "end": 7.0, "duration": 1.0}
+                ],
+            },
+            average_spectrum={"strongest_bin_hz": 220.0},
+            spectral_shape={"rolloff_95_median_hz": 7000.0},
+        )
+    )
+
+    assert result.all_findings
+    assert all(finding.does_not_mean for finding in result.all_findings)

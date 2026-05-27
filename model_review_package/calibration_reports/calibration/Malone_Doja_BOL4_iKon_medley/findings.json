@@ -1,0 +1,504 @@
+{
+  "all_count": 5,
+  "all_findings": [
+    {
+      "category": "stereo",
+      "confidence": "medium",
+      "evidence": "correlation_min measured -0.483.",
+      "measured_value": -0.4831987209578604,
+      "severity": "warning",
+      "suggested_checks": [
+        "Inspect the stereo correlation plot around the low-correlation region.",
+        "Listen in mono around these regions if mono compatibility matters."
+      ],
+      "threshold": 0.0,
+      "time_ranges": [
+        {
+          "duration": 0.3947392290249354,
+          "end": 89.83800453514739,
+          "start": 89.44326530612246
+        },
+        {
+          "duration": 0.4179591836734602,
+          "end": 99.05632653061224,
+          "start": 98.63836734693878
+        },
+        {
+          "duration": 0.27863945578231153,
+          "end": 104.07183673469387,
+          "start": 103.79319727891156
+        }
+      ],
+      "title": "Minimum L/R correlation is below 0",
+      "unit": "Pearson r",
+      "why_it_matters": "Negative L/R correlation can indicate phase-inverted content in at least part of the measured timeline."
+    },
+    {
+      "category": "stereo",
+      "confidence": "medium",
+      "evidence": "6 time range(s) have frame correlation below 0.3.",
+      "measured_value": 6,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect the stereo correlation plot around these regions.",
+        "Listen in mono around these regions if mono compatibility matters."
+      ],
+      "threshold": 0.3,
+      "time_ranges": [
+        {
+          "duration": 0.25541950113378675,
+          "end": 77.48498866213151,
+          "start": 77.22956916099773
+        },
+        {
+          "duration": 0.34829931972788586,
+          "end": 81.75746031746031,
+          "start": 81.40916099773243
+        },
+        {
+          "duration": 0.5804988662131478,
+          "end": 89.93088435374149,
+          "start": 89.35038548752834
+        },
+        {
+          "duration": 0.46439909297050974,
+          "end": 99.07954648526076,
+          "start": 98.61514739229025
+        },
+        {
+          "duration": 0.48761904761904873,
+          "end": 103.49133786848073,
+          "start": 103.00371882086168
+        },
+        {
+          "duration": 0.3018594104308363,
+          "end": 104.07183673469387,
+          "start": 103.76997732426304
+        }
+      ],
+      "title": "L/R correlation falls below 0.3 in some regions",
+      "unit": "regions",
+      "why_it_matters": "Low L/R correlation marks regions where the two channels are less similar by this measurement."
+    },
+    {
+      "category": "spectrum",
+      "confidence": "medium",
+      "evidence": "strongest_bin_hz measured 193.799 Hz.",
+      "measured_value": 193.798828125,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect the average spectrum plot around 120-350 Hz.",
+        "Listen for which instruments or sources occupy that region."
+      ],
+      "threshold": 120,
+      "time_ranges": [],
+      "title": "Strongest average-spectrum bin is in the low-mid region",
+      "unit": "Hz",
+      "why_it_matters": "This identifies where the strongest Welch average-spectrum bin falls; it does not describe whether the balance is desirable."
+    },
+    {
+      "category": "spectrum",
+      "confidence": "medium",
+      "evidence": "centroid_median_hz measured 2517.060 Hz; 3 time range(s) exceed the relative threshold.",
+      "measured_value": 2517.0595316349436,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect EQ, arrangement density, cymbals, distortion, or vocal presence in these regions.",
+        "Check whether these sections sound brighter or denser; centroid is only a proxy."
+      ],
+      "threshold": 3775.5892974524154,
+      "time_ranges": [
+        {
+          "duration": 0.27863945578231153,
+          "end": 22.19827664399093,
+          "start": 21.91963718820862
+        },
+        {
+          "duration": 0.27863945578231153,
+          "end": 25.44907029478458,
+          "start": 25.170430839002268
+        },
+        {
+          "duration": 0.25541950113378675,
+          "end": 90.58104308390023,
+          "start": 90.32562358276644
+        }
+      ],
+      "title": "Spectral centroid is elevated relative to this track's median",
+      "unit": "Hz",
+      "why_it_matters": "Spectral centroid is a frequency-distribution statistic; elevated regions indicate the centroid is higher than this track's median by the configured heuristic."
+    },
+    {
+      "category": "spectrum",
+      "confidence": "medium",
+      "evidence": "Affected bands after duration and energy filters: bass elevated, high reduced, air reduced.",
+      "measured_value": 3,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect the frequency band energy timeline around the listed regions.",
+        "Check whether arrangement, source content, or processing changes align with these regions."
+      ],
+      "threshold": 1,
+      "time_ranges": [
+        {
+          "duration": 0.5340589569160983,
+          "end": 9.82204081632653,
+          "start": 9.287981859410431
+        },
+        {
+          "duration": 0.6501587301587222,
+          "end": 96.4324716553288,
+          "start": 95.78231292517007
+        },
+        {
+          "duration": 0.6269387755101974,
+          "end": 104.07183673469387,
+          "start": 103.44489795918368
+        },
+        {
+          "duration": 0.7198185941043107,
+          "end": 104.07183673469387,
+          "start": 103.35201814058956
+        }
+      ],
+      "title": "Multiple band-energy changes detected",
+      "unit": "band observations",
+      "why_it_matters": "This groups broad frequency-band changes that crossed relative track-level thresholds."
+    }
+  ],
+  "count": 5,
+  "findings": [
+    {
+      "category": "stereo",
+      "confidence": "medium",
+      "evidence": "correlation_min measured -0.483.",
+      "measured_value": -0.4831987209578604,
+      "severity": "warning",
+      "suggested_checks": [
+        "Inspect the stereo correlation plot around the low-correlation region.",
+        "Listen in mono around these regions if mono compatibility matters."
+      ],
+      "threshold": 0.0,
+      "time_ranges": [
+        {
+          "duration": 0.3947392290249354,
+          "end": 89.83800453514739,
+          "start": 89.44326530612246
+        },
+        {
+          "duration": 0.4179591836734602,
+          "end": 99.05632653061224,
+          "start": 98.63836734693878
+        },
+        {
+          "duration": 0.27863945578231153,
+          "end": 104.07183673469387,
+          "start": 103.79319727891156
+        }
+      ],
+      "title": "Minimum L/R correlation is below 0",
+      "unit": "Pearson r",
+      "why_it_matters": "Negative L/R correlation can indicate phase-inverted content in at least part of the measured timeline."
+    },
+    {
+      "category": "stereo",
+      "confidence": "medium",
+      "evidence": "6 time range(s) have frame correlation below 0.3.",
+      "measured_value": 6,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect the stereo correlation plot around these regions.",
+        "Listen in mono around these regions if mono compatibility matters."
+      ],
+      "threshold": 0.3,
+      "time_ranges": [
+        {
+          "duration": 0.25541950113378675,
+          "end": 77.48498866213151,
+          "start": 77.22956916099773
+        },
+        {
+          "duration": 0.34829931972788586,
+          "end": 81.75746031746031,
+          "start": 81.40916099773243
+        },
+        {
+          "duration": 0.5804988662131478,
+          "end": 89.93088435374149,
+          "start": 89.35038548752834
+        },
+        {
+          "duration": 0.46439909297050974,
+          "end": 99.07954648526076,
+          "start": 98.61514739229025
+        },
+        {
+          "duration": 0.48761904761904873,
+          "end": 103.49133786848073,
+          "start": 103.00371882086168
+        },
+        {
+          "duration": 0.3018594104308363,
+          "end": 104.07183673469387,
+          "start": 103.76997732426304
+        }
+      ],
+      "title": "L/R correlation falls below 0.3 in some regions",
+      "unit": "regions",
+      "why_it_matters": "Low L/R correlation marks regions where the two channels are less similar by this measurement."
+    },
+    {
+      "category": "spectrum",
+      "confidence": "medium",
+      "evidence": "strongest_bin_hz measured 193.799 Hz.",
+      "measured_value": 193.798828125,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect the average spectrum plot around 120-350 Hz.",
+        "Listen for which instruments or sources occupy that region."
+      ],
+      "threshold": 120,
+      "time_ranges": [],
+      "title": "Strongest average-spectrum bin is in the low-mid region",
+      "unit": "Hz",
+      "why_it_matters": "This identifies where the strongest Welch average-spectrum bin falls; it does not describe whether the balance is desirable."
+    },
+    {
+      "category": "spectrum",
+      "confidence": "medium",
+      "evidence": "centroid_median_hz measured 2517.060 Hz; 3 time range(s) exceed the relative threshold.",
+      "measured_value": 2517.0595316349436,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect EQ, arrangement density, cymbals, distortion, or vocal presence in these regions.",
+        "Check whether these sections sound brighter or denser; centroid is only a proxy."
+      ],
+      "threshold": 3775.5892974524154,
+      "time_ranges": [
+        {
+          "duration": 0.27863945578231153,
+          "end": 22.19827664399093,
+          "start": 21.91963718820862
+        },
+        {
+          "duration": 0.27863945578231153,
+          "end": 25.44907029478458,
+          "start": 25.170430839002268
+        },
+        {
+          "duration": 0.25541950113378675,
+          "end": 90.58104308390023,
+          "start": 90.32562358276644
+        }
+      ],
+      "title": "Spectral centroid is elevated relative to this track's median",
+      "unit": "Hz",
+      "why_it_matters": "Spectral centroid is a frequency-distribution statistic; elevated regions indicate the centroid is higher than this track's median by the configured heuristic."
+    },
+    {
+      "category": "spectrum",
+      "confidence": "medium",
+      "evidence": "Affected bands after duration and energy filters: bass elevated, high reduced, air reduced.",
+      "measured_value": 3,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect the frequency band energy timeline around the listed regions.",
+        "Check whether arrangement, source content, or processing changes align with these regions."
+      ],
+      "threshold": 1,
+      "time_ranges": [
+        {
+          "duration": 0.5340589569160983,
+          "end": 9.82204081632653,
+          "start": 9.287981859410431
+        },
+        {
+          "duration": 0.6501587301587222,
+          "end": 96.4324716553288,
+          "start": 95.78231292517007
+        },
+        {
+          "duration": 0.6269387755101974,
+          "end": 104.07183673469387,
+          "start": 103.44489795918368
+        },
+        {
+          "duration": 0.7198185941043107,
+          "end": 104.07183673469387,
+          "start": 103.35201814058956
+        }
+      ],
+      "title": "Multiple band-energy changes detected",
+      "unit": "band observations",
+      "why_it_matters": "This groups broad frequency-band changes that crossed relative track-level thresholds."
+    }
+  ],
+  "findings_shown": [
+    {
+      "category": "stereo",
+      "confidence": "medium",
+      "evidence": "correlation_min measured -0.483.",
+      "measured_value": -0.4831987209578604,
+      "severity": "warning",
+      "suggested_checks": [
+        "Inspect the stereo correlation plot around the low-correlation region.",
+        "Listen in mono around these regions if mono compatibility matters."
+      ],
+      "threshold": 0.0,
+      "time_ranges": [
+        {
+          "duration": 0.3947392290249354,
+          "end": 89.83800453514739,
+          "start": 89.44326530612246
+        },
+        {
+          "duration": 0.4179591836734602,
+          "end": 99.05632653061224,
+          "start": 98.63836734693878
+        },
+        {
+          "duration": 0.27863945578231153,
+          "end": 104.07183673469387,
+          "start": 103.79319727891156
+        }
+      ],
+      "title": "Minimum L/R correlation is below 0",
+      "unit": "Pearson r",
+      "why_it_matters": "Negative L/R correlation can indicate phase-inverted content in at least part of the measured timeline."
+    },
+    {
+      "category": "stereo",
+      "confidence": "medium",
+      "evidence": "6 time range(s) have frame correlation below 0.3.",
+      "measured_value": 6,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect the stereo correlation plot around these regions.",
+        "Listen in mono around these regions if mono compatibility matters."
+      ],
+      "threshold": 0.3,
+      "time_ranges": [
+        {
+          "duration": 0.25541950113378675,
+          "end": 77.48498866213151,
+          "start": 77.22956916099773
+        },
+        {
+          "duration": 0.34829931972788586,
+          "end": 81.75746031746031,
+          "start": 81.40916099773243
+        },
+        {
+          "duration": 0.5804988662131478,
+          "end": 89.93088435374149,
+          "start": 89.35038548752834
+        },
+        {
+          "duration": 0.46439909297050974,
+          "end": 99.07954648526076,
+          "start": 98.61514739229025
+        },
+        {
+          "duration": 0.48761904761904873,
+          "end": 103.49133786848073,
+          "start": 103.00371882086168
+        },
+        {
+          "duration": 0.3018594104308363,
+          "end": 104.07183673469387,
+          "start": 103.76997732426304
+        }
+      ],
+      "title": "L/R correlation falls below 0.3 in some regions",
+      "unit": "regions",
+      "why_it_matters": "Low L/R correlation marks regions where the two channels are less similar by this measurement."
+    },
+    {
+      "category": "spectrum",
+      "confidence": "medium",
+      "evidence": "strongest_bin_hz measured 193.799 Hz.",
+      "measured_value": 193.798828125,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect the average spectrum plot around 120-350 Hz.",
+        "Listen for which instruments or sources occupy that region."
+      ],
+      "threshold": 120,
+      "time_ranges": [],
+      "title": "Strongest average-spectrum bin is in the low-mid region",
+      "unit": "Hz",
+      "why_it_matters": "This identifies where the strongest Welch average-spectrum bin falls; it does not describe whether the balance is desirable."
+    },
+    {
+      "category": "spectrum",
+      "confidence": "medium",
+      "evidence": "centroid_median_hz measured 2517.060 Hz; 3 time range(s) exceed the relative threshold.",
+      "measured_value": 2517.0595316349436,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect EQ, arrangement density, cymbals, distortion, or vocal presence in these regions.",
+        "Check whether these sections sound brighter or denser; centroid is only a proxy."
+      ],
+      "threshold": 3775.5892974524154,
+      "time_ranges": [
+        {
+          "duration": 0.27863945578231153,
+          "end": 22.19827664399093,
+          "start": 21.91963718820862
+        },
+        {
+          "duration": 0.27863945578231153,
+          "end": 25.44907029478458,
+          "start": 25.170430839002268
+        },
+        {
+          "duration": 0.25541950113378675,
+          "end": 90.58104308390023,
+          "start": 90.32562358276644
+        }
+      ],
+      "title": "Spectral centroid is elevated relative to this track's median",
+      "unit": "Hz",
+      "why_it_matters": "Spectral centroid is a frequency-distribution statistic; elevated regions indicate the centroid is higher than this track's median by the configured heuristic."
+    },
+    {
+      "category": "spectrum",
+      "confidence": "medium",
+      "evidence": "Affected bands after duration and energy filters: bass elevated, high reduced, air reduced.",
+      "measured_value": 3,
+      "severity": "info",
+      "suggested_checks": [
+        "Inspect the frequency band energy timeline around the listed regions.",
+        "Check whether arrangement, source content, or processing changes align with these regions."
+      ],
+      "threshold": 1,
+      "time_ranges": [
+        {
+          "duration": 0.5340589569160983,
+          "end": 9.82204081632653,
+          "start": 9.287981859410431
+        },
+        {
+          "duration": 0.6501587301587222,
+          "end": 96.4324716553288,
+          "start": 95.78231292517007
+        },
+        {
+          "duration": 0.6269387755101974,
+          "end": 104.07183673469387,
+          "start": 103.44489795918368
+        },
+        {
+          "duration": 0.7198185941043107,
+          "end": 104.07183673469387,
+          "start": 103.35201814058956
+        }
+      ],
+      "title": "Multiple band-energy changes detected",
+      "unit": "band observations",
+      "why_it_matters": "This groups broad frequency-band changes that crossed relative track-level thresholds."
+    }
+  ],
+  "findings_suppressed_count": 0,
+  "max_findings": 8
+}

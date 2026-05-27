@@ -50,6 +50,13 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   nullability tracks the global value) and the new report section.
 
 ### Changed
+- Report language now displays generated findings as `Listening prompts`,
+  includes explicit `does_not_mean` caveats, maps internal severity values
+  to friendlier prompt labels, and repeats relative-dB context near
+  relative spectrum/band sections.
+- Relative-to-track centroid, band-energy, and onset-density movement now
+  stays in summaries and plots instead of producing default listening
+  prompts for normal within-song movement.
 - Calibrated stereo and near-clipping finding severity from real-run
   reports: brief low-correlation events in otherwise high-correlation,
   mid-dominant tracks are downgraded or suppressed, while sustained

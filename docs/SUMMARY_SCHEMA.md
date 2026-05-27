@@ -48,6 +48,7 @@ Current schema version: **`0.1.0`**.
       "unit": "samples",
       "evidence": "near_clipping_samples measured 12.",
       "why_it_matters": "...",
+      "does_not_mean": "...",
       "suggested_checks": ["Inspect the sample histogram."],
       "time_ranges": [],
       "confidence": "high"
@@ -60,10 +61,12 @@ Current schema version: **`0.1.0`**.
 ```
 
 Findings are factual observations derived from existing summary fields.
-They are not mix scores, verdicts, mastering advice, or reference-track
-comparisons. `findings` and `findings_shown` contain the prioritized
-default report set. `all_findings` records lower-priority observations
-when the display cap suppresses them.
+Reports display them as "Listening prompts": measurement-based pointers
+for where to listen or inspect. They are not mix scores, verdicts,
+mastering advice, or reference-track comparisons. `findings` and
+`findings_shown` contain the prioritized default report set.
+`all_findings` records lower-priority observations when the display cap
+suppresses them.
 
 ## Blocks
 
@@ -362,6 +365,7 @@ New plots from future feature slices append numbered prefixes (`11_*`,
 | `unit` | string | Unit for `measured_value` and/or threshold. |
 | `evidence` | string | Summary field and value behind the finding. |
 | `why_it_matters` | string | Factual context, not advice or a verdict. |
+| `does_not_mean` | string | Explicit non-verdict caveat for what the finding should not be taken to mean. |
 | `suggested_checks` | list[string] | Manual checks to consider. These are not fixes. |
 | `time_ranges` | list[object] | Optional time ranges with `start`, `end`, and `duration` in seconds. |
 | `confidence` | `"low"` \| `"medium"` \| `"high"` | Confidence in the rule based on available measured evidence. |
@@ -369,17 +373,22 @@ New plots from future feature slices append numbered prefixes (`11_*`,
 Findings are sorted deterministically before the default report cap is
 applied: issues, then warnings, then info; within each severity,
 headroom/levels and clipping observations precede dynamics, stereo,
-spectrum, onset-related, and metadata observations. `max_findings`
-controls the number shown in `report.md`. Non-severe time-ranged
-findings apply `finding_min_time_range_seconds` before they are emitted.
-`report_max_time_ranges` controls how many ranges per finding are printed
+spectrum, onset-related, and metadata observations. `report.md` maps the
+internal severities to friendlier prompt levels: `issue` is shown as
+"check before delivery", `warning` as "worth a listen", and `info` as
+"for reference". `max_findings` controls the number shown in
+`report.md`. Non-severe time-ranged findings apply
+`finding_min_time_range_seconds` before they are emitted.
+`report_max_time_ranges` controls how many ranges per prompt are printed
 in `report.md`; full surviving ranges remain in `findings.json`.
 Stereo correlation findings use duration and context: brief low-correlation
 events in otherwise highly correlated, mid-dominant material may be info
 or suppressed, while low median correlation, high side-to-mid ratio, or
 sustained low-correlation duration keeps stereo findings prominent.
 Near-clipping findings are count-aware; actual clipping and true peak
-above 0 dBTP remain higher-priority level findings.
+above 0 dBTP remain higher-priority level findings. Relative-to-track
+spectral centroid, band-energy, and onset-density movement remains in
+the summaries and plots rather than default listening prompts.
 
 ## Example
 
