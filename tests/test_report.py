@@ -100,11 +100,33 @@ def _make_summary() -> dict:
             "frames": 100,
             "near_clipping_time_ranges": [],
         },
+        "spectral_shape": {
+            "n_fft": 4096,
+            "hop_length": 1024,
+            "frames": 100,
+            "valid_frames": 100,
+            "undefined_frames": 0,
+            "centroid_mean_hz": 2200.0,
+            "centroid_median_hz": 2000.0,
+            "centroid_min_hz": 900.0,
+            "centroid_max_hz": 5000.0,
+            "rolloff_85_median_hz": 5000.0,
+            "rolloff_95_median_hz": 9000.0,
+            "bandwidth_median_hz": 1500.0,
+            "centroid_elevated_threshold_hz": 3000.0,
+            "centroid_reduced_threshold_hz": 1000.0,
+            "centroid_large_shift_threshold_hz": 2000.0,
+            "centroid_elevated_time_ranges": [],
+            "centroid_reduced_time_ranges": [],
+            "centroid_large_shift_time_ranges": [],
+            "warnings": [],
+        },
         "plots": [
             "01_waveform_rms.png",
             "02_rms_timeline.png",
             "06_stereo_correlation.png",
             "07_mid_side_energy.png",
+            "08_spectral_shape.png",
         ],
     }
 
@@ -162,6 +184,7 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Frame RMS envelope summary" in text
     assert "## Average spectrum summary" in text
     assert "## Band energy summary" in text
+    assert "## Spectral shape summary" in text
     assert "## Stereo correlation summary" in text
     assert "## Mid/side energy summary" in text
     assert "## Plots" in text

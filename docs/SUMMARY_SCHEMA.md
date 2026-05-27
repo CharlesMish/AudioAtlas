@@ -18,6 +18,7 @@ Current schema version: **`0.1.0`**.
   "rms_envelope":    { ... RmsEnvelopeResult.to_summary_dict() ... },
   "peak_timeline":   { ... PeakTimelineResult.to_summary_dict() ... },
   "average_spectrum":{ ... AverageSpectrumResult.to_summary_dict() ... },
+  "spectral_shape":  { ... SpectralShapeResult.to_summary_dict() ... },
   "stereo_correlation": { ... StereoCorrelationResult.to_summary_dict() ... },
   "mid_side_energy": { ... MidSideEnergyResult.to_summary_dict() ... },
   "plots":           ["01_waveform_rms.png", ...]
@@ -167,6 +168,35 @@ Frame-wise clipping and near-clipping sample counts. This reuses
 | `frames_with_near_clipping` | int | Number of frames where `near_clipping_counts > 0`. |
 | `near_clipping_time_ranges` | list[object] | Contiguous frame ranges where near-clipping counts are nonzero. |
 
+### `spectral_shape` (from `SpectralShapeResult.to_summary_dict`)
+
+Time-varying spectral centroid, rolloff, and bandwidth measurements from
+a mono channel average. Spectral centroid is a frequency-distribution
+statistic, not a definitive brightness measurement. Silent frames are
+represented as undefined and excluded from summary statistics.
+
+| Field | Type | Notes |
+|---|---|---|
+| `n_fft` | int | FFT size used. |
+| `hop_length` | int | Hop between frames. |
+| `frames` | int | Number of spectral-shape frames. |
+| `valid_frames` | int | Non-silent frames included in summary statistics. |
+| `undefined_frames` | int | Silent frames excluded from summary statistics. |
+| `centroid_mean_hz` | float \| null | Mean spectral centroid over valid frames. |
+| `centroid_median_hz` | float \| null | Median spectral centroid over valid frames. |
+| `centroid_min_hz` | float \| null | Minimum spectral centroid over valid frames. |
+| `centroid_max_hz` | float \| null | Maximum spectral centroid over valid frames. |
+| `rolloff_85_median_hz` | float \| null | Median 85% spectral rolloff over valid frames. |
+| `rolloff_95_median_hz` | float \| null | Median 95% spectral rolloff over valid frames. |
+| `bandwidth_median_hz` | float \| null | Median spectral bandwidth over valid frames. |
+| `centroid_elevated_threshold_hz` | float \| absent | Relative heuristic threshold: median + max(1000 Hz, 0.5 * median). |
+| `centroid_reduced_threshold_hz` | float \| absent | Relative heuristic threshold: median - max(1000 Hz, 0.5 * median), floored at 0 Hz. |
+| `centroid_large_shift_threshold_hz` | float \| absent | Relative heuristic threshold: max(2000 Hz, 0.75 * median). |
+| `centroid_elevated_time_ranges` | list[object] | Ranges where centroid is above the elevated threshold. |
+| `centroid_reduced_time_ranges` | list[object] | Ranges where centroid is below the reduced threshold. |
+| `centroid_large_shift_time_ranges` | list[object] | Ranges where adjacent-frame centroid change exceeds the large-shift threshold. |
+| `warnings` | list[str] | Human-readable caveats; safe to ignore programmatically. |
+
 ### `stereo_correlation` (from `StereoCorrelationResult.to_summary_dict`)
 
 Per-frame Pearson correlation between input channels 0 and 1. Mono input
@@ -228,10 +258,11 @@ order is fixed:
 05_sample_histogram.png
 06_stereo_correlation.png
 07_mid_side_energy.png
+08_spectral_shape.png
 ```
 
-New plots from future feature slices append numbered prefixes (`08_*`,
-`09_*`, ...) and are added to `plot_paths` in `pipeline.py`.
+New plots from future feature slices append numbered prefixes (`09_*`,
+`10_*`, ...) and are added to `plot_paths` in `pipeline.py`.
 
 ## findings.json blocks
 

@@ -66,6 +66,9 @@ def generate_findings(summary: dict) -> FindingsResult:
     spectrum = (
         summary.get("average_spectrum") if isinstance(summary.get("average_spectrum"), dict) else {}
     )
+    spectral_shape = (
+        summary.get("spectral_shape") if isinstance(summary.get("spectral_shape"), dict) else {}
+    )
 
     findings: list[Finding] = []
 
@@ -341,6 +344,115 @@ def generate_findings(summary: dict) -> FindingsResult:
                     confidence="medium",
                 )
             )
+
+    centroid_median = _number(spectral_shape, "centroid_median_hz")
+    elevated_ranges = _ranges(spectral_shape, "centroid_elevated_time_ranges")
+    if centroid_median is not None and elevated_ranges:
+        findings.append(
+            Finding(
+                severity="info",
+                category="spectrum",
+                title="Spectral centroid is elevated relative to this track's median",
+                measured_value=centroid_median,
+                threshold=_number(spectral_shape, "centroid_elevated_threshold_hz") or 0,
+                unit="Hz",
+                evidence=(
+                    f"centroid_median_hz measured {_fmt_measure(centroid_median)} Hz; "
+                    f"{len(elevated_ranges)} time range(s) exceed the relative threshold."
+                ),
+                why_it_matters=(
+                    "Spectral centroid is a frequency-distribution statistic; elevated "
+                    "regions indicate the centroid is higher than this track's median by "
+                    "the configured heuristic."
+                ),
+                suggested_checks=[
+                    "Inspect EQ, arrangement density, cymbals, distortion, or vocal presence in these regions.",
+                    "Check whether these sections sound brighter or denser; centroid is only a proxy.",
+                ],
+                confidence="medium",
+                time_ranges=elevated_ranges,
+            )
+        )
+
+    reduced_ranges = _ranges(spectral_shape, "centroid_reduced_time_ranges")
+    if centroid_median is not None and reduced_ranges:
+        findings.append(
+            Finding(
+                severity="info",
+                category="spectrum",
+                title="Spectral centroid is reduced relative to this track's median",
+                measured_value=centroid_median,
+                threshold=_number(spectral_shape, "centroid_reduced_threshold_hz") or 0,
+                unit="Hz",
+                evidence=(
+                    f"centroid_median_hz measured {_fmt_measure(centroid_median)} Hz; "
+                    f"{len(reduced_ranges)} time range(s) fall below the relative threshold."
+                ),
+                why_it_matters=(
+                    "Spectral centroid is a frequency-distribution statistic; reduced "
+                    "regions indicate the centroid is lower than this track's median by "
+                    "the configured heuristic."
+                ),
+                suggested_checks=[
+                    "Inspect EQ, arrangement density, instrumentation, or source changes in these regions.",
+                    "Check whether these sections sound less high-frequency-weighted; centroid is only a proxy.",
+                ],
+                confidence="medium",
+                time_ranges=reduced_ranges,
+            )
+        )
+
+    rolloff_95_median = _number(spectral_shape, "rolloff_95_median_hz")
+    if rolloff_95_median is not None and rolloff_95_median < 8000.0:
+        findings.append(
+            Finding(
+                severity="info",
+                category="spectrum",
+                title="Median 95% spectral rolloff is below 8 kHz",
+                measured_value=rolloff_95_median,
+                threshold=8000.0,
+                unit="Hz",
+                evidence=(
+                    f"rolloff_95_median_hz measured {_fmt_measure(rolloff_95_median)} Hz."
+                ),
+                why_it_matters=(
+                    "Rolloff 95% marks the frequency below which 95% of measured spectral "
+                    "energy falls for each frame; this finding describes concentration of "
+                    "energy, not quality."
+                ),
+                suggested_checks=[
+                    "Inspect the spectral shape timeline and log spectrogram.",
+                    "Check whether instrumentation, cymbals, distortion, or vocal presence explain the measured rolloff.",
+                ],
+                confidence="medium",
+            )
+        )
+
+    shift_ranges = _ranges(spectral_shape, "centroid_large_shift_time_ranges")
+    if shift_ranges:
+        findings.append(
+            Finding(
+                severity="info",
+                category="spectrum",
+                title="Spectral centroid changes sharply in some regions",
+                measured_value=len(shift_ranges),
+                threshold=_number(spectral_shape, "centroid_large_shift_threshold_hz") or 0,
+                unit="regions",
+                evidence=(
+                    f"{len(shift_ranges)} time range(s) exceed the relative centroid-change heuristic."
+                ),
+                why_it_matters=(
+                    "Sharp centroid changes can mark transitions in arrangement, instrumentation, "
+                    "or processing by this frequency-distribution measurement."
+                ),
+                suggested_checks=[
+                    "Inspect the spectral shape timeline around these regions.",
+                    "Check whether arrangement or source changes align with the measured shifts.",
+                ],
+                confidence="medium",
+                time_ranges=shift_ranges,
+            )
+        )
 
     return FindingsResult(findings=findings)
 

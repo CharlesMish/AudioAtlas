@@ -6,6 +6,9 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- Spectral shape timeline analysis with centroid, 85%/95% rolloff, and
+  bandwidth summaries, `08_spectral_shape.png`, and factual
+  spectral-shape findings based on relative-to-track heuristics.
 - Time-ranged findings for near-clipping, low stereo correlation, and
   high side-to-mid ratio observations.
 - `peak_timeline` summary block with frame-wise clipping and

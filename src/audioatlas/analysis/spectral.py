@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 from scipy import signal
 
 from audioatlas.config import AnalysisConfig
-from audioatlas.utils import EPS, power_to_db, to_mono
+from audioatlas.utils import EPS, mask_to_time_ranges, power_to_db, to_mono
 
 BANDS: tuple[tuple[str, float, float], ...] = (
     ("sub", 20.0, 60.0),
@@ -71,6 +71,89 @@ class AverageSpectrumResult:
             "band_energies": self.band_energies,
             "strongest_band": strongest_band,
         }
+
+
+@dataclass(frozen=True)
+class SpectralShapeResult:
+    """Time-varying spectral shape features from a mono channel average."""
+
+    times_seconds: NDArray[np.float64]
+    spectral_centroid_hz: NDArray[np.float64]
+    spectral_rolloff_85_hz: NDArray[np.float64]
+    spectral_rolloff_95_hz: NDArray[np.float64]
+    spectral_bandwidth_hz: NDArray[np.float64]
+    valid_frames: NDArray[np.bool_]
+    sample_rate: int
+    n_fft: int
+    hop_length: int
+    warnings: list[str]
+
+    def to_summary_dict(self) -> dict[str, object]:
+        centroid = self.spectral_centroid_hz[self.valid_frames]
+        rolloff_85 = self.spectral_rolloff_85_hz[self.valid_frames]
+        rolloff_95 = self.spectral_rolloff_95_hz[self.valid_frames]
+        bandwidth = self.spectral_bandwidth_hz[self.valid_frames]
+        summary: dict[str, object] = {
+            "n_fft": self.n_fft,
+            "hop_length": self.hop_length,
+            "frames": int(len(self.times_seconds)),
+            "valid_frames": int(np.count_nonzero(self.valid_frames)),
+            "undefined_frames": int(len(self.valid_frames) - np.count_nonzero(self.valid_frames)),
+            "warnings": self.warnings,
+        }
+        if len(centroid) == 0:
+            summary.update(
+                {
+                    "centroid_mean_hz": None,
+                    "centroid_median_hz": None,
+                    "centroid_min_hz": None,
+                    "centroid_max_hz": None,
+                    "rolloff_85_median_hz": None,
+                    "rolloff_95_median_hz": None,
+                    "bandwidth_median_hz": None,
+                    "centroid_elevated_time_ranges": [],
+                    "centroid_reduced_time_ranges": [],
+                    "centroid_large_shift_time_ranges": [],
+                }
+            )
+            return summary
+
+        centroid_median = float(np.median(centroid))
+        high_threshold = centroid_median + max(1000.0, 0.5 * centroid_median)
+        low_threshold = max(0.0, centroid_median - max(1000.0, 0.5 * centroid_median))
+        jump_threshold = max(2000.0, 0.75 * centroid_median)
+        centroid_jumps = np.zeros(len(self.spectral_centroid_hz), dtype=bool)
+        if len(self.spectral_centroid_hz) > 1:
+            diffs = np.abs(np.diff(self.spectral_centroid_hz))
+            valid_pairs = self.valid_frames[1:] & self.valid_frames[:-1]
+            centroid_jumps[1:] = valid_pairs & (diffs > jump_threshold)
+
+        summary.update(
+            {
+                "centroid_mean_hz": float(np.mean(centroid)),
+                "centroid_median_hz": centroid_median,
+                "centroid_min_hz": float(np.min(centroid)),
+                "centroid_max_hz": float(np.max(centroid)),
+                "rolloff_85_median_hz": float(np.median(rolloff_85)),
+                "rolloff_95_median_hz": float(np.median(rolloff_95)),
+                "bandwidth_median_hz": float(np.median(bandwidth)),
+                "centroid_elevated_threshold_hz": high_threshold,
+                "centroid_reduced_threshold_hz": low_threshold,
+                "centroid_large_shift_threshold_hz": jump_threshold,
+                "centroid_elevated_time_ranges": mask_to_time_ranges(
+                    self.valid_frames & (self.spectral_centroid_hz > high_threshold),
+                    self.times_seconds,
+                ),
+                "centroid_reduced_time_ranges": mask_to_time_ranges(
+                    self.valid_frames & (self.spectral_centroid_hz < low_threshold),
+                    self.times_seconds,
+                ),
+                "centroid_large_shift_time_ranges": mask_to_time_ranges(
+                    centroid_jumps, self.times_seconds
+                ),
+            }
+        )
+        return summary
 
 
 def compute_log_spectrogram(
@@ -154,6 +237,87 @@ def compute_average_spectrum(
         sample_rate=int(sr),
         nperseg=int(nperseg),
         band_energies=band_energies,
+    )
+
+
+def compute_spectral_shape(
+    y: NDArray[np.floating], sr: int, config: AnalysisConfig | None = None
+) -> SpectralShapeResult:
+    """Compute time-varying spectral shape features from a mono channel average.
+
+    Spectral centroid is a frequency-distribution statistic, not a definitive
+    brightness judgment. Silent frames are represented as ``NaN`` and excluded
+    from summary statistics.
+    """
+
+    cfg = config or AnalysisConfig()
+    cfg.validate()
+    mono = to_mono(y).astype(np.float64)
+    if sr <= 0:
+        raise ValueError("sr must be positive")
+    if len(mono) == 0:
+        raise ValueError("audio has zero samples")
+
+    centroid = librosa.feature.spectral_centroid(
+        y=mono,
+        sr=sr,
+        n_fft=cfg.n_fft,
+        hop_length=cfg.hop_length,
+        window=cfg.window,
+        center=True,
+    )[0].astype(np.float64)
+    rolloff_85 = librosa.feature.spectral_rolloff(
+        y=mono,
+        sr=sr,
+        n_fft=cfg.n_fft,
+        hop_length=cfg.hop_length,
+        window=cfg.window,
+        center=True,
+        roll_percent=0.85,
+    )[0].astype(np.float64)
+    rolloff_95 = librosa.feature.spectral_rolloff(
+        y=mono,
+        sr=sr,
+        n_fft=cfg.n_fft,
+        hop_length=cfg.hop_length,
+        window=cfg.window,
+        center=True,
+        roll_percent=0.95,
+    )[0].astype(np.float64)
+    bandwidth = librosa.feature.spectral_bandwidth(
+        y=mono,
+        sr=sr,
+        n_fft=cfg.n_fft,
+        hop_length=cfg.hop_length,
+        window=cfg.window,
+        center=True,
+    )[0].astype(np.float64)
+    rms = librosa.feature.rms(
+        y=mono,
+        frame_length=cfg.n_fft,
+        hop_length=cfg.hop_length,
+        center=True,
+    )[0].astype(np.float64)
+    valid = rms > EPS
+    warnings: list[str] = []
+    if not np.all(valid):
+        warnings.append("one or more silent frames; spectral shape values are undefined there")
+    for arr in (centroid, rolloff_85, rolloff_95, bandwidth):
+        arr[~valid] = np.nan
+    times = librosa.frames_to_time(
+        np.arange(len(centroid)), sr=sr, hop_length=cfg.hop_length
+    ).astype(np.float64)
+    return SpectralShapeResult(
+        times_seconds=times,
+        spectral_centroid_hz=centroid,
+        spectral_rolloff_85_hz=rolloff_85,
+        spectral_rolloff_95_hz=rolloff_95,
+        spectral_bandwidth_hz=bandwidth,
+        valid_frames=valid.astype(bool),
+        sample_rate=int(sr),
+        n_fft=cfg.n_fft,
+        hop_length=cfg.hop_length,
+        warnings=warnings,
     )
 
 

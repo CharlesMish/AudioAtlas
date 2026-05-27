@@ -3,8 +3,13 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from audioatlas.analysis.spectral import compute_average_spectrum, compute_log_spectrogram
+from audioatlas.analysis.spectral import (
+    compute_average_spectrum,
+    compute_log_spectrogram,
+    compute_spectral_shape,
+)
 from audioatlas.config import AnalysisConfig
+from audioatlas.visualize.spectral_shape import plot_spectral_shape
 from audioatlas.visualize.spectrogram import plot_log_spectrogram
 
 
@@ -81,3 +86,59 @@ def test_log_spectrogram_plot_omits_zero_hz_on_log_axis(tmp_path, monkeypatch, s
     ax = closed[0].axes[0]
     bottom, _top = ax.get_ylim()
     assert bottom >= 20
+
+
+def test_spectral_shape_higher_for_high_frequency_sine(sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512)
+    t = np.arange(sr, dtype=np.float64) / sr
+    low = (0.5 * np.sin(2 * np.pi * 200 * t)).astype(np.float32)[:, None]
+    high = (0.5 * np.sin(2 * np.pi * 5000 * t)).astype(np.float32)[:, None]
+
+    low_shape = compute_spectral_shape(low, sr, cfg)
+    high_shape = compute_spectral_shape(high, sr, cfg)
+
+    assert np.nanmedian(high_shape.spectral_centroid_hz) > np.nanmedian(
+        low_shape.spectral_centroid_hz
+    )
+    assert np.nanmedian(high_shape.spectral_rolloff_95_hz) > np.nanmedian(
+        low_shape.spectral_rolloff_95_hz
+    )
+
+
+def test_spectral_shape_silence_is_safe(sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512)
+    y = np.zeros((sr, 1), dtype=np.float32)
+
+    result = compute_spectral_shape(y, sr, cfg)
+    summary = result.to_summary_dict()
+
+    assert np.all(np.isnan(result.spectral_centroid_hz))
+    assert summary["valid_frames"] == 0
+    assert summary["centroid_median_hz"] is None
+    assert result.warnings
+
+
+def test_spectral_shape_high_frequency_content_raises_metrics(sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512)
+    t = np.arange(sr, dtype=np.float64) / sr
+    low = 0.5 * np.sin(2 * np.pi * 300 * t)
+    mixed = low + 0.25 * np.sin(2 * np.pi * 6000 * t)
+
+    low_shape = compute_spectral_shape(low.astype(np.float32)[:, None], sr, cfg)
+    mixed_shape = compute_spectral_shape(mixed.astype(np.float32)[:, None], sr, cfg)
+
+    assert np.nanmedian(mixed_shape.spectral_centroid_hz) > np.nanmedian(
+        low_shape.spectral_centroid_hz
+    )
+    assert np.nanmedian(mixed_shape.spectral_rolloff_85_hz) > np.nanmedian(
+        low_shape.spectral_rolloff_85_hz
+    )
+
+
+def test_plot_spectral_shape_writes_png(tmp_path, sine_minus_6_dbfs, sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512)
+    result = compute_spectral_shape(sine_minus_6_dbfs, sr, cfg)
+    path = plot_spectral_shape(result, tmp_path / "spectral_shape.png")
+
+    assert path.exists()
+    assert path.stat().st_size > 0

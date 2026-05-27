@@ -80,6 +80,7 @@ def write_report_md(
     levels = summary.get("levels", {})
     rms = summary.get("rms_envelope", {})
     spectrum = summary.get("average_spectrum", {})
+    spectral_shape = summary.get("spectral_shape", {})
     stereo = summary.get("stereo_correlation", {})
     mid_side = summary.get("mid_side_energy", {})
 
@@ -165,6 +166,22 @@ def write_report_md(
             high = _fmt_value(values.get("high_hz"))
             energy = _fmt_value(values.get("energy_db"))
             lines.append(f"| {band} | {low}-{high} Hz | {energy} dB relative |")
+        lines.append("")
+
+    if spectral_shape:
+        lines.append("## Spectral shape summary\n")
+        for key, value in spectral_shape.items():
+            if key in (
+                "warnings",
+                "centroid_elevated_time_ranges",
+                "centroid_reduced_time_ranges",
+                "centroid_large_shift_time_ranges",
+            ):
+                continue
+            lines.append(f"- {key}: {_fmt_value(value)}")
+        spectral_shape_warnings = spectral_shape.get("warnings") or []
+        for warning in spectral_shape_warnings:
+            lines.append(f"- warning: {warning}")
         lines.append("")
 
     if stereo:
