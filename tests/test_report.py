@@ -266,10 +266,44 @@ def test_write_report_md_contains_findings_section(tmp_path: Path):
     path = write_report_md(summary, summary["plots"], tmp_path, findings)
     text = path.read_text(encoding="utf-8")
     assert "## Findings" in text
+    assert "Findings are prioritized factual observations" in text
     assert "Near-full-scale samples detected" in text
     assert "Suggested checks" in text
     assert "Time ranges" in text
     assert "1.000s-1.500s" in text
+
+
+def test_write_report_md_reports_suppressed_findings(tmp_path: Path):
+    summary = _make_summary()
+    findings = {
+        "count": 1,
+        "all_count": 2,
+        "max_findings": 1,
+        "findings_suppressed_count": 1,
+        "findings_shown": [
+            {
+                "severity": "issue",
+                "category": "levels",
+                "title": "Sample clipping detected",
+                "measured_value": 3,
+                "threshold": 0,
+                "unit": "samples",
+                "evidence": "clipped_samples measured 3.",
+                "why_it_matters": "Measured sample values reached the clipping threshold.",
+                "suggested_checks": ["Inspect the waveform."],
+                "time_ranges": [],
+                "confidence": "high",
+            }
+        ],
+        "findings": [],
+        "all_findings": [],
+    }
+
+    path = write_report_md(summary, summary["plots"], tmp_path, findings)
+    text = path.read_text(encoding="utf-8")
+
+    assert "1 lower-priority finding(s) suppressed" in text
+    assert "Sample clipping detected" in text
 
 
 def test_report_per_channel_section_has_one_column_per_channel(tmp_path: Path):
@@ -340,6 +374,8 @@ def test_report_renders_plot_links_in_order(tmp_path: Path):
     plot_files = ["01_waveform_rms.png", "02_rms_timeline.png"]
     path = write_report_md(summary, plot_files, tmp_path)
     text = path.read_text(encoding="utf-8")
+    assert "Waveform + RMS Envelope" in text
+    assert "Frame RMS Timeline" in text
     idx_a = text.index("01_waveform_rms.png")
     idx_b = text.index("02_rms_timeline.png")
     assert idx_a < idx_b

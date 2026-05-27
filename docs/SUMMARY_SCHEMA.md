@@ -32,7 +32,13 @@ Current schema version: **`0.1.0`**.
 ```jsonc
 {
   "count": 1,
+  "all_count": 2,
+  "max_findings": 8,
+  "findings_suppressed_count": 1,
   "findings": [
+    { ... Finding shown in report.md ... }
+  ],
+  "findings_shown": [
     {
       "severity": "warning",
       "category": "levels",
@@ -46,13 +52,18 @@ Current schema version: **`0.1.0`**.
       "time_ranges": [],
       "confidence": "high"
     }
+  ],
+  "all_findings": [
+    { ... every generated Finding before the display cap ... }
   ]
 }
 ```
 
 Findings are factual observations derived from existing summary fields.
 They are not mix scores, verdicts, mastering advice, or reference-track
-comparisons.
+comparisons. `findings` and `findings_shown` contain the prioritized
+default report set. `all_findings` records lower-priority observations
+when the display cap suppresses them.
 
 ## Blocks
 
@@ -76,7 +87,12 @@ Frozen dataclass, serialized via `dataclasses.asdict`. Includes
 `n_fft`, `hop_length`, `window`, `db_floor`, `rms_frame_length`,
 `clipping_threshold`, `near_clipping_threshold`, `true_peak_oversample`,
 `welch_nperseg`, `max_plot_points`, `correlation_min_rms_dbfs`,
-`onset_density_window_seconds`.
+`onset_density_window_seconds`, `max_findings`,
+`band_finding_min_duration_seconds`, and
+`band_finding_min_relative_db`.
+
+Relative dB plots use track or analysis-view max = 0 dB and are not
+calibrated dBFS.
 
 ### `levels` (from `audioatlas.analysis.levels.ScalarLevelsResult`)
 
@@ -232,6 +248,11 @@ Each `bands.<band>` object contains:
 | `elevated_time_ranges` | list[object] | Ranges where frame band energy is above `elevated_threshold_db`. |
 | `reduced_time_ranges` | list[object] | Ranges where frame band energy is below `reduced_threshold_db`. |
 
+The findings layer applies additional report-noise filters to these
+ranges: band findings must pass a minimum range duration and minimum
+relative-energy threshold, and multiple eligible band observations may be
+grouped into one finding.
+
 ### `onset_density` (from `OnsetDensityResult.to_summary_dict`)
 
 Onset-strength based transient-density timeline from a mono channel
@@ -343,6 +364,12 @@ New plots from future feature slices append numbered prefixes (`11_*`,
 | `suggested_checks` | list[string] | Manual checks to consider. These are not fixes. |
 | `time_ranges` | list[object] | Optional time ranges with `start`, `end`, and `duration` in seconds. |
 | `confidence` | `"low"` \| `"medium"` \| `"high"` | Confidence in the rule based on available measured evidence. |
+
+Findings are sorted deterministically before the default report cap is
+applied: issues, then warnings, then info; within each severity,
+headroom/levels and clipping observations precede dynamics, stereo,
+spectrum, onset-related, and metadata observations. `max_findings`
+controls the number shown in `report.md`.
 
 ## Example
 

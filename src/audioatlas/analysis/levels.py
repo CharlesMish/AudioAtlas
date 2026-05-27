@@ -29,7 +29,9 @@ class ScalarLevelsResult:
     Notes:
         - ``sample_peak_dbfs`` is based on decoded samples.
         - ``true_peak_dbtp`` is an approximation using polyphase oversampling.
-          It returns ``None`` when oversampling is disabled in config.
+          When ``true_peak_oversample`` is 1, it falls back to sample peak.
+          It returns ``None`` only when the configured true-peak path cannot
+          produce a value, such as audio too short for the upsampler.
         - ``integrated_lufs`` is ``None`` if pyloudnorm is unavailable or the
           file is too short (BS.1770 requires >= ~400 ms of audio).
         - ``plr_db`` is true_peak - integrated_lufs when both exist.

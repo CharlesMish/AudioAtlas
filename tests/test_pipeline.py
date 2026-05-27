@@ -42,3 +42,6 @@ def test_pipeline_writes_expected_outputs(tmp_path, sr):
     assert "10_onset_density.png" in summary["plots"]
     assert "findings" in findings
     assert findings["count"] == len(result.findings["findings"])
+    all_titles = [item["title"] for item in findings["all_findings"]]
+    assert len(all_titles) <= 4
+    assert not any("band energy" in title.lower() for title in all_titles)

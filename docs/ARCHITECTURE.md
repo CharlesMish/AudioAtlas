@@ -121,6 +121,10 @@ All dBFS / dBTP / dB-power values shown to the user are clamped to
 and `power_to_db(..., floor_db=cfg.db_floor)` for this. Internal math
 that needs raw values can pass `floor_db=None`.
 
+Relative dB plots, such as spectrogram, Welch average spectrum, and
+frequency-band timelines, use the track or analysis-view maximum as
+0 dB. They are shape/contrast views, not calibrated dBFS meters.
+
 A silent input must produce identical floor values in `levels.rms_dbfs`,
 `levels.sample_peak_dbfs`, and the entire `rms_envelope.rms_dbfs` series.
 There's a test for this in `tests/test_levels.py`.

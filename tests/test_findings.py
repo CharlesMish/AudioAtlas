@@ -5,6 +5,12 @@ from audioatlas.analysis.findings import generate_findings
 
 def _summary(**overrides):
     summary = {
+        "analysis_config": {
+            "db_floor": -100.0,
+            "max_findings": 8,
+            "band_finding_min_duration_seconds": 0.5,
+            "band_finding_min_relative_db": -80.0,
+        },
         "levels": {
             "true_peak_dbtp": -1.0,
             "near_clipping_samples": 0,
@@ -191,7 +197,7 @@ def test_low_mid_strongest_bin_generates_info_without_muddy_claim():
     assert "muddy" not in text
 
 
-def test_strongest_band_generates_factual_info():
+def test_strongest_band_summary_fact_does_not_generate_default_finding():
     findings = generate_findings(
         _summary(
             average_spectrum={
@@ -203,9 +209,7 @@ def test_strongest_band_generates_factual_info():
         )
     ).findings
 
-    assert len(findings) == 1
-    assert findings[0].category == "spectrum"
-    assert "bass" in findings[0].title
+    assert findings == []
 
 
 def test_spectral_centroid_elevated_ranges_generate_info():
@@ -275,6 +279,7 @@ def test_band_energy_elevated_ranges_generate_info():
                 "bands": {
                     "low_mid": {
                         "median_db": -18.0,
+                        "max_db": -8.0,
                         "elevated_threshold_db": -12.0,
                         "reduced_threshold_db": -30.0,
                         "elevated_time_ranges": [
@@ -301,6 +306,7 @@ def test_high_band_reduced_ranges_generate_info():
                 "bands": {
                     "high": {
                         "median_db": -20.0,
+                        "max_db": -6.0,
                         "elevated_threshold_db": -14.0,
                         "reduced_threshold_db": -32.0,
                         "elevated_time_ranges": [],
@@ -318,7 +324,7 @@ def test_high_band_reduced_ranges_generate_info():
     assert findings[0].time_ranges == [{"start": 16.0, "end": 17.0, "duration": 1.0}]
 
 
-def test_strongest_time_varying_band_generates_info():
+def test_strongest_time_varying_band_does_not_generate_default_finding():
     findings = generate_findings(
         _summary(
             band_energy_timeline={
@@ -334,9 +340,7 @@ def test_strongest_time_varying_band_generates_info():
         )
     ).findings
 
-    assert len(findings) == 1
-    assert "presence" in findings[0].title
-    assert findings[0].category == "spectrum"
+    assert findings == []
 
 
 def test_onset_density_elevated_ranges_generate_info():
@@ -354,7 +358,7 @@ def test_onset_density_elevated_ranges_generate_info():
         )
     ).findings
 
-    assert len(findings) == 2
+    assert len(findings) == 1
     assert "Onset density is elevated" in findings[0].title
     assert findings[0].category == "dynamics"
     assert findings[0].time_ranges == [{"start": 18.0, "end": 19.0, "duration": 1.0}]
@@ -362,7 +366,7 @@ def test_onset_density_elevated_ranges_generate_info():
     assert "punch" not in text and "bad transients" not in text
 
 
-def test_strongest_onset_density_frame_generates_info():
+def test_strongest_onset_density_frame_does_not_generate_default_finding():
     findings = generate_findings(
         _summary(
             onset_density={
@@ -374,10 +378,151 @@ def test_strongest_onset_density_frame_generates_info():
         )
     ).findings
 
+    assert findings == []
+
+
+def test_floor_level_band_ranges_do_not_generate_findings():
+    findings = generate_findings(
+        _summary(
+            band_energy_timeline={
+                "bands": {
+                    "sub": {
+                        "median_db": -100.0,
+                        "max_db": -96.0,
+                        "elevated_threshold_db": -94.0,
+                        "reduced_threshold_db": -100.0,
+                        "elevated_time_ranges": [
+                            {"start": 0.0, "end": 1.0, "duration": 1.0}
+                        ],
+                        "reduced_time_ranges": [],
+                    },
+                    "bass": {
+                        "median_db": -99.0,
+                        "max_db": -92.0,
+                        "elevated_threshold_db": -93.0,
+                        "reduced_threshold_db": -100.0,
+                        "elevated_time_ranges": [
+                            {"start": 1.0, "end": 2.0, "duration": 1.0}
+                        ],
+                        "reduced_time_ranges": [],
+                    },
+                }
+            }
+        )
+    ).findings
+
+    assert findings == []
+
+
+def test_tiny_band_edge_ranges_are_filtered():
+    findings = generate_findings(
+        _summary(
+            band_energy_timeline={
+                "bands": {
+                    "presence": {
+                        "median_db": -20.0,
+                        "max_db": -5.0,
+                        "elevated_threshold_db": -14.0,
+                        "reduced_threshold_db": -32.0,
+                        "elevated_time_ranges": [
+                            {"start": 0.0, "end": 0.043, "duration": 0.043}
+                        ],
+                        "reduced_time_ranges": [],
+                    }
+                }
+            }
+        )
+    ).findings
+
+    assert findings == []
+
+
+def test_multiple_band_findings_are_grouped():
+    findings = generate_findings(
+        _summary(
+            band_energy_timeline={
+                "bands": {
+                    "low_mid": {
+                        "median_db": -18.0,
+                        "max_db": -5.0,
+                        "elevated_threshold_db": -12.0,
+                        "reduced_threshold_db": -30.0,
+                        "elevated_time_ranges": [
+                            {"start": 14.0, "end": 15.0, "duration": 1.0}
+                        ],
+                        "reduced_time_ranges": [],
+                    },
+                    "presence": {
+                        "median_db": -16.0,
+                        "max_db": -4.0,
+                        "elevated_threshold_db": -10.0,
+                        "reduced_threshold_db": -28.0,
+                        "elevated_time_ranges": [
+                            {"start": 14.5, "end": 15.5, "duration": 1.0}
+                        ],
+                        "reduced_time_ranges": [],
+                    },
+                }
+            }
+        )
+    ).findings
+
     assert len(findings) == 1
-    assert "Strongest onset-density frame" in findings[0].title
-    assert findings[0].category == "dynamics"
-    assert findings[0].time_ranges == [{"start": 21.0, "end": 21.0, "duration": 0.0}]
+    assert findings[0].title == "Multiple band-energy changes detected"
+    assert findings[0].measured_value == 2
+
+
+def test_findings_are_sorted_deterministically_by_priority():
+    findings = generate_findings(
+        _summary(
+            levels={
+                "clipped_samples": 2,
+                "near_clipping_samples": 3,
+                "integrated_lufs": -9.0,
+                "plr_db": 7.0,
+            },
+            stereo_correlation={
+                "correlation_min": -0.2,
+                "correlation_median": 0.4,
+            },
+            average_spectrum={"strongest_bin_hz": 220.0},
+        )
+    ).findings
+
+    assert [finding.severity for finding in findings[:4]] == [
+        "issue",
+        "warning",
+        "warning",
+        "warning",
+    ]
+    assert findings[0].title == "Sample clipping detected"
+    assert findings[1].title == "Near-full-scale samples detected"
+
+
+def test_max_findings_caps_shown_and_records_suppressed_count():
+    result = generate_findings(
+        _summary(
+            analysis_config={"max_findings": 3},
+            levels={
+                "clipped_samples": 2,
+                "near_clipping_samples": 3,
+                "integrated_lufs": -9.0,
+                "plr_db": 7.0,
+            },
+            stereo_correlation={
+                "correlation_min": -0.2,
+                "correlation_median": 0.4,
+            },
+            average_spectrum={"strongest_bin_hz": 220.0},
+        )
+    )
+    data = result.to_dict()
+
+    assert data["count"] == 3
+    assert len(data["findings"]) == 3
+    assert len(data["all_findings"]) > 3
+    assert data["findings_suppressed_count"] == len(data["all_findings"]) - 3
+    assert data["findings"][0]["title"] == "Sample clipping detected"
 
 
 def test_multiple_rules_can_trigger_together():

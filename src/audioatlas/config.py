@@ -24,6 +24,9 @@ class AnalysisConfig:
     max_plot_points: int = 250_000
     correlation_min_rms_dbfs: float = -80.0
     onset_density_window_seconds: float = 1.0
+    max_findings: int = 8
+    band_finding_min_duration_seconds: float = 0.5
+    band_finding_min_relative_db: float = -80.0
 
     def validate(self) -> None:
         if self.n_fft <= 0:
@@ -38,3 +41,9 @@ class AnalysisConfig:
             raise ValueError("correlation_min_rms_dbfs must be <= 0")
         if self.onset_density_window_seconds <= 0:
             raise ValueError("onset_density_window_seconds must be positive")
+        if self.max_findings <= 0:
+            raise ValueError("max_findings must be positive")
+        if self.band_finding_min_duration_seconds < 0:
+            raise ValueError("band_finding_min_duration_seconds must be non-negative")
+        if self.band_finding_min_relative_db < self.db_floor:
+            raise ValueError("band_finding_min_relative_db must be >= db_floor")

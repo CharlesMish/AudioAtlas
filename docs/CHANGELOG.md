@@ -9,6 +9,8 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Onset-strength based transient density analysis with `onset_density`
   summary output, `10_onset_density.png`, and factual relative-to-track
   dynamics findings with suggested checks.
+- Finding prioritization and display capping with `findings_shown`,
+  `all_findings`, and `findings_suppressed_count` in `findings.json`.
 - Time-varying frequency band energy analysis with
   `band_energy_timeline` summary output, `09_band_energy_timeline.png`,
   and factual relative-to-track band findings.
@@ -45,6 +47,12 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   nullability tracks the global value) and the new report section.
 
 ### Changed
+- Findings are less eager by default: floor-level and very short
+  band-energy observations are suppressed, repeated band observations are
+  grouped, and strongest-frame/strongest-band facts stay in summaries
+  rather than default findings.
+- Report plot headings now use curated display names instead of title
+  casing filenames.
 - Relabeled spectrogram and average-spectrum wording to avoid implying
   calibrated dBFS where the plotted STFT/Welch values are relative.
 - Normalized spectrogram and average-spectrum dB displays to the track

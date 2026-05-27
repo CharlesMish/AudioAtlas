@@ -36,6 +36,19 @@ PER_CHANNEL_METRIC_DISPLAY: list[tuple[str, str, str]] = [
     ("dc_offset_per_channel",      "DC offset",            ""),
 ]
 
+PLOT_DISPLAY_NAMES: dict[str, str] = {
+    "01_waveform_rms.png": "Waveform + RMS Envelope",
+    "02_rms_timeline.png": "Frame RMS Timeline",
+    "03_log_spectrogram.png": "Log-Frequency Spectrogram",
+    "04_average_spectrum.png": "Welch Average Spectrum",
+    "05_sample_histogram.png": "Sample Histogram",
+    "06_stereo_correlation.png": "Stereo Correlation Timeline",
+    "07_mid_side_energy.png": "Mid/Side Energy Timeline",
+    "08_spectral_shape.png": "Spectral Shape Timeline",
+    "09_band_energy_timeline.png": "Frequency Band Energy Timeline",
+    "10_onset_density.png": "Onset / Transient Density Timeline",
+}
+
 
 def write_summary_json(summary: dict[str, Any], out_dir: str | Path) -> Path:
     """Write summary.json."""
@@ -150,6 +163,7 @@ def write_report_md(
     lines.append("")
 
     lines.append("## Average spectrum summary\n")
+    lines.append("Relative dB plots use track max = 0 dB and are not calibrated dBFS.\n")
     for key, value in spectrum.items():
         if key == "band_energies":
             continue
@@ -188,6 +202,7 @@ def write_report_md(
 
     if band_energy_timeline:
         lines.append("## Band energy timeline summary\n")
+        lines.append("Relative dB values use this analysis view's maximum as 0 dB and are not calibrated dBFS.\n")
         lines.append(f"- frames: {_fmt_value(band_energy_timeline.get('frames'))}")
         lines.append(f"- valid_frames: {_fmt_value(band_energy_timeline.get('valid_frames'))}")
         lines.append(f"- strongest_band_by_median: {_fmt_value(band_energy_timeline.get('strongest_band_by_median'))}")
@@ -244,7 +259,19 @@ def write_report_md(
 
     if findings is not None:
         lines.append("## Findings\n")
-        finding_items = findings.get("findings") if isinstance(findings, dict) else None
+        lines.append(
+            "Findings are prioritized factual observations. Some lower-priority "
+            "observations may be omitted from this report."
+        )
+        suppressed = findings.get("findings_suppressed_count") if isinstance(findings, dict) else 0
+        if isinstance(suppressed, int) and suppressed > 0:
+            lines.append(
+                f"{suppressed} lower-priority finding(s) suppressed; see findings.json for details."
+            )
+        lines.append("")
+        finding_items = findings.get("findings_shown") if isinstance(findings, dict) else None
+        if not isinstance(finding_items, list) and isinstance(findings, dict):
+            finding_items = findings.get("findings")
         if isinstance(finding_items, list) and finding_items:
             for item in finding_items:
                 if not isinstance(item, dict):
@@ -281,7 +308,7 @@ def write_report_md(
 
     lines.append("## Plots\n")
     for filename in plot_files:
-        title = Path(filename).stem.replace("_", " ").title()
+        title = PLOT_DISPLAY_NAMES.get(filename, Path(filename).stem.replace("_", " ").title())
         lines.append(f"### {title}\n")
         lines.append(f"![{title}]({filename})\n")
 
