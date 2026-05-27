@@ -40,6 +40,10 @@ def _summary(**overrides):
             "centroid_reduced_time_ranges": [],
             "centroid_large_shift_time_ranges": [],
         },
+        "band_energy_timeline": {
+            "strongest_band_by_median": None,
+            "bands": {},
+        },
     }
     for block, values in overrides.items():
         summary[block].update(values)
@@ -255,6 +259,77 @@ def test_large_centroid_shift_ranges_generate_info():
     assert len(findings) == 1
     assert "changes sharply" in findings[0].title
     assert findings[0].time_ranges == [{"start": 12.0, "end": 13.0, "duration": 1.0}]
+
+
+def test_band_energy_elevated_ranges_generate_info():
+    findings = generate_findings(
+        _summary(
+            band_energy_timeline={
+                "bands": {
+                    "low_mid": {
+                        "median_db": -18.0,
+                        "elevated_threshold_db": -12.0,
+                        "reduced_threshold_db": -30.0,
+                        "elevated_time_ranges": [
+                            {"start": 14.0, "end": 15.0, "duration": 1.0}
+                        ],
+                        "reduced_time_ranges": [],
+                    }
+                }
+            }
+        )
+    ).findings
+
+    assert len(findings) == 1
+    assert "low_mid band energy is elevated" in findings[0].title
+    assert findings[0].time_ranges == [{"start": 14.0, "end": 15.0, "duration": 1.0}]
+    text = " ".join([findings[0].title, " ".join(findings[0].suggested_checks)]).lower()
+    assert "muddy" not in text and "too much" not in text
+
+
+def test_high_band_reduced_ranges_generate_info():
+    findings = generate_findings(
+        _summary(
+            band_energy_timeline={
+                "bands": {
+                    "high": {
+                        "median_db": -20.0,
+                        "elevated_threshold_db": -14.0,
+                        "reduced_threshold_db": -32.0,
+                        "elevated_time_ranges": [],
+                        "reduced_time_ranges": [
+                            {"start": 16.0, "end": 17.0, "duration": 1.0}
+                        ],
+                    }
+                }
+            }
+        )
+    ).findings
+
+    assert len(findings) == 1
+    assert "high band energy is reduced" in findings[0].title
+    assert findings[0].time_ranges == [{"start": 16.0, "end": 17.0, "duration": 1.0}]
+
+
+def test_strongest_time_varying_band_generates_info():
+    findings = generate_findings(
+        _summary(
+            band_energy_timeline={
+                "strongest_band_by_median": "presence",
+                "bands": {
+                    "presence": {
+                        "median_db": -8.0,
+                        "elevated_time_ranges": [],
+                        "reduced_time_ranges": [],
+                    }
+                },
+            }
+        )
+    ).findings
+
+    assert len(findings) == 1
+    assert "presence" in findings[0].title
+    assert findings[0].category == "spectrum"
 
 
 def test_multiple_rules_can_trigger_together():

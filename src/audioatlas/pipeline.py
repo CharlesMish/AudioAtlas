@@ -25,6 +25,7 @@ from audioatlas.analysis.levels import (
 )
 from audioatlas.analysis.spectral import (
     compute_average_spectrum,
+    compute_band_energy_timeline,
     compute_log_spectrogram,
     compute_spectral_shape,
 )
@@ -32,6 +33,7 @@ from audioatlas.analysis.stereo import compute_mid_side_energy, compute_stereo_c
 from audioatlas.config import AnalysisConfig
 from audioatlas.io import load_audio
 from audioatlas.report import write_findings_json, write_report_md, write_summary_json
+from audioatlas.visualize.band_energy import plot_band_energy_timeline
 from audioatlas.visualize.histogram import plot_sample_histogram
 from audioatlas.visualize.spectral_shape import plot_spectral_shape
 from audioatlas.visualize.spectrogram import plot_log_spectrogram
@@ -79,6 +81,7 @@ def analyze_file(
     spec = compute_log_spectrogram(audio.y, audio.sr, cfg)
     avg = compute_average_spectrum(audio.y, audio.sr, cfg)
     spectral_shape = compute_spectral_shape(audio.y, audio.sr, cfg)
+    band_energy = compute_band_energy_timeline(audio.y, audio.sr, cfg)
     stereo = compute_stereo_correlation(audio.y, audio.sr, cfg)
     mid_side = compute_mid_side_energy(audio.y, audio.sr, cfg)
 
@@ -91,6 +94,7 @@ def analyze_file(
     plot_paths.append(plot_stereo_correlation(stereo, out / "06_stereo_correlation.png"))
     plot_paths.append(plot_mid_side_energy(mid_side, out / "07_mid_side_energy.png", cfg))
     plot_paths.append(plot_spectral_shape(spectral_shape, out / "08_spectral_shape.png"))
+    plot_paths.append(plot_band_energy_timeline(band_energy, out / "09_band_energy_timeline.png"))
 
     summary: dict[str, Any] = {
         "schema_version": "0.1.0",
@@ -101,6 +105,7 @@ def analyze_file(
         "peak_timeline": peaks.to_summary_dict(),
         "average_spectrum": avg.to_summary_dict(),
         "spectral_shape": spectral_shape.to_summary_dict(),
+        "band_energy_timeline": band_energy.to_summary_dict(),
         "stereo_correlation": stereo.to_summary_dict(),
         "mid_side_energy": mid_side.to_summary_dict(),
         "plots": [p.name for p in plot_paths],

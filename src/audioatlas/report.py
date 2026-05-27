@@ -81,6 +81,7 @@ def write_report_md(
     rms = summary.get("rms_envelope", {})
     spectrum = summary.get("average_spectrum", {})
     spectral_shape = summary.get("spectral_shape", {})
+    band_energy_timeline = summary.get("band_energy_timeline", {})
     stereo = summary.get("stereo_correlation", {})
     mid_side = summary.get("mid_side_energy", {})
 
@@ -181,6 +182,29 @@ def write_report_md(
             lines.append(f"- {key}: {_fmt_value(value)}")
         spectral_shape_warnings = spectral_shape.get("warnings") or []
         for warning in spectral_shape_warnings:
+            lines.append(f"- warning: {warning}")
+        lines.append("")
+
+    if band_energy_timeline:
+        lines.append("## Band energy timeline summary\n")
+        lines.append(f"- frames: {_fmt_value(band_energy_timeline.get('frames'))}")
+        lines.append(f"- valid_frames: {_fmt_value(band_energy_timeline.get('valid_frames'))}")
+        lines.append(f"- strongest_band_by_median: {_fmt_value(band_energy_timeline.get('strongest_band_by_median'))}")
+        bands = band_energy_timeline.get("bands")
+        if isinstance(bands, dict) and bands:
+            lines.append("")
+            lines.append("| Band | Median | Mean | Min | Max |")
+            lines.append("|---|---|---|---|---|")
+            for band, values in bands.items():
+                if not isinstance(values, dict):
+                    continue
+                lines.append(
+                    f"| {band} | {_fmt_value(values.get('median_db'))} | "
+                    f"{_fmt_value(values.get('mean_db'))} | {_fmt_value(values.get('min_db'))} | "
+                    f"{_fmt_value(values.get('max_db'))} |"
+                )
+        warnings = band_energy_timeline.get("warnings") or []
+        for warning in warnings:
             lines.append(f"- warning: {warning}")
         lines.append("")
 

@@ -121,12 +121,45 @@ def _make_summary() -> dict:
             "centroid_large_shift_time_ranges": [],
             "warnings": [],
         },
+        "band_energy_timeline": {
+            "n_fft": 4096,
+            "hop_length": 1024,
+            "frames": 100,
+            "valid_frames": 100,
+            "undefined_frames": 0,
+            "band_names": ["bass", "mid"],
+            "strongest_band_by_median": "mid",
+            "bands": {
+                "bass": {
+                    "median_db": -20.0,
+                    "mean_db": -21.0,
+                    "min_db": -40.0,
+                    "max_db": -10.0,
+                    "elevated_threshold_db": -14.0,
+                    "reduced_threshold_db": -32.0,
+                    "elevated_time_ranges": [],
+                    "reduced_time_ranges": [],
+                },
+                "mid": {
+                    "median_db": -8.0,
+                    "mean_db": -9.0,
+                    "min_db": -20.0,
+                    "max_db": -2.0,
+                    "elevated_threshold_db": -2.0,
+                    "reduced_threshold_db": -20.0,
+                    "elevated_time_ranges": [],
+                    "reduced_time_ranges": [],
+                },
+            },
+            "warnings": [],
+        },
         "plots": [
             "01_waveform_rms.png",
             "02_rms_timeline.png",
             "06_stereo_correlation.png",
             "07_mid_side_energy.png",
             "08_spectral_shape.png",
+            "09_band_energy_timeline.png",
         ],
     }
 
@@ -185,6 +218,7 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Average spectrum summary" in text
     assert "## Band energy summary" in text
     assert "## Spectral shape summary" in text
+    assert "## Band energy timeline summary" in text
     assert "## Stereo correlation summary" in text
     assert "## Mid/side energy summary" in text
     assert "## Plots" in text

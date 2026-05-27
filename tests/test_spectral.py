@@ -5,10 +5,12 @@ import pytest
 
 from audioatlas.analysis.spectral import (
     compute_average_spectrum,
+    compute_band_energy_timeline,
     compute_log_spectrogram,
     compute_spectral_shape,
 )
 from audioatlas.config import AnalysisConfig
+from audioatlas.visualize.band_energy import plot_band_energy_timeline
 from audioatlas.visualize.spectral_shape import plot_spectral_shape
 from audioatlas.visualize.spectrogram import plot_log_spectrogram
 
@@ -139,6 +141,52 @@ def test_plot_spectral_shape_writes_png(tmp_path, sine_minus_6_dbfs, sr):
     cfg = AnalysisConfig(n_fft=2048, hop_length=512)
     result = compute_spectral_shape(sine_minus_6_dbfs, sr, cfg)
     path = plot_spectral_shape(result, tmp_path / "spectral_shape.png")
+
+    assert path.exists()
+    assert path.stat().st_size > 0
+
+
+def test_band_energy_timeline_low_frequency_signal_concentrates_lower_band(sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512)
+    t = np.arange(sr, dtype=np.float64) / sr
+    y = (0.5 * np.sin(2 * np.pi * 80 * t)).astype(np.float32)[:, None]
+
+    result = compute_band_energy_timeline(y, sr, cfg)
+    summary = result.to_summary_dict()
+
+    assert summary["strongest_band_by_median"] == "bass"
+    assert summary["bands"]["bass"]["median_db"] > summary["bands"]["mid"]["median_db"]
+
+
+def test_band_energy_timeline_high_frequency_signal_concentrates_upper_band(sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512)
+    t = np.arange(sr, dtype=np.float64) / sr
+    y = (0.5 * np.sin(2 * np.pi * 8000 * t)).astype(np.float32)[:, None]
+
+    result = compute_band_energy_timeline(y, sr, cfg)
+    summary = result.to_summary_dict()
+
+    assert summary["strongest_band_by_median"] in {"high", "air"}
+    assert summary["bands"]["high"]["median_db"] > summary["bands"]["mid"]["median_db"]
+
+
+def test_band_energy_timeline_silence_is_safe(sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512)
+    y = np.zeros((sr, 1), dtype=np.float32)
+
+    result = compute_band_energy_timeline(y, sr, cfg)
+    summary = result.to_summary_dict()
+
+    assert summary["valid_frames"] == 0
+    assert summary["strongest_band_by_median"] is None
+    assert all(summary["bands"][band]["median_db"] is None for band in summary["band_names"])
+    assert result.warnings
+
+
+def test_plot_band_energy_timeline_writes_png(tmp_path, sine_minus_6_dbfs, sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512)
+    result = compute_band_energy_timeline(sine_minus_6_dbfs, sr, cfg)
+    path = plot_band_energy_timeline(result, tmp_path / "band_energy.png")
 
     assert path.exists()
     assert path.stat().st_size > 0

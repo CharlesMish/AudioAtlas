@@ -30,11 +30,13 @@ def test_pipeline_writes_expected_outputs(tmp_path, sr):
     assert "peak_timeline" in summary
     assert "band_energies" in summary["average_spectrum"]
     assert "spectral_shape" in summary
+    assert "band_energy_timeline" in summary
     assert "stereo_correlation" in summary
     assert "mid_side_energy" in summary
-    assert len(summary["plots"]) == 8
+    assert len(summary["plots"]) == 9
     assert "06_stereo_correlation.png" in summary["plots"]
     assert "07_mid_side_energy.png" in summary["plots"]
     assert "08_spectral_shape.png" in summary["plots"]
+    assert "09_band_energy_timeline.png" in summary["plots"]
     assert "findings" in findings
     assert findings["count"] == len(result.findings["findings"])

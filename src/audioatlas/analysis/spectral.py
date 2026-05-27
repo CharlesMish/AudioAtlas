@@ -156,6 +156,80 @@ class SpectralShapeResult:
         return summary
 
 
+@dataclass(frozen=True)
+class BandEnergyTimelineResult:
+    """Time-varying relative energy for broad frequency bands."""
+
+    times_seconds: NDArray[np.float64]
+    band_names: list[str]
+    band_energy_db_by_band: dict[str, NDArray[np.float64]]
+    valid_frames: NDArray[np.bool_]
+    sample_rate: int
+    n_fft: int
+    hop_length: int
+    db_floor: float
+    warnings: list[str]
+
+    def to_summary_dict(self) -> dict[str, object]:
+        bands: dict[str, dict[str, object]] = {}
+        strongest_band: str | None = None
+        strongest_median = -np.inf
+        for name in self.band_names:
+            values = self.band_energy_db_by_band[name]
+            valid_values = values[self.valid_frames & np.isfinite(values)]
+            if len(valid_values):
+                median = float(np.median(valid_values))
+                mean = float(np.mean(valid_values))
+                max_value = float(np.max(valid_values))
+                min_value = float(np.min(valid_values))
+                elevated_threshold = median + 6.0
+                reduced_threshold = median - 12.0
+                elevated_ranges = mask_to_time_ranges(
+                    self.valid_frames & np.isfinite(values) & (values > elevated_threshold),
+                    self.times_seconds,
+                )
+                reduced_ranges = mask_to_time_ranges(
+                    self.valid_frames & np.isfinite(values) & (values < reduced_threshold),
+                    self.times_seconds,
+                )
+                if median > strongest_median:
+                    strongest_median = median
+                    strongest_band = name
+            else:
+                median = None
+                mean = None
+                max_value = None
+                min_value = None
+                elevated_threshold = None
+                reduced_threshold = None
+                elevated_ranges = []
+                reduced_ranges = []
+            bands[name] = {
+                "median_db": median,
+                "mean_db": mean,
+                "max_db": max_value,
+                "min_db": min_value,
+                "elevated_threshold_db": elevated_threshold,
+                "reduced_threshold_db": reduced_threshold,
+                "elevated_time_ranges": elevated_ranges,
+                "reduced_time_ranges": reduced_ranges,
+            }
+
+        if strongest_median == -np.inf:
+            strongest_band = None
+        return {
+            "n_fft": self.n_fft,
+            "hop_length": self.hop_length,
+            "frames": int(len(self.times_seconds)),
+            "valid_frames": int(np.count_nonzero(self.valid_frames)),
+            "undefined_frames": int(len(self.valid_frames) - np.count_nonzero(self.valid_frames)),
+            "band_names": self.band_names,
+            "bands": bands,
+            "strongest_band_by_median": strongest_band,
+            "warnings": self.warnings,
+        }
+
+
 def compute_log_spectrogram(
     y: NDArray[np.floating], sr: int, config: AnalysisConfig | None = None
 ) -> SpectrogramResult:
@@ -237,6 +311,76 @@ def compute_average_spectrum(
         sample_rate=int(sr),
         nperseg=int(nperseg),
         band_energies=band_energies,
+    )
+
+
+def compute_band_energy_timeline(
+    y: NDArray[np.floating], sr: int, config: AnalysisConfig | None = None
+) -> BandEnergyTimelineResult:
+    """Compute frame-wise relative energy in broad frequency bands."""
+
+    cfg = config or AnalysisConfig()
+    cfg.validate()
+    mono = to_mono(y).astype(np.float64)
+    if sr <= 0:
+        raise ValueError("sr must be positive")
+    if len(mono) == 0:
+        raise ValueError("audio has zero samples")
+
+    stft = librosa.stft(
+        mono,
+        n_fft=cfg.n_fft,
+        hop_length=cfg.hop_length,
+        window=cfg.window,
+        center=True,
+    )
+    power = np.square(np.abs(stft)).astype(np.float64)
+    freqs = librosa.fft_frequencies(sr=sr, n_fft=cfg.n_fft).astype(np.float64)
+    times = librosa.frames_to_time(
+        np.arange(power.shape[1]), sr=sr, hop_length=cfg.hop_length
+    ).astype(np.float64)
+    frame_power = np.sum(power, axis=0)
+    valid_frames = frame_power > EPS
+    warnings: list[str] = []
+    if not np.all(valid_frames):
+        warnings.append("one or more silent frames; band energy values are undefined there")
+
+    band_linear: dict[str, NDArray[np.float64]] = {}
+    for name, low_hz, high_hz in BANDS:
+        capped_high = min(high_hz, sr / 2)
+        mask = (freqs >= low_hz) & (freqs < capped_high)
+        values = np.full(power.shape[1], np.nan, dtype=np.float64)
+        if np.any(mask):
+            values[valid_frames] = np.mean(power[mask][:, valid_frames], axis=0)
+        band_linear[name] = values
+
+    reference = 0.0
+    finite_values = np.concatenate(
+        [values[np.isfinite(values)] for values in band_linear.values()]
+    )
+    if len(finite_values):
+        reference = float(np.max(finite_values))
+    band_db: dict[str, NDArray[np.float64]] = {}
+    for name, values in band_linear.items():
+        out = np.full(len(times), np.nan, dtype=np.float64)
+        finite = np.isfinite(values)
+        if reference > EPS and np.any(finite):
+            out[finite] = np.maximum(
+                np.asarray(power_to_db(values[finite] / reference, floor_db=None), dtype=np.float64),
+                cfg.db_floor,
+            )
+        band_db[name] = out
+
+    return BandEnergyTimelineResult(
+        times_seconds=times,
+        band_names=[name for name, _low, _high in BANDS],
+        band_energy_db_by_band=band_db,
+        valid_frames=valid_frames.astype(bool),
+        sample_rate=int(sr),
+        n_fft=cfg.n_fft,
+        hop_length=cfg.hop_length,
+        db_floor=cfg.db_floor,
+        warnings=warnings,
     )
 
 

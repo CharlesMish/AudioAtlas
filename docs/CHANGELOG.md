@@ -6,6 +6,9 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- Time-varying frequency band energy analysis with
+  `band_energy_timeline` summary output, `09_band_energy_timeline.png`,
+  and factual relative-to-track band findings.
 - Spectral shape timeline analysis with centroid, 85%/95% rolloff, and
   bandwidth summaries, `08_spectral_shape.png`, and factual
   spectral-shape findings based on relative-to-track heuristics.

@@ -19,6 +19,7 @@ Current schema version: **`0.1.0`**.
   "peak_timeline":   { ... PeakTimelineResult.to_summary_dict() ... },
   "average_spectrum":{ ... AverageSpectrumResult.to_summary_dict() ... },
   "spectral_shape":  { ... SpectralShapeResult.to_summary_dict() ... },
+  "band_energy_timeline": { ... BandEnergyTimelineResult.to_summary_dict() ... },
   "stereo_correlation": { ... StereoCorrelationResult.to_summary_dict() ... },
   "mid_side_energy": { ... MidSideEnergyResult.to_summary_dict() ... },
   "plots":           ["01_waveform_rms.png", ...]
@@ -197,6 +198,38 @@ represented as undefined and excluded from summary statistics.
 | `centroid_large_shift_time_ranges` | list[object] | Ranges where adjacent-frame centroid change exceeds the large-shift threshold. |
 | `warnings` | list[str] | Human-readable caveats; safe to ignore programmatically. |
 
+### `band_energy_timeline` (from `BandEnergyTimelineResult.to_summary_dict`)
+
+Frame-wise relative energy in the same broad bands used by
+`average_spectrum.band_energies`. Values are relative dB within this
+timeline analysis and are not calibrated dBFS. Silent frames are
+undefined and excluded from summary statistics.
+
+| Field | Type | Notes |
+|---|---|---|
+| `n_fft` | int | FFT size used. |
+| `hop_length` | int | Hop between frames. |
+| `frames` | int | Number of band-energy frames. |
+| `valid_frames` | int | Non-silent frames included in summary statistics. |
+| `undefined_frames` | int | Silent frames excluded from summary statistics. |
+| `band_names` | list[string] | Band order used in arrays/visualization. |
+| `bands` | object | Per-band statistics and time ranges. |
+| `strongest_band_by_median` | string \| null | Band with highest median relative frame energy. |
+| `warnings` | list[str] | Human-readable caveats; safe to ignore programmatically. |
+
+Each `bands.<band>` object contains:
+
+| Field | Type | Notes |
+|---|---|---|
+| `median_db` | float \| null | Median relative band energy over valid frames. |
+| `mean_db` | float \| null | Mean relative band energy over valid frames. |
+| `max_db` | float \| null | Maximum relative band energy over valid frames. |
+| `min_db` | float \| null | Minimum relative band energy over valid frames. |
+| `elevated_threshold_db` | float \| null | Relative heuristic threshold: band median + 6 dB. |
+| `reduced_threshold_db` | float \| null | Relative heuristic threshold: band median - 12 dB. |
+| `elevated_time_ranges` | list[object] | Ranges where frame band energy is above `elevated_threshold_db`. |
+| `reduced_time_ranges` | list[object] | Ranges where frame band energy is below `reduced_threshold_db`. |
+
 ### `stereo_correlation` (from `StereoCorrelationResult.to_summary_dict`)
 
 Per-frame Pearson correlation between input channels 0 and 1. Mono input
@@ -259,10 +292,11 @@ order is fixed:
 06_stereo_correlation.png
 07_mid_side_energy.png
 08_spectral_shape.png
+09_band_energy_timeline.png
 ```
 
-New plots from future feature slices append numbered prefixes (`09_*`,
-`10_*`, ...) and are added to `plot_paths` in `pipeline.py`.
+New plots from future feature slices append numbered prefixes (`10_*`,
+`11_*`, ...) and are added to `plot_paths` in `pipeline.py`.
 
 ## findings.json blocks
 

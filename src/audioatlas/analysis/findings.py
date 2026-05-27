@@ -69,6 +69,11 @@ def generate_findings(summary: dict) -> FindingsResult:
     spectral_shape = (
         summary.get("spectral_shape") if isinstance(summary.get("spectral_shape"), dict) else {}
     )
+    band_energy_timeline = (
+        summary.get("band_energy_timeline")
+        if isinstance(summary.get("band_energy_timeline"), dict)
+        else {}
+    )
 
     findings: list[Finding] = []
 
@@ -453,6 +458,98 @@ def generate_findings(summary: dict) -> FindingsResult:
                 time_ranges=shift_ranges,
             )
         )
+
+    band_timeline_bands = band_energy_timeline.get("bands")
+    if isinstance(band_timeline_bands, dict):
+        for band, band_values in band_timeline_bands.items():
+            if not isinstance(band_values, dict):
+                continue
+            elevated_ranges = _ranges(band_values, "elevated_time_ranges")
+            median_db = _number(band_values, "median_db")
+            elevated_threshold = _number(band_values, "elevated_threshold_db")
+            if elevated_ranges and median_db is not None and elevated_threshold is not None:
+                findings.append(
+                    Finding(
+                        severity="info",
+                        category="spectrum",
+                        title=f"{band} band energy is elevated relative to this track's median",
+                        measured_value=median_db,
+                        threshold=elevated_threshold,
+                        unit="dB relative",
+                        evidence=(
+                            f"{band} median band energy measured {_fmt_measure(median_db)} dB; "
+                            f"{len(elevated_ranges)} time range(s) exceed the relative threshold."
+                        ),
+                        why_it_matters=(
+                            "This marks regions where a broad frequency band is higher than "
+                            "its own track-level median by a heuristic threshold."
+                        ),
+                        suggested_checks=[
+                            f"Inspect the band energy timeline around the {band} band in these regions.",
+                            "Listen for arrangement or EQ density in these regions.",
+                        ],
+                        confidence="medium",
+                        time_ranges=elevated_ranges,
+                    )
+                )
+
+            if band in {"high", "air"}:
+                reduced_ranges = _ranges(band_values, "reduced_time_ranges")
+                reduced_threshold = _number(band_values, "reduced_threshold_db")
+                if reduced_ranges and median_db is not None and reduced_threshold is not None:
+                    findings.append(
+                        Finding(
+                            severity="info",
+                            category="spectrum",
+                            title=f"{band} band energy is reduced relative to this track's median",
+                            measured_value=median_db,
+                            threshold=reduced_threshold,
+                            unit="dB relative",
+                            evidence=(
+                                f"{band} median band energy measured {_fmt_measure(median_db)} dB; "
+                                f"{len(reduced_ranges)} time range(s) fall below the relative threshold."
+                            ),
+                            why_it_matters=(
+                                "This marks regions where a broad high-frequency band is lower "
+                                "than its own track-level median by a heuristic threshold."
+                            ),
+                            suggested_checks=[
+                                f"Inspect the band energy timeline around the {band} band in these regions.",
+                                "Check whether arrangement, source content, or processing changes align with these regions.",
+                            ],
+                            confidence="medium",
+                            time_ranges=reduced_ranges,
+                        )
+                    )
+
+    strongest_timeline_band = band_energy_timeline.get("strongest_band_by_median")
+    if isinstance(strongest_timeline_band, str) and isinstance(band_timeline_bands, dict):
+        band_values = band_timeline_bands.get(strongest_timeline_band)
+        median_db = _number(band_values, "median_db") if isinstance(band_values, dict) else None
+        if median_db is not None:
+            findings.append(
+                Finding(
+                    severity="info",
+                    category="spectrum",
+                    title=f"Strongest time-varying band by median is {strongest_timeline_band}",
+                    measured_value=median_db,
+                    threshold=0,
+                    unit="dB relative",
+                    evidence=(
+                        f"strongest_band_by_median measured {strongest_timeline_band}; "
+                        f"median band energy measured {_fmt_measure(median_db)} dB relative."
+                    ),
+                    why_it_matters=(
+                        "This identifies the broad band with the highest median frame-wise "
+                        "relative energy."
+                    ),
+                    suggested_checks=[
+                        f"Inspect the band energy timeline around the {strongest_timeline_band} band.",
+                        "Listen for which sources occupy the strongest measured band over time.",
+                    ],
+                    confidence="medium",
+                )
+            )
 
     return FindingsResult(findings=findings)
 
