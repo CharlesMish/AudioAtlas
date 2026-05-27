@@ -6,6 +6,9 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- Time-range summarization in `report.md` findings: long range lists now
+  show counts, total duration, first/last range, longest range, and a
+  capped preview while preserving full ranges in `findings.json`.
 - Onset-strength based transient density analysis with `onset_density`
   summary output, `10_onset_density.png`, and factual relative-to-track
   dynamics findings with suggested checks.
@@ -47,6 +50,10 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   nullability tracks the global value) and the new report section.
 
 ### Changed
+- Technical report summary sections now show time-range counts instead
+  of raw Python-style range lists.
+- Non-severe time-ranged findings now filter tiny ranges by
+  `finding_min_time_range_seconds`.
 - Findings are less eager by default: floor-level and very short
   band-energy observations are suppressed, repeated band observations are
   grouped, and strongest-frame/strongest-band facts stay in summaries

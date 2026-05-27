@@ -89,7 +89,8 @@ Frozen dataclass, serialized via `dataclasses.asdict`. Includes
 `welch_nperseg`, `max_plot_points`, `correlation_min_rms_dbfs`,
 `onset_density_window_seconds`, `max_findings`,
 `band_finding_min_duration_seconds`, and
-`band_finding_min_relative_db`.
+`band_finding_min_relative_db`, `finding_min_time_range_seconds`, and
+`report_max_time_ranges`.
 
 Relative dB plots use track or analysis-view max = 0 dB and are not
 calibrated dBFS.
@@ -369,7 +370,10 @@ Findings are sorted deterministically before the default report cap is
 applied: issues, then warnings, then info; within each severity,
 headroom/levels and clipping observations precede dynamics, stereo,
 spectrum, onset-related, and metadata observations. `max_findings`
-controls the number shown in `report.md`.
+controls the number shown in `report.md`. Non-severe time-ranged
+findings apply `finding_min_time_range_seconds` before they are emitted.
+`report_max_time_ranges` controls how many ranges per finding are printed
+in `report.md`; full surviving ranges remain in `findings.json`.
 
 ## Example
 

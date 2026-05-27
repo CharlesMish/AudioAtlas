@@ -28,7 +28,7 @@ def _make_summary() -> dict:
             "format": "WAV",
             "subtype": "PCM_16",
         },
-        "analysis_config": {"n_fft": 4096, "hop_length": 1024},
+        "analysis_config": {"n_fft": 4096, "hop_length": 1024, "report_max_time_ranges": 8},
         "levels": {
             "duration_seconds": 65.5,
             "sample_peak_dbfs": -0.2,
@@ -74,7 +74,9 @@ def _make_summary() -> dict:
             "correlation_mean": 0.98,
             "correlation_median": 0.99,
             "overall_correlation": 0.98,
-            "correlation_below_0_time_ranges": [],
+            "correlation_below_0_time_ranges": [
+                {"start": 1.0, "end": 1.5, "duration": 0.5}
+            ],
             "correlation_below_0_3_time_ranges": [],
             "warnings": [],
         },
@@ -271,6 +273,73 @@ def test_write_report_md_contains_findings_section(tmp_path: Path):
     assert "Suggested checks" in text
     assert "Time ranges" in text
     assert "1.000s-1.500s" in text
+
+
+def test_report_truncates_many_time_ranges(tmp_path: Path):
+    summary = _make_summary()
+    ranges = [
+        {"start": float(i), "end": float(i) + 0.2, "duration": 0.2}
+        for i in range(12)
+    ]
+    findings = {
+        "count": 1,
+        "findings_shown": [
+            {
+                "severity": "warning",
+                "category": "levels",
+                "title": "Near-full-scale samples detected",
+                "measured_value": 1482,
+                "threshold": 0,
+                "unit": "samples",
+                "evidence": "near_clipping_samples measured 1482.",
+                "why_it_matters": "Measured sample values are near full scale.",
+                "suggested_checks": ["Inspect the sample histogram."],
+                "time_ranges": ranges,
+                "confidence": "high",
+            }
+        ],
+    }
+
+    path = write_report_md(summary, summary["plots"], tmp_path, findings)
+    text = path.read_text(encoding="utf-8")
+
+    assert "Time ranges: 12 regions" in text
+    assert "total 2.400s" in text
+    assert "longest 0.200s" in text
+    assert "First range: 0.000s-0.200s" in text
+    assert "Last range: 11.000s-11.200s" in text
+    assert "Showing first 8" in text
+    assert "0.000s-0.200s" in text
+    assert "7.000s-7.200s" in text
+    assert "8.000s-8.200s" not in text
+    assert "...and 4 more range(s); see findings.json for full details." in text
+
+
+def test_findings_json_preserves_full_time_ranges(tmp_path: Path):
+    ranges = [
+        {"start": float(i), "end": float(i) + 0.2, "duration": 0.2}
+        for i in range(12)
+    ]
+    findings = {
+        "count": 1,
+        "findings": [{"title": "Test", "time_ranges": ranges}],
+    }
+
+    path = write_findings_json(findings, tmp_path)
+    parsed = json.loads(path.read_text(encoding="utf-8"))
+
+    assert len(parsed["findings"][0]["time_ranges"]) == 12
+    assert parsed["findings"][0]["time_ranges"][-1]["start"] == 11.0
+
+
+def test_report_summary_sections_show_range_counts_not_raw_lists(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_md(summary, summary["plots"], tmp_path)
+    text = path.read_text(encoding="utf-8")
+
+    assert "correlation_below_0_ranges: 1" in text
+    assert "correlation_below_0_time_ranges" not in text
+    assert "{'start':" not in text
 
 
 def test_write_report_md_reports_suppressed_findings(tmp_path: Path):

@@ -67,6 +67,9 @@ def generate_findings(summary: dict) -> FindingsResult:
     band_min_duration = _non_negative_number(
         analysis_config, "band_finding_min_duration_seconds", default=0.5
     )
+    min_range_duration = _non_negative_number(
+        analysis_config, "finding_min_time_range_seconds", default=0.25
+    )
     db_floor = _number(analysis_config, "db_floor")
     if db_floor is None:
         db_floor = -100.0
@@ -222,7 +225,9 @@ def generate_findings(summary: dict) -> FindingsResult:
 
     corr_min = _number(stereo, "correlation_min")
     if corr_min is not None and corr_min < 0.0:
-        negative_ranges = _ranges(stereo, "correlation_below_0_time_ranges")
+        negative_ranges = _ranges_at_least(
+            stereo, "correlation_below_0_time_ranges", min_range_duration
+        )
         findings.append(
             Finding(
                 severity="warning",
@@ -245,7 +250,9 @@ def generate_findings(summary: dict) -> FindingsResult:
             )
         )
 
-    low_corr_ranges = _ranges(stereo, "correlation_below_0_3_time_ranges")
+    low_corr_ranges = _ranges_at_least(
+        stereo, "correlation_below_0_3_time_ranges", min_range_duration
+    )
     if low_corr_ranges:
         findings.append(
             Finding(
@@ -296,7 +303,9 @@ def generate_findings(summary: dict) -> FindingsResult:
 
     side_ratio = _number(mid_side, "side_to_mid_ratio_db_median")
     if side_ratio is not None and side_ratio > -6.0:
-        side_ratio_ranges = _ranges(mid_side, "side_to_mid_ratio_above_minus_6_time_ranges")
+        side_ratio_ranges = _ranges_at_least(
+            mid_side, "side_to_mid_ratio_above_minus_6_time_ranges", min_range_duration
+        )
         findings.append(
             Finding(
                 severity="info",
@@ -343,7 +352,9 @@ def generate_findings(summary: dict) -> FindingsResult:
         )
 
     centroid_median = _number(spectral_shape, "centroid_median_hz")
-    elevated_ranges = _ranges(spectral_shape, "centroid_elevated_time_ranges")
+    elevated_ranges = _ranges_at_least(
+        spectral_shape, "centroid_elevated_time_ranges", min_range_duration
+    )
     if centroid_median is not None and elevated_ranges:
         findings.append(
             Finding(
@@ -371,7 +382,9 @@ def generate_findings(summary: dict) -> FindingsResult:
             )
         )
 
-    reduced_ranges = _ranges(spectral_shape, "centroid_reduced_time_ranges")
+    reduced_ranges = _ranges_at_least(
+        spectral_shape, "centroid_reduced_time_ranges", min_range_duration
+    )
     if centroid_median is not None and reduced_ranges:
         findings.append(
             Finding(
@@ -425,7 +438,9 @@ def generate_findings(summary: dict) -> FindingsResult:
             )
         )
 
-    shift_ranges = _ranges(spectral_shape, "centroid_large_shift_time_ranges")
+    shift_ranges = _ranges_at_least(
+        spectral_shape, "centroid_large_shift_time_ranges", min_range_duration
+    )
     if shift_ranges:
         findings.append(
             Finding(
@@ -566,7 +581,9 @@ def generate_findings(summary: dict) -> FindingsResult:
                 )
             )
 
-    high_onset_ranges = _ranges(onset_density, "high_onset_density_time_ranges")
+    high_onset_ranges = _ranges_at_least(
+        onset_density, "high_onset_density_time_ranges", min_range_duration
+    )
     onset_density_median = _number(onset_density, "onset_density_median")
     if high_onset_ranges and onset_density_median is not None:
         findings.append(

@@ -27,6 +27,8 @@ class AnalysisConfig:
     max_findings: int = 8
     band_finding_min_duration_seconds: float = 0.5
     band_finding_min_relative_db: float = -80.0
+    finding_min_time_range_seconds: float = 0.25
+    report_max_time_ranges: int = 8
 
     def validate(self) -> None:
         if self.n_fft <= 0:
@@ -47,3 +49,7 @@ class AnalysisConfig:
             raise ValueError("band_finding_min_duration_seconds must be non-negative")
         if self.band_finding_min_relative_db < self.db_floor:
             raise ValueError("band_finding_min_relative_db must be >= db_floor")
+        if self.finding_min_time_range_seconds < 0:
+            raise ValueError("finding_min_time_range_seconds must be non-negative")
+        if self.report_max_time_ranges <= 0:
+            raise ValueError("report_max_time_ranges must be positive")

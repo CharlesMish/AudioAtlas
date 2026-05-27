@@ -49,6 +49,16 @@ PLOT_DISPLAY_NAMES: dict[str, str] = {
     "10_onset_density.png": "Onset / Transient Density Timeline",
 }
 
+TIME_RANGE_KEYS: set[str] = {
+    "correlation_below_0_time_ranges",
+    "correlation_below_0_3_time_ranges",
+    "side_to_mid_ratio_above_minus_6_time_ranges",
+    "centroid_elevated_time_ranges",
+    "centroid_reduced_time_ranges",
+    "centroid_large_shift_time_ranges",
+    "high_onset_density_time_ranges",
+}
+
 
 def write_summary_json(summary: dict[str, Any], out_dir: str | Path) -> Path:
     """Write summary.json."""
@@ -76,6 +86,81 @@ def _fmt_value(value: Any) -> str:
     return str(value)
 
 
+def _positive_int(block: dict[str, Any], key: str, *, default: int) -> int:
+    value = block.get(key)
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int) and value > 0:
+        return value
+    return default
+
+
+def _append_summary_value(lines: list[str], key: str, value: Any) -> None:
+    if key in TIME_RANGE_KEYS and isinstance(value, list):
+        count_name = key.removesuffix("_time_ranges") + "_ranges"
+        lines.append(f"- {count_name}: {len(value)}")
+        return
+    lines.append(f"- {key}: {_fmt_value(value)}")
+
+
+def _normalized_time_ranges(time_ranges: list[Any]) -> list[dict[str, float]]:
+    out: list[dict[str, float]] = []
+    for item in time_ranges:
+        if not isinstance(item, dict):
+            continue
+        start = item.get("start")
+        end = item.get("end")
+        duration = item.get("duration")
+        if not isinstance(start, (int, float)) or not isinstance(end, (int, float)):
+            continue
+        if not isinstance(duration, (int, float)):
+            duration = float(end) - float(start)
+        out.append(
+            {
+                "start": float(start),
+                "end": float(end),
+                "duration": float(duration),
+            }
+        )
+    return out
+
+
+def _format_range_short(item: dict[str, float]) -> str:
+    return f"{item['start']:.3f}s-{item['end']:.3f}s"
+
+
+def _format_time_ranges_for_report(
+    time_ranges: list[Any],
+    *,
+    max_display: int,
+) -> list[str]:
+    ranges = _normalized_time_ranges(time_ranges)
+    if not ranges:
+        return []
+
+    total_duration = sum(item["duration"] for item in ranges)
+    longest = max(ranges, key=lambda item: item["duration"])
+    first = ranges[0]
+    last = ranges[-1]
+    lines = [
+        (
+            f"- Time ranges: {len(ranges)} regions, total {total_duration:.3f}s, "
+            f"longest {longest['duration']:.3f}s."
+        ),
+        f"- First range: {_format_range_short(first)}",
+        f"- Last range: {_format_range_short(last)}",
+        f"- Showing first {min(max_display, len(ranges))}:",
+    ]
+    for item in ranges[:max_display]:
+        lines.append(f"  - {_format_range_short(item)}")
+    remaining = len(ranges) - max_display
+    if remaining > 0:
+        lines.append(
+            f"  - ...and {remaining} more range(s); see findings.json for full details."
+        )
+    return lines
+
+
 def write_report_md(
     summary: dict[str, Any],
     plot_files: list[str],
@@ -90,6 +175,12 @@ def write_report_md(
     """
 
     metadata = summary.get("metadata", {})
+    analysis_config = (
+        summary.get("analysis_config") if isinstance(summary.get("analysis_config"), dict) else {}
+    )
+    report_max_time_ranges = _positive_int(
+        analysis_config, "report_max_time_ranges", default=8
+    )
     levels = summary.get("levels", {})
     rms = summary.get("rms_envelope", {})
     spectrum = summary.get("average_spectrum", {})
@@ -187,14 +278,9 @@ def write_report_md(
     if spectral_shape:
         lines.append("## Spectral shape summary\n")
         for key, value in spectral_shape.items():
-            if key in (
-                "warnings",
-                "centroid_elevated_time_ranges",
-                "centroid_reduced_time_ranges",
-                "centroid_large_shift_time_ranges",
-            ):
+            if key == "warnings":
                 continue
-            lines.append(f"- {key}: {_fmt_value(value)}")
+            _append_summary_value(lines, key, value)
         spectral_shape_warnings = spectral_shape.get("warnings") or []
         for warning in spectral_shape_warnings:
             lines.append(f"- warning: {warning}")
@@ -227,9 +313,9 @@ def write_report_md(
     if onset_density:
         lines.append("## Onset / transient density summary\n")
         for key, value in onset_density.items():
-            if key in ("warnings", "high_onset_density_time_ranges"):
+            if key == "warnings":
                 continue
-            lines.append(f"- {key}: {_fmt_value(value)}")
+            _append_summary_value(lines, key, value)
         onset_warnings = onset_density.get("warnings") or []
         for warning in onset_warnings:
             lines.append(f"- warning: {warning}")
@@ -240,7 +326,7 @@ def write_report_md(
         for key, value in stereo.items():
             if key == "warnings":
                 continue
-            lines.append(f"- {key}: {_fmt_value(value)}")
+            _append_summary_value(lines, key, value)
         stereo_warnings = stereo.get("warnings") or []
         for warning in stereo_warnings:
             lines.append(f"- warning: {warning}")
@@ -251,7 +337,7 @@ def write_report_md(
         for key, value in mid_side.items():
             if key == "warnings":
                 continue
-            lines.append(f"- {key}: {_fmt_value(value)}")
+            _append_summary_value(lines, key, value)
         mid_side_warnings = mid_side.get("warnings") or []
         for warning in mid_side_warnings:
             lines.append(f"- warning: {warning}")
@@ -262,6 +348,10 @@ def write_report_md(
         lines.append(
             "Findings are prioritized factual observations. Some lower-priority "
             "observations may be omitted from this report."
+        )
+        lines.append(
+            "Long lists of time ranges are summarized here; see findings.json for "
+            "full machine-readable details."
         )
         suppressed = findings.get("findings_suppressed_count") if isinstance(findings, dict) else 0
         if isinstance(suppressed, int) and suppressed > 0:
@@ -293,14 +383,12 @@ def write_report_md(
                         lines.append(f"  - {check}")
                 time_ranges = item.get("time_ranges")
                 if isinstance(time_ranges, list) and time_ranges:
-                    lines.append("- Time ranges:")
-                    for item_range in time_ranges:
-                        if not isinstance(item_range, dict):
-                            continue
-                        start = _fmt_value(item_range.get("start"))
-                        end = _fmt_value(item_range.get("end"))
-                        duration = _fmt_value(item_range.get("duration"))
-                        lines.append(f"  - {start}s-{end}s ({duration}s)")
+                    lines.extend(
+                        _format_time_ranges_for_report(
+                            time_ranges,
+                            max_display=report_max_time_ranges,
+                        )
+                    )
                 lines.append(f"- Confidence: {item.get('confidence', 'unknown')}")
                 lines.append("")
         else:

@@ -10,6 +10,7 @@ def _summary(**overrides):
             "max_findings": 8,
             "band_finding_min_duration_seconds": 0.5,
             "band_finding_min_relative_db": -80.0,
+            "finding_min_time_range_seconds": 0.25,
         },
         "levels": {
             "true_peak_dbtp": -1.0,
@@ -152,6 +153,20 @@ def test_low_correlation_time_ranges_generate_info():
     assert findings[0].time_ranges == [{"start": 4.0, "end": 5.0, "duration": 1.0}]
 
 
+def test_tiny_low_correlation_range_is_filtered():
+    findings = generate_findings(
+        _summary(
+            stereo_correlation={
+                "correlation_below_0_3_time_ranges": [
+                    {"start": 4.0, "end": 4.08, "duration": 0.08}
+                ]
+            }
+        )
+    ).findings
+
+    assert findings == []
+
+
 def test_low_median_correlation_generates_warning():
     findings = generate_findings(
         _summary(stereo_correlation={"correlation_median": 0.4})
@@ -228,6 +243,20 @@ def test_spectral_centroid_elevated_ranges_generate_info():
     assert "elevated" in findings[0].title
     assert findings[0].time_ranges == [{"start": 8.0, "end": 9.0, "duration": 1.0}]
     assert "proxy" in " ".join(findings[0].suggested_checks)
+
+
+def test_tiny_spectral_centroid_range_is_filtered():
+    findings = generate_findings(
+        _summary(
+            spectral_shape={
+                "centroid_elevated_time_ranges": [
+                    {"start": 8.0, "end": 8.1, "duration": 0.1}
+                ]
+            }
+        )
+    ).findings
+
+    assert findings == []
 
 
 def test_spectral_centroid_reduced_ranges_generate_info():
@@ -364,6 +393,23 @@ def test_onset_density_elevated_ranges_generate_info():
     assert findings[0].time_ranges == [{"start": 18.0, "end": 19.0, "duration": 1.0}]
     text = " ".join([findings[0].title, " ".join(findings[0].suggested_checks)]).lower()
     assert "punch" not in text and "bad transients" not in text
+
+
+def test_tiny_onset_density_range_is_filtered():
+    findings = generate_findings(
+        _summary(
+            onset_density={
+                "onset_density_median": 0.25,
+                "onset_density_max": 0.9,
+                "high_onset_density_threshold": 0.5,
+                "high_onset_density_time_ranges": [
+                    {"start": 18.0, "end": 18.1, "duration": 0.1}
+                ],
+            }
+        )
+    ).findings
+
+    assert findings == []
 
 
 def test_strongest_onset_density_frame_does_not_generate_default_finding():
