@@ -417,7 +417,10 @@ def write_report_md(
                 lines.append(f"- Confidence: {item.get('confidence', 'unknown')}")
                 lines.append("")
         else:
-            lines.append("- No findings triggered by the current rule set.\n")
+            lines.append(
+                "- No prioritized findings surfaced. The plots and technical details "
+                "still describe the track's measured shape.\n"
+            )
 
     lines.append("## Plots\n")
     for filename in plot_files:

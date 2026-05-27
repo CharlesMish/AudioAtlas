@@ -521,6 +521,18 @@ def test_report_handles_missing_optional_metrics(tmp_path: Path):
     assert "—" in text
 
 
+def test_report_md_renders_friendly_no_findings_state(tmp_path: Path):
+    summary = _make_summary()
+    findings = {"count": 0, "findings": [], "findings_shown": []}
+    path = write_report_md(summary, summary["plots"], tmp_path, findings)
+    text = path.read_text(encoding="utf-8")
+
+    assert (
+        "No prioritized findings surfaced. The plots and technical details still "
+        "describe the track's measured shape."
+    ) in text
+
+
 def _html_findings() -> dict:
     return {
         "count": 1,
@@ -622,3 +634,15 @@ def test_write_report_html_avoids_banned_judgment_words(tmp_path: Path):
 
     for word in ("bad", "good", "professional", "amateur", "ai", "score", "fix", "broken"):
         assert not re.search(rf"\b{word}\b", text, flags=re.IGNORECASE), word
+
+
+def test_write_report_html_renders_friendly_no_findings_state(tmp_path: Path):
+    summary = _make_summary()
+    findings = {"count": 0, "findings": [], "findings_shown": []}
+    path = write_report_html(summary, summary["plots"], tmp_path, findings)
+    text = path.read_text(encoding="utf-8")
+
+    assert (
+        "No prioritized findings surfaced. The plots and technical details still "
+        "describe the track's measured shape."
+    ) in text

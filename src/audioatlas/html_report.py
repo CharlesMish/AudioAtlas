@@ -284,7 +284,10 @@ def _findings_section(findings: dict[str, Any] | None, max_display: int) -> str:
     if not isinstance(items, list):
         items = findings.get("findings")
     if not isinstance(items, list) or not items:
-        lines.append('<p class="empty">No findings triggered by the current rule set.</p>')
+        lines.append(
+            "<p class=\"empty\">No prioritized findings surfaced. The plots and technical "
+            "details still describe the track's measured shape.</p>"
+        )
         lines.append("</section>")
         return "\n".join(lines)
 

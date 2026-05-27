@@ -132,7 +132,7 @@ def test_many_near_clipping_samples_generate_warning():
     assert findings[0].severity == "warning"
 
 
-def test_true_peak_above_zero_keeps_near_clipping_warning():
+def test_tiny_near_clipping_with_true_peak_merges_into_true_peak_finding():
     findings = generate_findings(
         _summary(
             levels={"near_clipping_samples": 3, "true_peak_dbtp": 0.2},
@@ -144,9 +144,28 @@ def test_true_peak_above_zero_keeps_near_clipping_warning():
         )
     ).findings
 
+    assert len(findings) == 1
+    assert "true peak" in findings[0].title.lower()
+    assert "near_clipping_samples measured 3" in findings[0].evidence
     near_clip = [finding for finding in findings if "Near-full-scale" in finding.title]
-    assert len(near_clip) == 1
-    assert near_clip[0].severity == "warning"
+    assert near_clip == []
+
+
+def test_substantial_near_clipping_with_true_peak_keeps_separate_finding():
+    findings = generate_findings(
+        _summary(
+            levels={"near_clipping_samples": 200, "true_peak_dbtp": 0.2},
+            peak_timeline={
+                "near_clipping_time_ranges": [
+                    {"start": 1.0, "end": 2.0, "duration": 1.0}
+                ]
+            },
+        )
+    ).findings
+
+    titles = [finding.title for finding in findings]
+    assert "Approximate true peak is above 0 dBTP" in titles
+    assert "Near-full-scale samples detected" in titles
 
 
 def test_lossy_metadata_uses_decoded_sample_wording_for_level_findings():
@@ -237,7 +256,7 @@ def test_high_median_low_side_brief_negative_correlation_is_not_warning():
 
     assert not any(finding.severity == "warning" for finding in findings)
     assert [finding.title for finding in findings] == [
-        "Minimum L/R correlation is below 0"
+        "Stereo field has a wide/decorrelated measurement"
     ]
 
 
@@ -313,7 +332,7 @@ def test_low_median_correlation_generates_warning():
 
     assert len(findings) == 1
     assert findings[0].severity == "warning"
-    assert "median" in findings[0].title.lower()
+    assert "correlation_median" in findings[0].evidence
 
 
 def test_high_side_to_mid_ratio_generates_info():
@@ -330,7 +349,7 @@ def test_high_side_to_mid_ratio_generates_info():
 
     assert len(findings) == 1
     assert findings[0].severity == "info"
-    assert findings[0].unit == "dB"
+    assert findings[0].unit == "mixed stereo metrics"
     assert findings[0].time_ranges == [{"start": 6.0, "end": 7.0, "duration": 1.0}]
 
 
@@ -358,27 +377,17 @@ def test_wide_low_correlation_track_retains_stereo_warnings_and_info():
     ).findings
 
     titles = [finding.title for finding in findings]
-    assert "Minimum L/R correlation is below 0" in titles
-    assert "Median L/R correlation is below 0.5" in titles
-    assert "Median side-to-mid ratio is above -6 dB" in titles
+    assert titles == ["Stereo field is relatively wide/decorrelated by several measurements"]
+    assert "correlation_min" in findings[0].evidence
+    assert "correlation_median" in findings[0].evidence
+    assert "side_to_mid_ratio_db_median" in findings[0].evidence
     assert any(finding.severity == "warning" for finding in findings)
 
 
-def test_low_mid_strongest_bin_generates_info_without_muddy_claim():
+def test_low_mid_strongest_bin_does_not_generate_default_finding():
     findings = generate_findings(_summary(average_spectrum={"strongest_bin_hz": 220.0})).findings
 
-    assert len(findings) == 1
-    assert findings[0].severity == "info"
-    assert findings[0].category == "spectrum"
-    text = " ".join(
-        [
-            findings[0].title,
-            findings[0].evidence,
-            findings[0].why_it_matters,
-            " ".join(findings[0].suggested_checks),
-        ]
-    ).lower()
-    assert "muddy" not in text
+    assert findings == []
 
 
 def test_strongest_band_summary_fact_does_not_generate_default_finding():
