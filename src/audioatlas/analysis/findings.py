@@ -78,6 +78,7 @@ def generate_findings(summary: dict) -> FindingsResult:
         band_min_relative_db = max(float(db_floor) + 20.0, -80.0)
 
     levels = summary.get("levels") if isinstance(summary.get("levels"), dict) else {}
+    metadata = summary.get("metadata") if isinstance(summary.get("metadata"), dict) else {}
     stereo = (
         summary.get("stereo_correlation")
         if isinstance(summary.get("stereo_correlation"), dict)
@@ -105,6 +106,10 @@ def generate_findings(summary: dict) -> FindingsResult:
     )
 
     findings: list[Finding] = []
+    track_duration = _number(levels, "duration_seconds")
+    is_lossy = _is_lossy_metadata(metadata)
+    sample_label = "decoded samples" if is_lossy else "samples"
+    audio_label = "decoded audio" if is_lossy else "audio"
 
     true_peak = _number(levels, "true_peak_dbtp")
     if true_peak is not None and true_peak > 0.0:
@@ -132,17 +137,29 @@ def generate_findings(summary: dict) -> FindingsResult:
     near_clipping = _number(levels, "near_clipping_samples")
     if near_clipping is not None and near_clipping > 0:
         near_clip_ranges = _ranges(peak_timeline, "near_clipping_time_ranges")
+        near_clipping_count = int(near_clipping)
+        if true_peak is not None and true_peak > 0.0:
+            near_clipping_severity: Severity | None = "warning"
+        elif near_clipping_count <= 10:
+            near_clipping_severity = None
+        elif near_clipping_count < 100:
+            near_clipping_severity = "info"
+        else:
+            near_clipping_severity = "warning"
+    else:
+        near_clipping_severity = None
+    if near_clipping is not None and near_clipping > 0 and near_clipping_severity is not None:
         findings.append(
             Finding(
-                severity="warning",
+                severity=near_clipping_severity,
                 category="levels",
                 title="Near-full-scale samples detected",
                 measured_value=int(near_clipping),
                 threshold=0,
                 unit="samples",
-                evidence=f"near_clipping_samples measured {int(near_clipping)}.",
+                evidence=f"near_clipping_samples measured {int(near_clipping)} in {sample_label}.",
                 why_it_matters=(
-                    "Samples near full scale can indicate limited headroom, even when no "
+                    f"Near-full-scale {sample_label} can indicate limited headroom, even when no "
                     "sample reaches the clipping threshold."
                 ),
                 suggested_checks=[
@@ -164,10 +181,10 @@ def generate_findings(summary: dict) -> FindingsResult:
                 measured_value=int(clipped),
                 threshold=0,
                 unit="samples",
-                evidence=f"clipped_samples measured {int(clipped)}.",
+                evidence=f"clipped_samples measured {int(clipped)} in {sample_label}.",
                 why_it_matters=(
                     "Samples at or beyond the clipping threshold can indicate flattened "
-                    "waveform peaks in the decoded audio."
+                    f"waveform peaks in the {audio_label}."
                 ),
                 suggested_checks=[
                     "Inspect the waveform around peak sections.",
@@ -223,14 +240,47 @@ def generate_findings(summary: dict) -> FindingsResult:
             )
         )
 
+    side_ratio = _number(mid_side, "side_to_mid_ratio_db_median")
+    corr_median = _number(stereo, "correlation_median")
+    negative_ranges = _ranges_at_least(
+        stereo, "correlation_below_0_time_ranges", min_range_duration
+    )
+    low_corr_ranges = _ranges_at_least(
+        stereo, "correlation_below_0_3_time_ranges", min_range_duration
+    )
+    negative_duration = _total_duration(negative_ranges)
+    low_corr_duration = _total_duration(low_corr_ranges)
+    negative_percent = _duration_percent(negative_duration, track_duration)
+    low_corr_percent = _duration_percent(low_corr_duration, track_duration)
+    healthy_stereo_context = (
+        corr_median is not None
+        and corr_median > 0.75
+        and (side_ratio is None or side_ratio < -8.0)
+    )
+
     corr_min = _number(stereo, "correlation_min")
-    if corr_min is not None and corr_min < 0.0:
-        negative_ranges = _ranges_at_least(
-            stereo, "correlation_below_0_time_ranges", min_range_duration
+    if corr_min is not None and corr_min < 0.0 and negative_ranges:
+        negative_is_brief = _is_brief_stereo_duration(
+            negative_duration, negative_percent
         )
+        stereo_warning_context = _has_stereo_warning_context(
+            corr_median,
+            side_ratio,
+            negative_duration,
+            negative_percent,
+        )
+        if healthy_stereo_context and negative_is_brief:
+            negative_severity: Severity | None = "info"
+        elif stereo_warning_context:
+            negative_severity = "warning"
+        else:
+            negative_severity = "info"
+    else:
+        negative_severity = None
+    if corr_min is not None and corr_min < 0.0 and negative_ranges and negative_severity:
         findings.append(
             Finding(
-                severity="warning",
+                severity=negative_severity,
                 category="stereo",
                 title="Minimum L/R correlation is below 0",
                 measured_value=corr_min,
@@ -238,8 +288,9 @@ def generate_findings(summary: dict) -> FindingsResult:
                 unit="Pearson r",
                 evidence=f"correlation_min measured {_fmt_measure(corr_min)}.",
                 why_it_matters=(
-                    "Negative L/R correlation can indicate phase-inverted content in at "
-                    "least part of the measured timeline."
+                    "Negative L/R correlation marks regions where channel relationship "
+                    "differs by this measurement; duration and median correlation affect "
+                    "how much weight to give it."
                 ),
                 suggested_checks=[
                     "Inspect the stereo correlation plot around the low-correlation region.",
@@ -250,10 +301,8 @@ def generate_findings(summary: dict) -> FindingsResult:
             )
         )
 
-    low_corr_ranges = _ranges_at_least(
-        stereo, "correlation_below_0_3_time_ranges", min_range_duration
-    )
-    if low_corr_ranges:
+    low_corr_is_brief = _is_brief_stereo_duration(low_corr_duration, low_corr_percent)
+    if low_corr_ranges and not (healthy_stereo_context and low_corr_is_brief):
         findings.append(
             Finding(
                 severity="info",
@@ -263,7 +312,8 @@ def generate_findings(summary: dict) -> FindingsResult:
                 threshold=0.3,
                 unit="regions",
                 evidence=(
-                    f"{len(low_corr_ranges)} time range(s) have frame correlation below 0.3."
+                    f"{len(low_corr_ranges)} time range(s) have frame correlation below 0.3; "
+                    f"total duration is {_fmt_measure(low_corr_duration)} seconds."
                 ),
                 why_it_matters=(
                     "Low L/R correlation marks regions where the two channels are less "
@@ -278,7 +328,6 @@ def generate_findings(summary: dict) -> FindingsResult:
             )
         )
 
-    corr_median = _number(stereo, "correlation_median")
     if corr_median is not None and corr_median < 0.5:
         findings.append(
             Finding(
@@ -316,8 +365,8 @@ def generate_findings(summary: dict) -> FindingsResult:
                 unit="dB",
                 evidence=f"side_to_mid_ratio_db_median measured {_fmt_measure(side_ratio)} dB.",
                 why_it_matters=(
-                    "A higher side-to-mid ratio means side-channel RMS is closer to mid-channel "
-                    "RMS in the measured frames."
+                    "Side energy is relatively high compared with mid energy by this "
+                    "measurement."
                 ),
                 suggested_checks=[
                     "Inspect the mid/side energy plot and side-to-mid ratio panel.",
@@ -655,6 +704,46 @@ def _ranges(block: dict, key: str) -> list[dict[str, float]]:
 
 def _ranges_at_least(block: dict, key: str, min_duration: float) -> list[dict[str, float]]:
     return [item for item in _ranges(block, key) if item["duration"] >= min_duration]
+
+
+def _total_duration(ranges: list[dict[str, float]]) -> float:
+    return float(sum(item["duration"] for item in ranges))
+
+
+def _duration_percent(duration: float, track_duration: float | int | None) -> float | None:
+    if track_duration is None or track_duration <= 0:
+        return None
+    return float(100.0 * duration / track_duration)
+
+
+def _is_brief_stereo_duration(duration: float, percent: float | None) -> bool:
+    if percent is None:
+        return duration < 0.5
+    return duration < 0.5 or percent < 1.0
+
+
+def _has_stereo_warning_context(
+    corr_median: float | int | None,
+    side_ratio: float | int | None,
+    duration: float,
+    percent: float | None,
+) -> bool:
+    if corr_median is not None and corr_median < 0.5:
+        return True
+    if side_ratio is not None and side_ratio > -6.0:
+        return True
+    return duration >= 0.5 and (percent is None or percent >= 1.0)
+
+
+def _is_lossy_metadata(metadata: dict) -> bool:
+    values = [
+        str(metadata.get("format", "")),
+        str(metadata.get("subtype", "")),
+        str(metadata.get("filename", "")),
+        str(metadata.get("path", "")),
+    ]
+    text = " ".join(values).lower()
+    return any(token in text for token in ("mp3", "mpeg", "aac", "ogg", "opus", "vorbis", "m4a"))
 
 
 def _positive_int(block: dict, key: str, *, default: int) -> int:

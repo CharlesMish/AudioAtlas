@@ -269,6 +269,7 @@ def test_write_report_md_contains_findings_section(tmp_path: Path):
     text = path.read_text(encoding="utf-8")
     assert "## Findings" in text
     assert "Findings are prioritized factual observations" in text
+    assert "Brief low-correlation events can be normal for panned effects" in text
     assert "Near-full-scale samples detected" in text
     assert "Suggested checks" in text
     assert "Time ranges" in text

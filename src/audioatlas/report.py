@@ -353,6 +353,10 @@ def write_report_md(
             "Long lists of time ranges are summarized here; see findings.json for "
             "full machine-readable details."
         )
+        lines.append(
+            "Brief low-correlation events can be normal for panned effects; "
+            "sustained or frequent low correlation is more relevant."
+        )
         suppressed = findings.get("findings_suppressed_count") if isinstance(findings, dict) else 0
         if isinstance(suppressed, int) and suppressed > 0:
             lines.append(

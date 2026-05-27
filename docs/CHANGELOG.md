@@ -50,6 +50,13 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   nullability tracks the global value) and the new report section.
 
 ### Changed
+- Calibrated stereo and near-clipping finding severity from real-run
+  reports: brief low-correlation events in otherwise high-correlation,
+  mid-dominant tracks are downgraded or suppressed, while sustained
+  low correlation, high side energy, true-peak overs, and actual clipping
+  remain prominent.
+- Level findings for lossy decoded files now refer to decoded samples or
+  decoded audio instead of implying the original source master clipped.
 - Technical report summary sections now show time-range counts instead
   of raw Python-style range lists.
 - Non-severe time-ranged findings now filter tiny ranges by

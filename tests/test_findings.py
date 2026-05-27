@@ -5,6 +5,11 @@ from audioatlas.analysis.findings import generate_findings
 
 def _summary(**overrides):
     summary = {
+        "metadata": {
+            "filename": "test.wav",
+            "format": "WAV",
+            "subtype": "PCM_16",
+        },
         "analysis_config": {
             "db_floor": -100.0,
             "max_findings": 8,
@@ -77,7 +82,7 @@ def test_true_peak_above_zero_generates_warning():
     assert "true peak" in findings[0].title.lower()
 
 
-def test_near_clipping_samples_generate_warning():
+def test_near_clipping_samples_generate_info_for_small_counts():
     findings = generate_findings(
         _summary(
             levels={"near_clipping_samples": 12},
@@ -90,9 +95,72 @@ def test_near_clipping_samples_generate_warning():
     ).findings
 
     assert len(findings) == 1
-    assert findings[0].severity == "warning"
+    assert findings[0].severity == "info"
     assert findings[0].measured_value == 12
     assert findings[0].time_ranges == [{"start": 1.0, "end": 1.5, "duration": 0.5}]
+
+
+def test_tiny_near_clipping_count_with_true_peak_below_zero_is_suppressed():
+    findings = generate_findings(
+        _summary(
+            levels={"near_clipping_samples": 1, "true_peak_dbtp": -0.4},
+            peak_timeline={
+                "near_clipping_time_ranges": [
+                    {"start": 1.0, "end": 1.1, "duration": 0.1}
+                ]
+            },
+        )
+    ).findings
+
+    assert findings == []
+
+
+def test_many_near_clipping_samples_generate_warning():
+    findings = generate_findings(
+        _summary(
+            levels={"near_clipping_samples": 1482, "true_peak_dbtp": -0.4},
+            peak_timeline={
+                "near_clipping_time_ranges": [
+                    {"start": 1.0, "end": 2.0, "duration": 1.0}
+                ]
+            },
+        )
+    ).findings
+
+    assert len(findings) == 1
+    assert findings[0].severity == "warning"
+
+
+def test_true_peak_above_zero_keeps_near_clipping_warning():
+    findings = generate_findings(
+        _summary(
+            levels={"near_clipping_samples": 3, "true_peak_dbtp": 0.2},
+            peak_timeline={
+                "near_clipping_time_ranges": [
+                    {"start": 1.0, "end": 1.1, "duration": 0.1}
+                ]
+            },
+        )
+    ).findings
+
+    near_clip = [finding for finding in findings if "Near-full-scale" in finding.title]
+    assert len(near_clip) == 1
+    assert near_clip[0].severity == "warning"
+
+
+def test_lossy_metadata_uses_decoded_sample_wording_for_level_findings():
+    findings = generate_findings(
+        _summary(
+            metadata={"filename": "song.mp3", "format": "MP3", "subtype": "MPEG_LAYER_III"},
+            levels={"near_clipping_samples": 200, "clipped_samples": 4},
+        )
+    ).findings
+
+    text = " ".join(
+        " ".join([finding.evidence, finding.why_it_matters]) for finding in findings
+    ).lower()
+    assert "decoded samples" in text
+    assert "decoded audio" in text
 
 
 def test_clipped_samples_generate_issue():
@@ -137,6 +205,48 @@ def test_negative_minimum_correlation_generates_warning():
     assert findings[0].time_ranges == [{"start": 2.0, "end": 3.0, "duration": 1.0}]
 
 
+def test_high_median_low_side_brief_negative_correlation_is_not_warning():
+    findings = generate_findings(
+        _summary(
+            levels={"duration_seconds": 180.0},
+            stereo_correlation={
+                "correlation_min": -0.15,
+                "correlation_median": 0.92,
+                "correlation_below_0_time_ranges": [
+                    {"start": 42.0, "end": 42.3, "duration": 0.3}
+                ],
+                "correlation_below_0_3_time_ranges": [
+                    {"start": 42.0, "end": 42.3, "duration": 0.3}
+                ],
+            },
+            mid_side_energy={"side_to_mid_ratio_db_median": -14.0},
+        )
+    ).findings
+
+    assert not any(finding.severity == "warning" for finding in findings)
+    assert [finding.title for finding in findings] == [
+        "Minimum L/R correlation is below 0"
+    ]
+
+
+def test_centered_track_with_tiny_negative_correlation_blip_is_suppressed():
+    findings = generate_findings(
+        _summary(
+            levels={"duration_seconds": 180.0},
+            stereo_correlation={
+                "correlation_min": -0.02,
+                "correlation_median": 0.95,
+                "correlation_below_0_time_ranges": [
+                    {"start": 42.0, "end": 42.08, "duration": 0.08}
+                ],
+            },
+            mid_side_energy={"side_to_mid_ratio_db_median": -16.0},
+        )
+    ).findings
+
+    assert findings == []
+
+
 def test_low_correlation_time_ranges_generate_info():
     findings = generate_findings(
         _summary(
@@ -151,6 +261,23 @@ def test_low_correlation_time_ranges_generate_info():
     assert len(findings) == 1
     assert findings[0].severity == "info"
     assert findings[0].time_ranges == [{"start": 4.0, "end": 5.0, "duration": 1.0}]
+
+
+def test_brief_below_0_3_correlation_is_suppressed_when_median_is_high():
+    findings = generate_findings(
+        _summary(
+            levels={"duration_seconds": 180.0},
+            stereo_correlation={
+                "correlation_median": 0.9,
+                "correlation_below_0_3_time_ranges": [
+                    {"start": 4.0, "end": 4.3, "duration": 0.3}
+                ],
+            },
+            mid_side_energy={"side_to_mid_ratio_db_median": -12.0},
+        )
+    ).findings
+
+    assert findings == []
 
 
 def test_tiny_low_correlation_range_is_filtered():
@@ -193,6 +320,36 @@ def test_high_side_to_mid_ratio_generates_info():
     assert findings[0].severity == "info"
     assert findings[0].unit == "dB"
     assert findings[0].time_ranges == [{"start": 6.0, "end": 7.0, "duration": 1.0}]
+
+
+def test_wide_low_correlation_track_retains_stereo_warnings_and_info():
+    findings = generate_findings(
+        _summary(
+            levels={"duration_seconds": 120.0},
+            stereo_correlation={
+                "correlation_min": -0.4,
+                "correlation_median": 0.35,
+                "correlation_below_0_time_ranges": [
+                    {"start": 10.0, "end": 15.0, "duration": 5.0}
+                ],
+                "correlation_below_0_3_time_ranges": [
+                    {"start": 10.0, "end": 30.0, "duration": 20.0}
+                ],
+            },
+            mid_side_energy={
+                "side_to_mid_ratio_db_median": -4.0,
+                "side_to_mid_ratio_above_minus_6_time_ranges": [
+                    {"start": 10.0, "end": 30.0, "duration": 20.0}
+                ],
+            },
+        )
+    ).findings
+
+    titles = [finding.title for finding in findings]
+    assert "Minimum L/R correlation is below 0" in titles
+    assert "Median L/R correlation is below 0.5" in titles
+    assert "Median side-to-mid ratio is above -6 dB" in titles
+    assert any(finding.severity == "warning" for finding in findings)
 
 
 def test_low_mid_strongest_bin_generates_info_without_muddy_claim():
@@ -523,7 +680,7 @@ def test_findings_are_sorted_deterministically_by_priority():
         _summary(
             levels={
                 "clipped_samples": 2,
-                "near_clipping_samples": 3,
+                "near_clipping_samples": 300,
                 "integrated_lufs": -9.0,
                 "plr_db": 7.0,
             },
@@ -579,7 +736,7 @@ def test_multiple_rules_can_trigger_together():
         )
     )
 
-    assert len(titles) == 3
+    assert len(titles) == 2
 
 
 def test_findings_result_serializes_to_json_safe_dict():

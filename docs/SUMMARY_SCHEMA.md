@@ -374,6 +374,12 @@ controls the number shown in `report.md`. Non-severe time-ranged
 findings apply `finding_min_time_range_seconds` before they are emitted.
 `report_max_time_ranges` controls how many ranges per finding are printed
 in `report.md`; full surviving ranges remain in `findings.json`.
+Stereo correlation findings use duration and context: brief low-correlation
+events in otherwise highly correlated, mid-dominant material may be info
+or suppressed, while low median correlation, high side-to-mid ratio, or
+sustained low-correlation duration keeps stereo findings prominent.
+Near-clipping findings are count-aware; actual clipping and true peak
+above 0 dBTP remain higher-priority level findings.
 
 ## Example
 
