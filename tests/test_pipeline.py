@@ -20,11 +20,14 @@ def test_pipeline_writes_expected_outputs(tmp_path, sr):
     assert result.summary_path.exists()
     assert result.findings_path.exists()
     assert result.report_path.exists()
+    assert result.html_report_path.exists()
+    assert result.html_report_path.name == "report.html"
     for plot_path in result.plot_paths:
         assert plot_path.exists()
 
     summary = json.loads(result.summary_path.read_text())
     findings = json.loads(result.findings_path.read_text())
+    html = result.html_report_path.read_text(encoding="utf-8")
     assert "levels" in summary
     assert "metadata" in summary
     assert "peak_timeline" in summary
@@ -41,6 +44,9 @@ def test_pipeline_writes_expected_outputs(tmp_path, sr):
     assert "09_band_energy_timeline.png" in summary["plots"]
     assert "10_onset_density.png" in summary["plots"]
     assert "findings" in findings
+    assert "Findings" in html
+    assert "Key metrics" in html
+    assert "01_waveform_rms.png" in html
     assert findings["count"] == len(result.findings["findings"])
     all_titles = [item["title"] for item in findings["all_findings"]]
     assert len(all_titles) <= 4

@@ -61,9 +61,9 @@ Current schema version: **`0.1.0`**.
 ```
 
 Findings are factual observations derived from existing summary fields.
-Reports display them as "Listening prompts": measurement-based pointers
-for where to listen or inspect. They are not mix scores, verdicts,
-mastering advice, or reference-track comparisons. `findings` and
+Reports display them as "Findings" with measurement-based framing: values
+or regions worth checking by ear, not quality judgments, mastering
+advice, or reference-track comparisons. `findings` and
 `findings_shown` contain the prioritized default report set.
 `all_findings` records lower-priority observations when the display cap
 suppresses them.
@@ -388,7 +388,7 @@ sustained low-correlation duration keeps stereo findings prominent.
 Near-clipping findings are count-aware; actual clipping and true peak
 above 0 dBTP remain higher-priority level findings. Relative-to-track
 spectral centroid, band-energy, and onset-density movement remains in
-the summaries and plots rather than default listening prompts.
+the summaries and plots rather than default findings.
 
 ## Example
 

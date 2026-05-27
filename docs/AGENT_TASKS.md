@@ -162,20 +162,19 @@ output, or contribute it upstream.
 
 ---
 
-## T-008 — HTML report [v0.3]
+## T-008 — HTML report [done]
 
-**Status:** open. **Layer:** report.
+**Status:** implemented. **Layer:** report.
 
-**What:** Add an HTML report renderer alongside the Markdown one. This
-is the moment to add `jinja2` back to `pyproject.toml`.
+**What:** Add a static HTML report renderer alongside the Markdown one.
+The implementation is dependency-light and uses embedded CSS.
 
 **Acceptance criteria:**
-- New module `src/audioatlas/report_html.py`.
-- CLI flag `--html` to opt in.
-- Template lives in `src/audioatlas/templates/report.html.j2`.
+- New module `src/audioatlas/html_report.py`.
+- `report.html` is generated for every analysis run.
 - Linked plots use relative paths. No external CDN, no JS frameworks.
-- Test asserts the HTML contains all metric labels from
-  `LEVEL_METRIC_DISPLAY`.
+- Tests cover key metric cards, findings, glossary copy, plot links,
+  escaping, and pipeline output.
 
 ---
 

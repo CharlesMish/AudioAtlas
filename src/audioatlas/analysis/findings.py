@@ -198,7 +198,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                     "LUFS value is useful context for expected playback gain changes."
                 ),
                 does_not_mean=(
-                    "This does not mean the track is too loud or unsuitable for its genre."
+                    "This does not mean the measured loudness is unsuitable for the track's context."
                 ),
                 suggested_checks=[
                     "Compare this measured loudness with the intended delivery context.",
@@ -379,7 +379,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                     "more important to check, especially when paired with low correlation."
                 ),
                 does_not_mean=(
-                    "This does not mean the track is too wide or that the stereo field is incorrect."
+                    "This does not mean the stereo width is unsuitable for the track's context."
                 ),
                 suggested_checks=[
                     "Inspect the mid/side energy plot and side-to-mid ratio panel.",
@@ -406,7 +406,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                     "low-mid content that may dominate the measured long-term spectrum."
                 ),
                 does_not_mean=(
-                    "This does not mean the mix is muddy or that the low-mid balance is wrong."
+                    "This does not mean the low-mid balance is unsuitable for the track's context."
                 ),
                 suggested_checks=[
                     "Inspect the average spectrum plot around 120-350 Hz.",

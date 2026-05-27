@@ -1,7 +1,6 @@
 """Report helpers for AudioAtlas.
 
-Only Markdown + JSON for v0.1. HTML is deferred to a later task; see
-``docs/AGENT_TASKS.md``.
+Markdown and JSON report helpers. Static HTML lives in ``html_report.py``.
 """
 
 from __future__ import annotations
@@ -361,10 +360,11 @@ def write_report_md(
         lines.append("")
 
     if findings is not None:
-        lines.append("## Listening prompts\n")
+        lines.append("## Findings\n")
         lines.append(
-            "Listening prompts are measurement-based pointers for where to listen or "
-            "inspect. They are not quality judgments."
+            "Findings are measurement-based observations derived from the analysis. "
+            "They highlight values or regions worth checking by ear; they are not "
+            "quality judgments."
         )
         lines.append(
             "Long lists of time ranges are summarized here; see findings.json for "
@@ -377,7 +377,7 @@ def write_report_md(
         suppressed = findings.get("findings_suppressed_count") if isinstance(findings, dict) else 0
         if isinstance(suppressed, int) and suppressed > 0:
             lines.append(
-                f"{suppressed} lower-priority prompt(s) suppressed; see findings.json for details."
+                f"{suppressed} lower-priority finding(s) suppressed; see findings.json for details."
             )
         lines.append("")
         finding_items = findings.get("findings_shown") if isinstance(findings, dict) else None
@@ -387,7 +387,7 @@ def write_report_md(
             for item in finding_items:
                 if not isinstance(item, dict):
                     continue
-                lines.append(f"### {item.get('title', 'Listening prompt')}\n")
+                lines.append(f"### {item.get('title', 'Finding')}\n")
                 severity = str(item.get("severity", "unknown"))
                 lines.append(f"- Prompt level: {SEVERITY_DISPLAY.get(severity, severity)}")
                 lines.append(f"- Category: {item.get('category', 'unknown')}")
@@ -417,7 +417,7 @@ def write_report_md(
                 lines.append(f"- Confidence: {item.get('confidence', 'unknown')}")
                 lines.append("")
         else:
-            lines.append("- No listening prompts triggered by the current rule set.\n")
+            lines.append("- No findings triggered by the current rule set.\n")
 
     lines.append("## Plots\n")
     for filename in plot_files:

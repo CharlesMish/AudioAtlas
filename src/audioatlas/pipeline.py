@@ -32,6 +32,7 @@ from audioatlas.analysis.spectral import (
 )
 from audioatlas.analysis.stereo import compute_mid_side_energy, compute_stereo_correlation
 from audioatlas.config import AnalysisConfig
+from audioatlas.html_report import write_report_html
 from audioatlas.io import load_audio
 from audioatlas.report import write_findings_json, write_report_md, write_summary_json
 from audioatlas.visualize.band_energy import plot_band_energy_timeline
@@ -56,6 +57,7 @@ class AnalysisRunResult:
     summary_path: Path
     findings_path: Path
     report_path: Path
+    html_report_path: Path
     plot_paths: list[Path]
     summary: dict[str, Any]
     findings: dict[str, Any]
@@ -120,12 +122,14 @@ def analyze_file(
     summary_path = write_summary_json(summary, out)
     findings_path = write_findings_json(findings, out)
     report_path = write_report_md(summary, [p.name for p in plot_paths], out, findings)
+    html_report_path = write_report_html(summary, [p.name for p in plot_paths], out, findings)
 
     return AnalysisRunResult(
         out_dir=out,
         summary_path=summary_path,
         findings_path=findings_path,
         report_path=report_path,
+        html_report_path=html_report_path,
         plot_paths=plot_paths,
         summary=summary,
         findings=findings,

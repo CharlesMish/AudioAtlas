@@ -27,7 +27,7 @@ agentic coding tools (Codex / GrokBuild) following the brief at
 - Log-frequency STFT spectrogram
 - Welch average power spectrum
 - Sample histogram
-- `summary.json` (machine-readable) and `report.md` (human-readable)
+- `summary.json`, `findings.json`, `report.md`, and static `report.html`
 - 39 unit / integration / golden tests covering DSP assumptions,
   utilities, report rendering, and an end-to-end pipeline run
 
@@ -113,15 +113,20 @@ CLI flags:
 ```
 reports/song/
 ├── summary.json
+├── findings.json
 ├── report.md
+├── report.html
 ├── 01_waveform_rms.png
 ├── 02_rms_timeline.png
 ├── 03_log_spectrogram.png
 ├── 04_average_spectrum.png
-└── 05_sample_histogram.png
+├── 05_sample_histogram.png
+└── ...
 ```
 
 `summary.json`'s schema is documented in `docs/SUMMARY_SCHEMA.md`.
+`report.html` is a static local file with embedded CSS and relative links
+to the PNG plots in the same output folder.
 
 ## Tests
 
@@ -154,7 +159,7 @@ See `docs/ARCHITECTURE.md` for the full layering contract.
 
 ## v0.1 intentionally does not include
 
-- Polished HTML or PDF output
+- PDF output
 - Reference-track comparison
 - Mix-health score or any verdict
 - AI mastering advice

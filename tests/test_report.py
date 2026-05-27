@@ -8,8 +8,10 @@ exact wording - just structure and presence of key sections.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
+from audioatlas.html_report import write_report_html
 from audioatlas.report import (
     LEVEL_METRIC_DISPLAY,
     write_findings_json,
@@ -174,6 +176,9 @@ def _make_summary() -> dict:
         "plots": [
             "01_waveform_rms.png",
             "02_rms_timeline.png",
+            "03_log_spectrogram.png",
+            "04_average_spectrum.png",
+            "05_sample_histogram.png",
             "06_stereo_correlation.png",
             "07_mid_side_energy.png",
             "08_spectral_shape.png",
@@ -245,7 +250,7 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Human notes" in text
 
 
-def test_write_report_md_contains_listening_prompts_section(tmp_path: Path):
+def test_write_report_md_contains_findings_section(tmp_path: Path):
     summary = _make_summary()
     findings = {
         "count": 1,
@@ -268,11 +273,11 @@ def test_write_report_md_contains_listening_prompts_section(tmp_path: Path):
     }
     path = write_report_md(summary, summary["plots"], tmp_path, findings)
     text = path.read_text(encoding="utf-8")
-    assert "## Listening prompts" in text
-    assert "## Findings" not in text
+    assert "## Findings" in text
+    assert "## Listening prompts" not in text
     assert (
-        "Listening prompts are measurement-based pointers for where to listen or inspect. "
-        "They are not quality judgments."
+        "Findings are measurement-based observations derived from the analysis. "
+        "They highlight values or regions worth checking by ear; they are not quality judgments."
     ) in text
     assert "Brief low-correlation events can be normal for panned effects" in text
     assert "Near-full-scale samples detected" in text
@@ -393,7 +398,7 @@ def test_write_report_md_reports_suppressed_findings(tmp_path: Path):
     path = write_report_md(summary, summary["plots"], tmp_path, findings)
     text = path.read_text(encoding="utf-8")
 
-    assert "1 lower-priority prompt(s) suppressed" in text
+    assert "1 lower-priority finding(s) suppressed" in text
     assert "Sample clipping detected" in text
     assert "Prompt level: check before delivery" in text
 
@@ -477,7 +482,7 @@ def test_report_uses_friendly_prompt_labels_not_internal_severity_labels(
                 "unit": "LUFS",
                 "evidence": "integrated_lufs measured -9.500 LUFS.",
                 "why_it_matters": "Delivery systems may apply loudness normalization.",
-                "does_not_mean": "This does not mean the track is too loud.",
+                "does_not_mean": "This does not mean the measured loudness is unsuitable.",
                 "suggested_checks": ["Compare with the intended delivery context."],
                 "time_ranges": [],
                 "confidence": "high",
@@ -514,3 +519,106 @@ def test_report_handles_missing_optional_metrics(tmp_path: Path):
     text = path.read_text(encoding="utf-8")
     # em dash placeholder must appear at least once
     assert "—" in text
+
+
+def _html_findings() -> dict:
+    return {
+        "count": 1,
+        "all_count": 2,
+        "max_findings": 1,
+        "findings_suppressed_count": 1,
+        "findings_shown": [
+            {
+                "severity": "warning",
+                "category": "levels",
+                "title": "Near-full-scale samples detected",
+                "measured_value": 12,
+                "threshold": 0,
+                "unit": "samples",
+                "evidence": "near_clipping_samples measured 12.",
+                "why_it_matters": "Measured samples are close to the configured ceiling.",
+                "does_not_mean": "This does not mean the passage is clipped.",
+                "suggested_checks": ["Inspect the sample histogram."],
+                "time_ranges": [{"start": 1.0, "end": 1.5, "duration": 0.5}],
+                "confidence": "high",
+            }
+        ],
+    }
+
+
+def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert path.name == "report.html"
+    assert "Measurement-based findings, not quality judgments." in text
+    assert ">Findings<" in text
+    assert "Listening prompts" not in text
+    assert "Integrated LUFS" in text
+    assert "True peak" in text
+    assert "Median stereo correlation" in text
+    assert "Does not mean:" in text
+    assert "This does not mean the passage is clipped." in text
+    assert "Suggested listening checks" in text
+    assert "1 lower-priority finding(s) suppressed" in text
+
+
+def test_write_report_html_contains_glossary_and_explanations(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert "Understanding these numbers" in text
+    assert "Onset density is an attack/activity map for this track" in text
+    assert "It is not punch, groove quality, drum hits per second, or mix quality." in text
+    assert "Relative dB plots show shape within this track and are not dBFS." in text
+    assert "PLR is the relationship between true peak and integrated loudness" in text
+
+
+def test_write_report_html_renders_relative_plot_links_and_curated_names(
+    tmp_path: Path,
+):
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert '<img src="03_log_spectrogram.png" alt="Log-Frequency Spectrogram">' in text
+    assert '<img src="04_average_spectrum.png" alt="Welch Average Spectrum">' in text
+    assert '<img src="09_band_energy_timeline.png" alt="Frequency Band Energy Timeline">' in text
+    assert "plot-card plot-card-wide" in text
+    assert "What this shows:" in text
+
+
+def test_write_report_html_escapes_filename_and_finding_text(tmp_path: Path):
+    summary = _make_summary()
+    summary["metadata"]["filename"] = '<track & "mix">.wav'
+    findings = _html_findings()
+    findings["findings_shown"][0]["title"] = "<script>alert(1)</script>"
+    findings["findings_shown"][0]["evidence"] = "value < 1 & value > 0"
+    findings["findings_shown"][0]["suggested_checks"] = ['Inspect "A&B" <now>.']
+
+    path = write_report_html(
+        summary,
+        ['03_log_spectrogram.png', 'bad"name.png'],
+        tmp_path,
+        findings,
+    )
+    text = path.read_text(encoding="utf-8")
+
+    assert '<track & "mix">.wav' not in text
+    assert "&lt;track &amp; &quot;mix&quot;&gt;.wav" in text
+    assert "<script>alert(1)</script>" not in text
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in text
+    assert "value &lt; 1 &amp; value &gt; 0" in text
+    assert "Inspect &quot;A&amp;B&quot; &lt;now&gt;." in text
+    assert 'src="bad&quot;name.png"' in text
+
+
+def test_write_report_html_avoids_banned_judgment_words(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    for word in ("bad", "good", "professional", "amateur", "ai", "score", "fix", "broken"):
+        assert not re.search(rf"\b{word}\b", text, flags=re.IGNORECASE), word

@@ -8,9 +8,9 @@ the conventions from source.
 
 AudioAtlas is a thin, deterministic pipeline that runs a fixed set of
 **analysis** functions on one audio file, hands their dataclass results to
-matching **visualization** functions and a **report** writer, and emits a
-directory containing PNGs, a Markdown report, and a JSON summary. There is
-no statefulness, no plugin system, and no implicit configuration.
+matching **visualization** functions and **report** writers, and emits a
+directory containing PNGs, Markdown/HTML reports, and JSON summaries.
+There is no statefulness, no plugin system, and no implicit configuration.
 
 ## The four layers
 
@@ -26,13 +26,15 @@ no statefulness, no plugin system, and no implicit configuration.
    │ visualize/*.py          ──  dataclass → PNG                 │
    │   (waveform, ...)            no re-analysis allowed         │
    │   ↓                                                         │
-   │ report.py               ──  dict → report.md, summary.json  │
+   │ report.py/html_report.py ──  dict → report.md/html/json     │
    └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
                        reports/<name>/
                        ├── summary.json
+                       ├── findings.json
                        ├── report.md
+                       ├── report.html
                        └── 0N_*.png
 ```
 
@@ -44,7 +46,7 @@ no statefulness, no plugin system, and no implicit configuration.
 | `visualize/*` | matplotlib, the analysis dataclasses it plots | re-running analysis, soundfile, `io` |
 | `pipeline.py` | all analysis + visualize + report + io | DSP math, matplotlib calls |
 | `cli.py` | click + pipeline | DSP math, matplotlib, IO besides paths |
-| `report.py` | stdlib only, plus `utils` | DSP math, matplotlib, plotting |
+| `report.py` / `html_report.py` | stdlib only, plus `utils` | DSP math, matplotlib, plotting |
 | `io.py` | soundfile + utils | DSP math, plotting |
 
 If you find yourself wanting to break one of these (e.g. "I just need
@@ -94,8 +96,8 @@ this shape, propose a separate module rather than bending the layering.
 - **No automated mastering advice / judgments / scores.** Hard rule from
   `AGENT_BRIEF.md`. The product is facts and visualizations.
 - **No reference-track comparison.** Out of scope for v0.1 - v0.2.
-- **No HTML report.** Deferred to a single dedicated ticket
-  (`T-008` in `AGENT_TASKS.md`).
+- **No hosted report app.** Static `report.html` is generated locally;
+  Streamlit, servers, PDF export, and playback UI remain out of scope.
 - **No real-time / playback UI.**
 - **No section segmentation** unless explicitly marked experimental and
   off by default.

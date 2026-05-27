@@ -70,6 +70,7 @@ def analyze(
     click.echo(f"AudioAtlas report written to: {result.out_dir}")
     click.echo(f"Summary: {result.summary_path}")
     click.echo(f"Report:  {result.report_path}")
+    click.echo(f"HTML:    {result.html_report_path}")
 
 
 if __name__ == "__main__":
