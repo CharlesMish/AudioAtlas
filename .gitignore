@@ -26,3 +26,4 @@ reports/
 *.ogg
 *.m4a
 !tests/fixtures/*.wav
+calibration_reports.zip
