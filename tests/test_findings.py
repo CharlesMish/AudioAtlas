@@ -44,6 +44,13 @@ def _summary(**overrides):
             "strongest_band_by_median": None,
             "bands": {},
         },
+        "onset_density": {
+            "onset_density_median": 0.2,
+            "onset_density_max": 0.0,
+            "high_onset_density_threshold": 0.35,
+            "high_onset_density_time_ranges": [],
+            "strongest_onset_density_time": None,
+        },
     }
     for block, values in overrides.items():
         summary[block].update(values)
@@ -330,6 +337,47 @@ def test_strongest_time_varying_band_generates_info():
     assert len(findings) == 1
     assert "presence" in findings[0].title
     assert findings[0].category == "spectrum"
+
+
+def test_onset_density_elevated_ranges_generate_info():
+    findings = generate_findings(
+        _summary(
+            onset_density={
+                "onset_density_median": 0.25,
+                "onset_density_max": 0.9,
+                "high_onset_density_threshold": 0.5,
+                "high_onset_density_time_ranges": [
+                    {"start": 18.0, "end": 19.0, "duration": 1.0}
+                ],
+                "strongest_onset_density_time": 18.5,
+            }
+        )
+    ).findings
+
+    assert len(findings) == 2
+    assert "Onset density is elevated" in findings[0].title
+    assert findings[0].category == "dynamics"
+    assert findings[0].time_ranges == [{"start": 18.0, "end": 19.0, "duration": 1.0}]
+    text = " ".join([findings[0].title, " ".join(findings[0].suggested_checks)]).lower()
+    assert "punch" not in text and "bad transients" not in text
+
+
+def test_strongest_onset_density_frame_generates_info():
+    findings = generate_findings(
+        _summary(
+            onset_density={
+                "onset_density_median": 0.1,
+                "onset_density_max": 0.75,
+                "high_onset_density_time_ranges": [],
+                "strongest_onset_density_time": 21.0,
+            }
+        )
+    ).findings
+
+    assert len(findings) == 1
+    assert "Strongest onset-density frame" in findings[0].title
+    assert findings[0].category == "dynamics"
+    assert findings[0].time_ranges == [{"start": 21.0, "end": 21.0, "duration": 0.0}]
 
 
 def test_multiple_rules_can_trigger_together():

@@ -6,6 +6,9 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- Onset-strength based transient density analysis with `onset_density`
+  summary output, `10_onset_density.png`, and factual relative-to-track
+  dynamics findings with suggested checks.
 - Time-varying frequency band energy analysis with
   `band_energy_timeline` summary output, `09_band_energy_timeline.png`,
   and factual relative-to-track band findings.

@@ -20,6 +20,7 @@ Current schema version: **`0.1.0`**.
   "average_spectrum":{ ... AverageSpectrumResult.to_summary_dict() ... },
   "spectral_shape":  { ... SpectralShapeResult.to_summary_dict() ... },
   "band_energy_timeline": { ... BandEnergyTimelineResult.to_summary_dict() ... },
+  "onset_density":   { ... OnsetDensityResult.to_summary_dict() ... },
   "stereo_correlation": { ... StereoCorrelationResult.to_summary_dict() ... },
   "mid_side_energy": { ... MidSideEnergyResult.to_summary_dict() ... },
   "plots":           ["01_waveform_rms.png", ...]
@@ -74,7 +75,8 @@ comparisons.
 Frozen dataclass, serialized via `dataclasses.asdict`. Includes
 `n_fft`, `hop_length`, `window`, `db_floor`, `rms_frame_length`,
 `clipping_threshold`, `near_clipping_threshold`, `true_peak_oversample`,
-`welch_nperseg`, `max_plot_points`, `correlation_min_rms_dbfs`.
+`welch_nperseg`, `max_plot_points`, `correlation_min_rms_dbfs`,
+`onset_density_window_seconds`.
 
 ### `levels` (from `audioatlas.analysis.levels.ScalarLevelsResult`)
 
@@ -230,6 +232,31 @@ Each `bands.<band>` object contains:
 | `elevated_time_ranges` | list[object] | Ranges where frame band energy is above `elevated_threshold_db`. |
 | `reduced_time_ranges` | list[object] | Ranges where frame band energy is below `reduced_threshold_db`. |
 
+### `onset_density` (from `OnsetDensityResult.to_summary_dict`)
+
+Onset-strength based transient-density timeline from a mono channel
+average. This is a measurement of onset-envelope activity, not a
+definitive measure of punch, transient quality, or performance quality.
+`normalized_onset_strength` is kept in the in-memory result for plotting;
+summary density values use raw librosa onset-strength units.
+
+| Field | Type | Notes |
+|---|---|---|
+| `hop_length` | int | Hop between onset frames. |
+| `frames` | int | Number of onset-density frames. |
+| `smoothing_window_seconds` | float | Requested smoothing window duration. |
+| `smoothing_window_frames` | int | Smoothing window in frames after converting from seconds. |
+| `onset_strength_mean` | float \| absent | Mean raw librosa onset strength. |
+| `onset_strength_median` | float \| absent | Median raw librosa onset strength. |
+| `onset_strength_max` | float \| absent | Maximum raw librosa onset strength. |
+| `onset_density_mean` | float \| absent | Mean smoothed onset strength. |
+| `onset_density_median` | float \| absent | Median smoothed onset strength. |
+| `onset_density_max` | float \| absent | Maximum smoothed onset strength. |
+| `high_onset_density_threshold` | float \| absent | Relative heuristic threshold: median + max(0.15, 0.5 * median). |
+| `high_onset_density_time_ranges` | list[object] \| absent | Ranges where smoothed onset density is above the relative threshold. |
+| `strongest_onset_density_time` | float \| absent | Time of the maximum smoothed onset-density frame. |
+| `warnings` | list[str] | Human-readable caveats; safe to ignore programmatically. |
+
 ### `stereo_correlation` (from `StereoCorrelationResult.to_summary_dict`)
 
 Per-frame Pearson correlation between input channels 0 and 1. Mono input
@@ -293,10 +320,11 @@ order is fixed:
 07_mid_side_energy.png
 08_spectral_shape.png
 09_band_energy_timeline.png
+10_onset_density.png
 ```
 
-New plots from future feature slices append numbered prefixes (`10_*`,
-`11_*`, ...) and are added to `plot_paths` in `pipeline.py`.
+New plots from future feature slices append numbered prefixes (`11_*`,
+`12_*`, ...) and are added to `plot_paths` in `pipeline.py`.
 
 ## findings.json blocks
 

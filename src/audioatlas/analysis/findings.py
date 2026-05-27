@@ -74,6 +74,9 @@ def generate_findings(summary: dict) -> FindingsResult:
         if isinstance(summary.get("band_energy_timeline"), dict)
         else {}
     )
+    onset_density = (
+        summary.get("onset_density") if isinstance(summary.get("onset_density"), dict) else {}
+    )
 
     findings: list[Finding] = []
 
@@ -550,6 +553,68 @@ def generate_findings(summary: dict) -> FindingsResult:
                     confidence="medium",
                 )
             )
+
+    high_onset_ranges = _ranges(onset_density, "high_onset_density_time_ranges")
+    onset_density_median = _number(onset_density, "onset_density_median")
+    if high_onset_ranges and onset_density_median is not None:
+        findings.append(
+            Finding(
+                severity="info",
+                category="dynamics",
+                title="Onset density is elevated relative to this track's median",
+                measured_value=onset_density_median,
+                threshold=_number(onset_density, "high_onset_density_threshold") or 0,
+                unit="onset strength",
+                evidence=(
+                    f"onset_density_median measured {_fmt_measure(onset_density_median)}; "
+                    f"{len(high_onset_ranges)} time range(s) exceed the relative threshold."
+                ),
+                why_it_matters=(
+                    "This marks regions with higher onset-strength activity by a relative "
+                    "track-level heuristic."
+                ),
+                suggested_checks=[
+                    "Check whether these sections feel rhythmically dense or transient-heavy.",
+                    "Inspect drums, strums, plucks, consonants, or percussive elements in these regions.",
+                ],
+                confidence="medium",
+                time_ranges=high_onset_ranges,
+            )
+        )
+
+    onset_density_max = _number(onset_density, "onset_density_max")
+    strongest_onset_time = _number(onset_density, "strongest_onset_density_time")
+    if onset_density_max is not None and strongest_onset_time is not None and onset_density_max > 0:
+        findings.append(
+            Finding(
+                severity="info",
+                category="dynamics",
+                title="Strongest onset-density frame identified",
+                measured_value=onset_density_max,
+                threshold=0,
+                unit="onset strength",
+                evidence=(
+                    f"onset_density_max measured {_fmt_measure(onset_density_max)} at "
+                    f"{_fmt_measure(strongest_onset_time)} seconds."
+                ),
+                why_it_matters=(
+                    "This identifies the frame with the highest smoothed onset-strength "
+                    "activity in the track."
+                ),
+                suggested_checks=[
+                    "Inspect the onset density plot around this time.",
+                    "Check which rhythmic or percussive elements are active around this region.",
+                ],
+                confidence="medium",
+                time_ranges=[
+                    {
+                        "start": float(strongest_onset_time),
+                        "end": float(strongest_onset_time),
+                        "duration": 0.0,
+                    }
+                ],
+            )
+        )
 
     return FindingsResult(findings=findings)
 

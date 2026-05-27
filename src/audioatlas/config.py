@@ -23,6 +23,7 @@ class AnalysisConfig:
     welch_nperseg: int = 8192
     max_plot_points: int = 250_000
     correlation_min_rms_dbfs: float = -80.0
+    onset_density_window_seconds: float = 1.0
 
     def validate(self) -> None:
         if self.n_fft <= 0:
@@ -35,3 +36,5 @@ class AnalysisConfig:
             raise ValueError("true_peak_oversample must be >= 1")
         if self.correlation_min_rms_dbfs > 0:
             raise ValueError("correlation_min_rms_dbfs must be <= 0")
+        if self.onset_density_window_seconds <= 0:
+            raise ValueError("onset_density_window_seconds must be positive")

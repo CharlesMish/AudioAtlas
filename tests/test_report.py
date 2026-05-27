@@ -153,6 +153,22 @@ def _make_summary() -> dict:
             },
             "warnings": [],
         },
+        "onset_density": {
+            "hop_length": 1024,
+            "frames": 100,
+            "smoothing_window_seconds": 1.0,
+            "smoothing_window_frames": 47,
+            "onset_strength_mean": 0.2,
+            "onset_strength_median": 0.1,
+            "onset_strength_max": 1.0,
+            "onset_density_mean": 0.25,
+            "onset_density_median": 0.2,
+            "onset_density_max": 0.8,
+            "high_onset_density_threshold": 0.35,
+            "high_onset_density_time_ranges": [],
+            "strongest_onset_density_time": 12.0,
+            "warnings": [],
+        },
         "plots": [
             "01_waveform_rms.png",
             "02_rms_timeline.png",
@@ -160,6 +176,7 @@ def _make_summary() -> dict:
             "07_mid_side_energy.png",
             "08_spectral_shape.png",
             "09_band_energy_timeline.png",
+            "10_onset_density.png",
         ],
     }
 
@@ -219,6 +236,7 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Band energy summary" in text
     assert "## Spectral shape summary" in text
     assert "## Band energy timeline summary" in text
+    assert "## Onset / transient density summary" in text
     assert "## Stereo correlation summary" in text
     assert "## Mid/side energy summary" in text
     assert "## Plots" in text

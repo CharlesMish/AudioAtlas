@@ -17,6 +17,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from audioatlas.analysis.dynamics import compute_onset_density
 from audioatlas.analysis.findings import generate_findings
 from audioatlas.analysis.levels import (
     compute_peak_timeline,
@@ -35,6 +36,7 @@ from audioatlas.io import load_audio
 from audioatlas.report import write_findings_json, write_report_md, write_summary_json
 from audioatlas.visualize.band_energy import plot_band_energy_timeline
 from audioatlas.visualize.histogram import plot_sample_histogram
+from audioatlas.visualize.onset import plot_onset_density
 from audioatlas.visualize.spectral_shape import plot_spectral_shape
 from audioatlas.visualize.spectrogram import plot_log_spectrogram
 from audioatlas.visualize.spectrum import plot_average_spectrum
@@ -82,6 +84,7 @@ def analyze_file(
     avg = compute_average_spectrum(audio.y, audio.sr, cfg)
     spectral_shape = compute_spectral_shape(audio.y, audio.sr, cfg)
     band_energy = compute_band_energy_timeline(audio.y, audio.sr, cfg)
+    onset = compute_onset_density(audio.y, audio.sr, cfg)
     stereo = compute_stereo_correlation(audio.y, audio.sr, cfg)
     mid_side = compute_mid_side_energy(audio.y, audio.sr, cfg)
 
@@ -95,6 +98,7 @@ def analyze_file(
     plot_paths.append(plot_mid_side_energy(mid_side, out / "07_mid_side_energy.png", cfg))
     plot_paths.append(plot_spectral_shape(spectral_shape, out / "08_spectral_shape.png"))
     plot_paths.append(plot_band_energy_timeline(band_energy, out / "09_band_energy_timeline.png"))
+    plot_paths.append(plot_onset_density(onset, out / "10_onset_density.png"))
 
     summary: dict[str, Any] = {
         "schema_version": "0.1.0",
@@ -106,6 +110,7 @@ def analyze_file(
         "average_spectrum": avg.to_summary_dict(),
         "spectral_shape": spectral_shape.to_summary_dict(),
         "band_energy_timeline": band_energy.to_summary_dict(),
+        "onset_density": onset.to_summary_dict(),
         "stereo_correlation": stereo.to_summary_dict(),
         "mid_side_energy": mid_side.to_summary_dict(),
         "plots": [p.name for p in plot_paths],

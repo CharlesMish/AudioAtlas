@@ -82,6 +82,7 @@ def write_report_md(
     spectrum = summary.get("average_spectrum", {})
     spectral_shape = summary.get("spectral_shape", {})
     band_energy_timeline = summary.get("band_energy_timeline", {})
+    onset_density = summary.get("onset_density", {})
     stereo = summary.get("stereo_correlation", {})
     mid_side = summary.get("mid_side_energy", {})
 
@@ -205,6 +206,17 @@ def write_report_md(
                 )
         warnings = band_energy_timeline.get("warnings") or []
         for warning in warnings:
+            lines.append(f"- warning: {warning}")
+        lines.append("")
+
+    if onset_density:
+        lines.append("## Onset / transient density summary\n")
+        for key, value in onset_density.items():
+            if key in ("warnings", "high_onset_density_time_ranges"):
+                continue
+            lines.append(f"- {key}: {_fmt_value(value)}")
+        onset_warnings = onset_density.get("warnings") or []
+        for warning in onset_warnings:
             lines.append(f"- warning: {warning}")
         lines.append("")
 
