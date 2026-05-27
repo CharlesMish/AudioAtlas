@@ -46,6 +46,15 @@ def write_summary_json(summary: dict[str, Any], out_dir: str | Path) -> Path:
     return out
 
 
+def write_findings_json(findings: dict[str, Any], out_dir: str | Path) -> Path:
+    """Write findings.json."""
+
+    out = Path(out_dir) / "findings.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(findings, indent=2, sort_keys=True), encoding="utf-8")
+    return out
+
+
 def _fmt_value(value: Any) -> str:
     if value is None:
         return "—"
@@ -55,7 +64,10 @@ def _fmt_value(value: Any) -> str:
 
 
 def write_report_md(
-    summary: dict[str, Any], plot_files: list[str], out_dir: str | Path
+    summary: dict[str, Any],
+    plot_files: list[str],
+    out_dir: str | Path,
+    findings: dict[str, Any] | None = None,
 ) -> Path:
     """Write a deliberately simple Markdown report.
 
@@ -160,6 +172,33 @@ def write_report_md(
         for warning in mid_side_warnings:
             lines.append(f"- warning: {warning}")
         lines.append("")
+
+    if findings is not None:
+        lines.append("## Findings\n")
+        finding_items = findings.get("findings") if isinstance(findings, dict) else None
+        if isinstance(finding_items, list) and finding_items:
+            for item in finding_items:
+                if not isinstance(item, dict):
+                    continue
+                lines.append(f"### {item.get('title', 'Finding')}\n")
+                lines.append(f"- Severity: {item.get('severity', 'unknown')}")
+                lines.append(f"- Category: {item.get('category', 'unknown')}")
+                lines.append(
+                    f"- Measured value: {_fmt_value(item.get('measured_value'))} "
+                    f"{item.get('unit', '')}".rstrip()
+                )
+                lines.append(f"- Threshold: {_fmt_value(item.get('threshold'))}")
+                lines.append(f"- Evidence: {item.get('evidence', '')}")
+                lines.append(f"- Why it matters: {item.get('why_it_matters', '')}")
+                suggested_checks = item.get("suggested_checks")
+                if isinstance(suggested_checks, list) and suggested_checks:
+                    lines.append("- Suggested checks:")
+                    for check in suggested_checks:
+                        lines.append(f"  - {check}")
+                lines.append(f"- Confidence: {item.get('confidence', 'unknown')}")
+                lines.append("")
+        else:
+            lines.append("- No findings triggered by the current rule set.\n")
 
     lines.append("## Plots\n")
     for filename in plot_files:

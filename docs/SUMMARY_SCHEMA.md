@@ -1,7 +1,9 @@
-# summary.json schema
+# Output JSON schema
 
 `summary.json` is the machine-readable output of every analysis run. It
 is the canonical record of "what AudioAtlas measured on this file".
+`findings.json` is the rule-based companion output derived from
+`summary.json`; it does not add new DSP measurements.
 
 Current schema version: **`0.1.0`**.
 
@@ -20,6 +22,33 @@ Current schema version: **`0.1.0`**.
   "plots":           ["01_waveform_rms.png", ...]
 }
 ```
+
+## findings.json shape
+
+```jsonc
+{
+  "count": 1,
+  "findings": [
+    {
+      "severity": "warning",
+      "category": "levels",
+      "title": "Near-full-scale samples detected",
+      "measured_value": 12,
+      "threshold": 0,
+      "unit": "samples",
+      "evidence": "near_clipping_samples measured 12.",
+      "why_it_matters": "...",
+      "suggested_checks": ["Inspect the sample histogram."],
+      "time_ranges": [],
+      "confidence": "high"
+    }
+  ]
+}
+```
+
+Findings are factual observations derived from existing summary fields.
+They are not mix scores, verdicts, mastering advice, or reference-track
+comparisons.
 
 ## Blocks
 
@@ -155,6 +184,24 @@ order is fixed:
 
 New plots from future feature slices append numbered prefixes (`08_*`,
 `09_*`, ...) and are added to `plot_paths` in `pipeline.py`.
+
+## findings.json blocks
+
+### `Finding`
+
+| Field | Type | Notes |
+|---|---|---|
+| `severity` | `"info"` \| `"warning"` \| `"issue"` | Rule severity. Not a mix-quality score. |
+| `category` | `"levels"` \| `"dynamics"` \| `"stereo"` \| `"spectrum"` \| `"metadata"` | Measurement area. |
+| `title` | string | Short factual label. |
+| `measured_value` | float \| int | Summary value that triggered the finding. |
+| `threshold` | float \| int | Rule threshold. |
+| `unit` | string | Unit for `measured_value` and/or threshold. |
+| `evidence` | string | Summary field and value behind the finding. |
+| `why_it_matters` | string | Factual context, not advice or a verdict. |
+| `suggested_checks` | list[string] | Manual checks to consider. These are not fixes. |
+| `time_ranges` | list[object] | Optional time ranges. Empty for first-pass scalar rules. |
+| `confidence` | `"low"` \| `"medium"` \| `"high"` | Confidence in the rule based on available measured evidence. |
 
 ## Example
 

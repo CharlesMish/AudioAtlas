@@ -17,12 +17,13 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from audioatlas.analysis.findings import generate_findings
 from audioatlas.analysis.levels import compute_rms_envelope, compute_scalar_levels
 from audioatlas.analysis.spectral import compute_average_spectrum, compute_log_spectrogram
 from audioatlas.analysis.stereo import compute_mid_side_energy, compute_stereo_correlation
 from audioatlas.config import AnalysisConfig
 from audioatlas.io import load_audio
-from audioatlas.report import write_report_md, write_summary_json
+from audioatlas.report import write_findings_json, write_report_md, write_summary_json
 from audioatlas.visualize.histogram import plot_sample_histogram
 from audioatlas.visualize.spectrogram import plot_log_spectrogram
 from audioatlas.visualize.spectrum import plot_average_spectrum
@@ -40,9 +41,11 @@ class AnalysisRunResult:
 
     out_dir: Path
     summary_path: Path
+    findings_path: Path
     report_path: Path
     plot_paths: list[Path]
     summary: dict[str, Any]
+    findings: dict[str, Any]
 
 
 def analyze_file(
@@ -89,13 +92,17 @@ def analyze_file(
         "plots": [p.name for p in plot_paths],
     }
 
+    findings = generate_findings(summary).to_dict()
     summary_path = write_summary_json(summary, out)
-    report_path = write_report_md(summary, [p.name for p in plot_paths], out)
+    findings_path = write_findings_json(findings, out)
+    report_path = write_report_md(summary, [p.name for p in plot_paths], out, findings)
 
     return AnalysisRunResult(
         out_dir=out,
         summary_path=summary_path,
+        findings_path=findings_path,
         report_path=report_path,
         plot_paths=plot_paths,
         summary=summary,
+        findings=findings,
     )

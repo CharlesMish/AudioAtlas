@@ -6,6 +6,9 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- First-pass `findings.json` and `## Findings` report section generated
+  from existing summary metrics, using factual evidence and suggested
+  checks rather than mix scores or advice.
 - Stereo correlation timeline analysis with `stereo_correlation` summary
   output, a Markdown report section, and `06_stereo_correlation.png`.
   Undefined zero-variance frames remain `NaN` internally and are excluded

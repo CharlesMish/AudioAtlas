@@ -10,7 +10,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from audioatlas.report import LEVEL_METRIC_DISPLAY, write_report_md, write_summary_json
+from audioatlas.report import (
+    LEVEL_METRIC_DISPLAY,
+    write_findings_json,
+    write_report_md,
+    write_summary_json,
+)
 
 
 def _make_summary() -> dict:
@@ -102,6 +107,31 @@ def test_write_summary_json_roundtrips(tmp_path: Path):
     assert parsed["plots"] == summary["plots"]
 
 
+def test_write_findings_json_roundtrips(tmp_path: Path):
+    findings = {
+        "count": 1,
+        "findings": [
+            {
+                "severity": "info",
+                "category": "spectrum",
+                "title": "Test finding",
+                "measured_value": 220.0,
+                "threshold": 120.0,
+                "unit": "Hz",
+                "evidence": "test evidence",
+                "why_it_matters": "test context",
+                "suggested_checks": ["inspect the plot"],
+                "time_ranges": [],
+                "confidence": "medium",
+            }
+        ],
+    }
+    path = write_findings_json(findings, tmp_path)
+    assert path.name == "findings.json"
+    parsed = json.loads(path.read_text(encoding="utf-8"))
+    assert parsed == findings
+
+
 def test_write_report_md_contains_expected_sections(tmp_path: Path):
     summary = _make_summary()
     plot_files = ["01_waveform_rms.png", "02_rms_timeline.png"]
@@ -121,6 +151,33 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Mid/side energy summary" in text
     assert "## Plots" in text
     assert "## Human notes" in text
+
+
+def test_write_report_md_contains_findings_section(tmp_path: Path):
+    summary = _make_summary()
+    findings = {
+        "count": 1,
+        "findings": [
+            {
+                "severity": "warning",
+                "category": "levels",
+                "title": "Near-full-scale samples detected",
+                "measured_value": 12,
+                "threshold": 0,
+                "unit": "samples",
+                "evidence": "near_clipping_samples measured 12.",
+                "why_it_matters": "Measured sample values are near full scale.",
+                "suggested_checks": ["Inspect the sample histogram."],
+                "time_ranges": [],
+                "confidence": "high",
+            }
+        ],
+    }
+    path = write_report_md(summary, summary["plots"], tmp_path, findings)
+    text = path.read_text(encoding="utf-8")
+    assert "## Findings" in text
+    assert "Near-full-scale samples detected" in text
+    assert "Suggested checks" in text
 
 
 def test_report_per_channel_section_has_one_column_per_channel(tmp_path: Path):
@@ -161,7 +218,25 @@ def test_report_includes_all_documented_metrics(tmp_path: Path):
 def test_report_does_not_make_verdicts(tmp_path: Path):
     """AudioAtlas must not produce judgmental language. See AGENT_BRIEF.md."""
     summary = _make_summary()
-    path = write_report_md(summary, summary["plots"], tmp_path)
+    findings = {
+        "count": 1,
+        "findings": [
+            {
+                "severity": "info",
+                "category": "spectrum",
+                "title": "Strongest average-spectrum bin is in the low-mid region",
+                "measured_value": 220.0,
+                "threshold": 120,
+                "unit": "Hz",
+                "evidence": "strongest_bin_hz measured 220.000 Hz.",
+                "why_it_matters": "This identifies where the strongest bin falls.",
+                "suggested_checks": ["Inspect the average spectrum plot."],
+                "time_ranges": [],
+                "confidence": "medium",
+            }
+        ],
+    }
+    path = write_report_md(summary, summary["plots"], tmp_path, findings)
     text = path.read_text(encoding="utf-8").lower()
     banned = ["mix is bad", "fix your mud", "well mastered", "needs more", "too loud", "mix health"]
     for phrase in banned:

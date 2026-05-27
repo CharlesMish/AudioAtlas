@@ -18,11 +18,13 @@ def test_pipeline_writes_expected_outputs(tmp_path, sr):
     result = analyze_file(path, tmp_path / "report", config=AnalysisConfig(n_fft=1024, hop_length=256, rms_frame_length=1024, welch_nperseg=1024, true_peak_oversample=1))
 
     assert result.summary_path.exists()
+    assert result.findings_path.exists()
     assert result.report_path.exists()
     for plot_path in result.plot_paths:
         assert plot_path.exists()
 
     summary = json.loads(result.summary_path.read_text())
+    findings = json.loads(result.findings_path.read_text())
     assert "levels" in summary
     assert "metadata" in summary
     assert "stereo_correlation" in summary
@@ -30,3 +32,5 @@ def test_pipeline_writes_expected_outputs(tmp_path, sr):
     assert len(summary["plots"]) == 7
     assert "06_stereo_correlation.png" in summary["plots"]
     assert "07_mid_side_energy.png" in summary["plots"]
+    assert "findings" in findings
+    assert findings["count"] == len(result.findings["findings"])
