@@ -8,7 +8,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from audioatlas.config import AnalysisConfig
-from audioatlas.utils import EPS, ensure_2d_audio, linear_to_dbfs
+from audioatlas.utils import EPS, ensure_2d_audio, linear_to_dbfs, mask_to_time_ranges
 
 
 @dataclass(frozen=True)
@@ -36,6 +36,8 @@ class StereoCorrelationResult:
                 "frames": 0,
                 "defined_frames": 0,
                 "undefined_frames": 0,
+                "correlation_below_0_time_ranges": [],
+                "correlation_below_0_3_time_ranges": [],
                 "warnings": self.warnings,
             }
         if len(finite) == 0:
@@ -50,8 +52,11 @@ class StereoCorrelationResult:
                 "correlation_mean": None,
                 "correlation_median": None,
                 "overall_correlation": self.overall_correlation,
+                "correlation_below_0_time_ranges": [],
+                "correlation_below_0_3_time_ranges": [],
                 "warnings": self.warnings,
             }
+        finite_mask = np.isfinite(self.correlation)
         return {
             "frame_length": self.frame_length,
             "hop_length": self.hop_length,
@@ -63,6 +68,12 @@ class StereoCorrelationResult:
             "correlation_mean": float(np.mean(finite)),
             "correlation_median": float(np.median(finite)),
             "overall_correlation": self.overall_correlation,
+            "correlation_below_0_time_ranges": mask_to_time_ranges(
+                finite_mask & (self.correlation < 0.0), self.times_seconds
+            ),
+            "correlation_below_0_3_time_ranges": mask_to_time_ranges(
+                finite_mask & (self.correlation < 0.3), self.times_seconds
+            ),
             "warnings": self.warnings,
         }
 
@@ -113,6 +124,11 @@ class MidSideEnergyResult:
             if len(finite_ratio)
             else None,
             "undefined_ratio_frames": int(len(self.side_to_mid_ratio_db) - len(finite_ratio)),
+            "side_to_mid_ratio_above_minus_6_time_ranges": mask_to_time_ranges(
+                np.isfinite(self.side_to_mid_ratio_db)
+                & (self.side_to_mid_ratio_db > -6.0),
+                self.times_seconds,
+            ),
             "warnings": self.warnings,
         }
 

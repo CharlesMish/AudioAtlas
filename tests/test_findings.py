@@ -15,12 +15,20 @@ def _summary(**overrides):
         "stereo_correlation": {
             "correlation_min": 0.5,
             "correlation_median": 0.9,
+            "correlation_below_0_time_ranges": [],
+            "correlation_below_0_3_time_ranges": [],
         },
         "mid_side_energy": {
             "side_to_mid_ratio_db_median": -12.0,
+            "side_to_mid_ratio_above_minus_6_time_ranges": [],
+        },
+        "peak_timeline": {
+            "near_clipping_time_ranges": [],
         },
         "average_spectrum": {
             "strongest_bin_hz": 1000.0,
+            "strongest_band": None,
+            "band_energies": {},
         },
     }
     for block, values in overrides.items():
@@ -42,11 +50,21 @@ def test_true_peak_above_zero_generates_warning():
 
 
 def test_near_clipping_samples_generate_warning():
-    findings = generate_findings(_summary(levels={"near_clipping_samples": 12})).findings
+    findings = generate_findings(
+        _summary(
+            levels={"near_clipping_samples": 12},
+            peak_timeline={
+                "near_clipping_time_ranges": [
+                    {"start": 1.0, "end": 1.5, "duration": 0.5}
+                ]
+            },
+        )
+    ).findings
 
     assert len(findings) == 1
     assert findings[0].severity == "warning"
     assert findings[0].measured_value == 12
+    assert findings[0].time_ranges == [{"start": 1.0, "end": 1.5, "duration": 0.5}]
 
 
 def test_clipped_samples_generate_issue():
@@ -75,12 +93,36 @@ def test_low_plr_generates_warning():
 
 def test_negative_minimum_correlation_generates_warning():
     findings = generate_findings(
-        _summary(stereo_correlation={"correlation_min": -0.2})
+        _summary(
+            stereo_correlation={
+                "correlation_min": -0.2,
+                "correlation_below_0_time_ranges": [
+                    {"start": 2.0, "end": 3.0, "duration": 1.0}
+                ],
+            }
+        )
     ).findings
 
     assert len(findings) == 1
     assert findings[0].severity == "warning"
     assert findings[0].category == "stereo"
+    assert findings[0].time_ranges == [{"start": 2.0, "end": 3.0, "duration": 1.0}]
+
+
+def test_low_correlation_time_ranges_generate_info():
+    findings = generate_findings(
+        _summary(
+            stereo_correlation={
+                "correlation_below_0_3_time_ranges": [
+                    {"start": 4.0, "end": 5.0, "duration": 1.0}
+                ]
+            }
+        )
+    ).findings
+
+    assert len(findings) == 1
+    assert findings[0].severity == "info"
+    assert findings[0].time_ranges == [{"start": 4.0, "end": 5.0, "duration": 1.0}]
 
 
 def test_low_median_correlation_generates_warning():
@@ -95,12 +137,20 @@ def test_low_median_correlation_generates_warning():
 
 def test_high_side_to_mid_ratio_generates_info():
     findings = generate_findings(
-        _summary(mid_side_energy={"side_to_mid_ratio_db_median": -4.0})
+        _summary(
+            mid_side_energy={
+                "side_to_mid_ratio_db_median": -4.0,
+                "side_to_mid_ratio_above_minus_6_time_ranges": [
+                    {"start": 6.0, "end": 7.0, "duration": 1.0}
+                ],
+            }
+        )
     ).findings
 
     assert len(findings) == 1
     assert findings[0].severity == "info"
     assert findings[0].unit == "dB"
+    assert findings[0].time_ranges == [{"start": 6.0, "end": 7.0, "duration": 1.0}]
 
 
 def test_low_mid_strongest_bin_generates_info_without_muddy_claim():
@@ -118,6 +168,23 @@ def test_low_mid_strongest_bin_generates_info_without_muddy_claim():
         ]
     ).lower()
     assert "muddy" not in text
+
+
+def test_strongest_band_generates_factual_info():
+    findings = generate_findings(
+        _summary(
+            average_spectrum={
+                "strongest_band": "bass",
+                "band_energies": {
+                    "bass": {"low_hz": 60.0, "high_hz": 120.0, "energy_db": -3.0}
+                },
+            }
+        )
+    ).findings
+
+    assert len(findings) == 1
+    assert findings[0].category == "spectrum"
+    assert "bass" in findings[0].title
 
 
 def test_multiple_rules_can_trigger_together():

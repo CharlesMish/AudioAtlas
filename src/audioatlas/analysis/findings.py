@@ -57,6 +57,9 @@ def generate_findings(summary: dict) -> FindingsResult:
         if isinstance(summary.get("stereo_correlation"), dict)
         else {}
     )
+    peak_timeline = (
+        summary.get("peak_timeline") if isinstance(summary.get("peak_timeline"), dict) else {}
+    )
     mid_side = (
         summary.get("mid_side_energy") if isinstance(summary.get("mid_side_energy"), dict) else {}
     )
@@ -91,6 +94,7 @@ def generate_findings(summary: dict) -> FindingsResult:
 
     near_clipping = _number(levels, "near_clipping_samples")
     if near_clipping is not None and near_clipping > 0:
+        near_clip_ranges = _ranges(peak_timeline, "near_clipping_time_ranges")
         findings.append(
             Finding(
                 severity="warning",
@@ -109,6 +113,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                     "Check whether near-full-scale samples cluster in a specific passage.",
                 ],
                 confidence="high",
+                time_ranges=near_clip_ranges,
             )
         )
 
@@ -183,6 +188,7 @@ def generate_findings(summary: dict) -> FindingsResult:
 
     corr_min = _number(stereo, "correlation_min")
     if corr_min is not None and corr_min < 0.0:
+        negative_ranges = _ranges(stereo, "correlation_below_0_time_ranges")
         findings.append(
             Finding(
                 severity="warning",
@@ -198,9 +204,36 @@ def generate_findings(summary: dict) -> FindingsResult:
                 ),
                 suggested_checks=[
                     "Inspect the stereo correlation plot around the low-correlation region.",
-                    "Check mono playback if this material needs mono compatibility.",
+                    "Listen in mono around these regions if mono compatibility matters.",
                 ],
                 confidence="medium",
+                time_ranges=negative_ranges,
+            )
+        )
+
+    low_corr_ranges = _ranges(stereo, "correlation_below_0_3_time_ranges")
+    if low_corr_ranges:
+        findings.append(
+            Finding(
+                severity="info",
+                category="stereo",
+                title="L/R correlation falls below 0.3 in some regions",
+                measured_value=len(low_corr_ranges),
+                threshold=0.3,
+                unit="regions",
+                evidence=(
+                    f"{len(low_corr_ranges)} time range(s) have frame correlation below 0.3."
+                ),
+                why_it_matters=(
+                    "Low L/R correlation marks regions where the two channels are less "
+                    "similar by this measurement."
+                ),
+                suggested_checks=[
+                    "Inspect the stereo correlation plot around these regions.",
+                    "Listen in mono around these regions if mono compatibility matters.",
+                ],
+                confidence="medium",
+                time_ranges=low_corr_ranges,
             )
         )
 
@@ -229,6 +262,7 @@ def generate_findings(summary: dict) -> FindingsResult:
 
     side_ratio = _number(mid_side, "side_to_mid_ratio_db_median")
     if side_ratio is not None and side_ratio > -6.0:
+        side_ratio_ranges = _ranges(mid_side, "side_to_mid_ratio_above_minus_6_time_ranges")
         findings.append(
             Finding(
                 severity="info",
@@ -244,9 +278,10 @@ def generate_findings(summary: dict) -> FindingsResult:
                 ),
                 suggested_checks=[
                     "Inspect the mid/side energy plot and side-to-mid ratio panel.",
-                    "Check mono playback if side-heavy sections are important to translation.",
+                    "Listen in mono around these regions if side-heavy sections matter.",
                 ],
                 confidence="medium",
+                time_ranges=side_ratio_ranges,
             )
         )
 
@@ -273,6 +308,40 @@ def generate_findings(summary: dict) -> FindingsResult:
             )
         )
 
+    strongest_band = spectrum.get("strongest_band")
+    band_energies = spectrum.get("band_energies")
+    if isinstance(strongest_band, str) and isinstance(band_energies, dict):
+        band_values = band_energies.get(strongest_band)
+        energy_db = (
+            band_values.get("energy_db")
+            if isinstance(band_values, dict)
+            else None
+        )
+        if isinstance(energy_db, (int, float)):
+            findings.append(
+                Finding(
+                    severity="info",
+                    category="spectrum",
+                    title=f"Strongest average-spectrum band is {strongest_band}",
+                    measured_value=float(energy_db),
+                    threshold=0,
+                    unit="dB relative",
+                    evidence=(
+                        f"strongest_band measured {strongest_band}; "
+                        f"band energy measured {_fmt_measure(float(energy_db))} dB relative."
+                    ),
+                    why_it_matters=(
+                        "This identifies the named frequency band with the highest measured "
+                        "average-spectrum band energy."
+                    ),
+                    suggested_checks=[
+                        f"Inspect the average spectrum around the {strongest_band} band.",
+                        "Listen for which sources occupy the strongest measured band.",
+                    ],
+                    confidence="medium",
+                )
+            )
+
     return FindingsResult(findings=findings)
 
 
@@ -280,3 +349,29 @@ def _fmt_measure(value: float | int) -> str:
     if isinstance(value, int):
         return str(value)
     return f"{value:.3f}"
+
+
+def _ranges(block: dict, key: str) -> list[dict[str, float]]:
+    value = block.get(key)
+    if not isinstance(value, list):
+        return []
+    out: list[dict[str, float]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        start = item.get("start")
+        end = item.get("end")
+        duration = item.get("duration")
+        if isinstance(start, (int, float)) and isinstance(end, (int, float)):
+            if isinstance(duration, (int, float)):
+                item_duration = float(duration)
+            else:
+                item_duration = float(end - start)
+            out.append(
+                {
+                    "start": float(start),
+                    "end": float(end),
+                    "duration": item_duration,
+                }
+            )
+    return out

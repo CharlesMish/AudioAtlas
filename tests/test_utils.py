@@ -7,6 +7,7 @@ from audioatlas.utils import (
     EPS,
     ensure_2d_audio,
     linear_to_dbfs,
+    mask_to_time_ranges,
     mmss,
     power_to_db,
     safe_stem,
@@ -104,3 +105,40 @@ class TestSafeStem:
 def test_eps_is_positive_and_small():
     # Trivial regression guard - EPS underpins the dB conversions.
     assert 0 < EPS < 1e-6
+
+
+class TestMaskToTimeRanges:
+    def test_no_ranges(self):
+        ranges = mask_to_time_ranges(
+            np.array([False, False, False]), np.array([0.0, 1.0, 2.0])
+        )
+        assert ranges == []
+
+    def test_one_range(self):
+        ranges = mask_to_time_ranges(
+            np.array([False, True, True, False]), np.array([0.0, 1.0, 2.0, 3.0])
+        )
+        assert ranges == [{"start": 1.0, "end": 3.0, "duration": 2.0}]
+
+    def test_multiple_ranges(self):
+        ranges = mask_to_time_ranges(
+            np.array([True, False, True, True]), np.array([0.0, 1.0, 2.0, 3.0])
+        )
+        assert ranges == [
+            {"start": 0.0, "end": 1.0, "duration": 1.0},
+            {"start": 2.0, "end": 4.0, "duration": 2.0},
+        ]
+
+    def test_merges_small_gaps(self):
+        ranges = mask_to_time_ranges(
+            np.array([True, False, True]), np.array([0.0, 1.0, 2.0]), merge_gap_sec=1.0
+        )
+        assert ranges == [{"start": 0.0, "end": 3.0, "duration": 3.0}]
+
+    def test_filters_short_ranges(self):
+        ranges = mask_to_time_ranges(
+            np.array([True, False, True, True]),
+            np.array([0.0, 1.0, 2.0, 3.0]),
+            min_duration_sec=1.5,
+        )
+        assert ranges == [{"start": 2.0, "end": 4.0, "duration": 2.0}]

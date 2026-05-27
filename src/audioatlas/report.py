@@ -148,8 +148,24 @@ def write_report_md(
 
     lines.append("## Average spectrum summary\n")
     for key, value in spectrum.items():
+        if key == "band_energies":
+            continue
         lines.append(f"- {key}: {_fmt_value(value)}")
     lines.append("")
+
+    band_energies = spectrum.get("band_energies")
+    if isinstance(band_energies, dict) and band_energies:
+        lines.append("## Band energy summary\n")
+        lines.append("| Band | Range | Energy |")
+        lines.append("|---|---|---|")
+        for band, values in band_energies.items():
+            if not isinstance(values, dict):
+                continue
+            low = _fmt_value(values.get("low_hz"))
+            high = _fmt_value(values.get("high_hz"))
+            energy = _fmt_value(values.get("energy_db"))
+            lines.append(f"| {band} | {low}-{high} Hz | {energy} dB relative |")
+        lines.append("")
 
     if stereo:
         lines.append("## Stereo correlation summary\n")
@@ -195,6 +211,16 @@ def write_report_md(
                     lines.append("- Suggested checks:")
                     for check in suggested_checks:
                         lines.append(f"  - {check}")
+                time_ranges = item.get("time_ranges")
+                if isinstance(time_ranges, list) and time_ranges:
+                    lines.append("- Time ranges:")
+                    for item_range in time_ranges:
+                        if not isinstance(item_range, dict):
+                            continue
+                        start = _fmt_value(item_range.get("start"))
+                        end = _fmt_value(item_range.get("end"))
+                        duration = _fmt_value(item_range.get("duration"))
+                        lines.append(f"  - {start}s-{end}s ({duration}s)")
                 lines.append(f"- Confidence: {item.get('confidence', 'unknown')}")
                 lines.append("")
         else:

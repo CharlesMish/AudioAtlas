@@ -18,7 +18,11 @@ from pathlib import Path
 from typing import Any
 
 from audioatlas.analysis.findings import generate_findings
-from audioatlas.analysis.levels import compute_rms_envelope, compute_scalar_levels
+from audioatlas.analysis.levels import (
+    compute_peak_timeline,
+    compute_rms_envelope,
+    compute_scalar_levels,
+)
 from audioatlas.analysis.spectral import compute_average_spectrum, compute_log_spectrogram
 from audioatlas.analysis.stereo import compute_mid_side_energy, compute_stereo_correlation
 from audioatlas.config import AnalysisConfig
@@ -66,6 +70,7 @@ def analyze_file(
 
     levels = compute_scalar_levels(audio.y, audio.sr, cfg)
     rms = compute_rms_envelope(audio.y, audio.sr, cfg)
+    peaks = compute_peak_timeline(audio.y, audio.sr, cfg)
     spec = compute_log_spectrogram(audio.y, audio.sr, cfg)
     avg = compute_average_spectrum(audio.y, audio.sr, cfg)
     stereo = compute_stereo_correlation(audio.y, audio.sr, cfg)
@@ -86,6 +91,7 @@ def analyze_file(
         "analysis_config": asdict(cfg),
         "levels": levels.to_dict(),
         "rms_envelope": rms.to_summary_dict(),
+        "peak_timeline": peaks.to_summary_dict(),
         "average_spectrum": avg.to_summary_dict(),
         "stereo_correlation": stereo.to_summary_dict(),
         "mid_side_energy": mid_side.to_summary_dict(),

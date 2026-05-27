@@ -34,6 +34,7 @@ def test_phase_inverted_stereo_has_negative_correlation(stereo_phase_inverted, s
     assert np.all(result.correlation <= -0.95)
     assert result.overall_correlation <= -0.95
     assert result.warnings == []
+    assert result.to_summary_dict()["correlation_below_0_time_ranges"]
 
 
 def test_correlated_stereo_has_positive_correlation(stereo_correlated, sr):
@@ -141,6 +142,7 @@ def test_mid_side_left_only_has_equal_mid_and_side(sr):
     assert np.allclose(result.mid_rms_linear, result.side_rms_linear)
     assert np.allclose(result.side_to_mid_ratio_db, 0.0, atol=1e-9)
     assert result.warnings == []
+    assert result.to_summary_dict()["side_to_mid_ratio_above_minus_6_time_ranges"]
 
 
 def test_plot_mid_side_energy_writes_png(tmp_path, stereo_correlated, sr):

@@ -6,6 +6,12 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- Time-ranged findings for near-clipping, low stereo correlation, and
+  high side-to-mid ratio observations.
+- `peak_timeline` summary block with frame-wise clipping and
+  near-clipping counts plus near-clipping time ranges.
+- Named average-spectrum band energy summaries and strongest-band
+  findings using factual suggested-check wording.
 - First-pass `findings.json` and `## Findings` report section generated
   from existing summary metrics, using factual evidence and suggested
   checks rather than mix scores or advice.

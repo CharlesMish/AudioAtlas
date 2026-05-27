@@ -57,6 +57,11 @@ def _make_summary() -> dict:
             "bins": 4097,
             "strongest_bin_hz": 1000.0,
             "strongest_bin_db": -12.0,
+            "strongest_band": "mid",
+            "band_energies": {
+                "bass": {"low_hz": 60.0, "high_hz": 120.0, "energy_db": -18.0},
+                "mid": {"low_hz": 350.0, "high_hz": 2000.0, "energy_db": -6.0},
+            },
         },
         "stereo_correlation": {
             "frame_length": 4096,
@@ -69,6 +74,8 @@ def _make_summary() -> dict:
             "correlation_mean": 0.98,
             "correlation_median": 0.99,
             "overall_correlation": 0.98,
+            "correlation_below_0_time_ranges": [],
+            "correlation_below_0_3_time_ranges": [],
             "warnings": [],
         },
         "mid_side_energy": {
@@ -84,7 +91,14 @@ def _make_summary() -> dict:
             "side_to_mid_ratio_db_median": -16.0,
             "side_to_mid_ratio_db_mean": -15.5,
             "undefined_ratio_frames": 0,
+            "side_to_mid_ratio_above_minus_6_time_ranges": [],
             "warnings": [],
+        },
+        "peak_timeline": {
+            "frame_length": 4096,
+            "hop_length": 1024,
+            "frames": 100,
+            "near_clipping_time_ranges": [],
         },
         "plots": [
             "01_waveform_rms.png",
@@ -147,6 +161,7 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Warnings / caveats" in text
     assert "## Frame RMS envelope summary" in text
     assert "## Average spectrum summary" in text
+    assert "## Band energy summary" in text
     assert "## Stereo correlation summary" in text
     assert "## Mid/side energy summary" in text
     assert "## Plots" in text
@@ -168,7 +183,7 @@ def test_write_report_md_contains_findings_section(tmp_path: Path):
                 "evidence": "near_clipping_samples measured 12.",
                 "why_it_matters": "Measured sample values are near full scale.",
                 "suggested_checks": ["Inspect the sample histogram."],
-                "time_ranges": [],
+                "time_ranges": [{"start": 1.0, "end": 1.5, "duration": 0.5}],
                 "confidence": "high",
             }
         ],
@@ -178,6 +193,8 @@ def test_write_report_md_contains_findings_section(tmp_path: Path):
     assert "## Findings" in text
     assert "Near-full-scale samples detected" in text
     assert "Suggested checks" in text
+    assert "Time ranges" in text
+    assert "1.000s-1.500s" in text
 
 
 def test_report_per_channel_section_has_one_column_per_channel(tmp_path: Path):

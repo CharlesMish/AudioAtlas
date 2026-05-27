@@ -88,3 +88,59 @@ def safe_stem(path: str | Path) -> str:
     """Return a filesystem-friendly stem."""
 
     return Path(path).stem.replace(" ", "_")
+
+
+def mask_to_time_ranges(
+    mask: NDArray[np.bool_],
+    times: NDArray[np.floating],
+    min_duration_sec: float = 0.0,
+    merge_gap_sec: float = 0.0,
+) -> list[dict[str, float]]:
+    """Convert a boolean frame mask into contiguous time ranges."""
+
+    mask_arr = np.asarray(mask, dtype=bool)
+    times_arr = np.asarray(times, dtype=np.float64)
+    if mask_arr.shape != times_arr.shape:
+        raise ValueError("mask and times must have the same shape")
+    if min_duration_sec < 0:
+        raise ValueError("min_duration_sec must be >= 0")
+    if merge_gap_sec < 0:
+        raise ValueError("merge_gap_sec must be >= 0")
+    if len(mask_arr) == 0 or not np.any(mask_arr):
+        return []
+
+    if len(times_arr) > 1:
+        positive_steps = np.diff(times_arr)
+        positive_steps = positive_steps[positive_steps > 0]
+        frame_duration = float(np.median(positive_steps)) if len(positive_steps) else 0.0
+    else:
+        frame_duration = 0.0
+
+    ranges: list[dict[str, float]] = []
+    start_idx: int | None = None
+    for i, active in enumerate(mask_arr):
+        if active and start_idx is None:
+            start_idx = i
+        elif not active and start_idx is not None:
+            ranges.append(_range_from_indices(times_arr, start_idx, i - 1, frame_duration))
+            start_idx = None
+    if start_idx is not None:
+        ranges.append(_range_from_indices(times_arr, start_idx, len(mask_arr) - 1, frame_duration))
+
+    merged: list[dict[str, float]] = []
+    for item in ranges:
+        if merged and item["start"] - merged[-1]["end"] <= merge_gap_sec:
+            merged[-1]["end"] = item["end"]
+            merged[-1]["duration"] = merged[-1]["end"] - merged[-1]["start"]
+        else:
+            merged.append(item)
+
+    return [item for item in merged if item["duration"] >= min_duration_sec]
+
+
+def _range_from_indices(
+    times: NDArray[np.float64], start_idx: int, end_idx: int, frame_duration: float
+) -> dict[str, float]:
+    start = float(times[start_idx])
+    end = float(times[end_idx] + frame_duration)
+    return {"start": start, "end": end, "duration": end - start}

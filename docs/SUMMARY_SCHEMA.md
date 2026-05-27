@@ -16,6 +16,7 @@ Current schema version: **`0.1.0`**.
   "analysis_config": { ... AnalysisConfig ... },
   "levels":          { ... ScalarLevelsResult ... },
   "rms_envelope":    { ... RmsEnvelopeResult.to_summary_dict() ... },
+  "peak_timeline":   { ... PeakTimelineResult.to_summary_dict() ... },
   "average_spectrum":{ ... AverageSpectrumResult.to_summary_dict() ... },
   "stereo_correlation": { ... StereoCorrelationResult.to_summary_dict() ... },
   "mid_side_energy": { ... MidSideEnergyResult.to_summary_dict() ... },
@@ -121,6 +122,50 @@ All `*_dbfs` and `*_dbtp` fields are clamped to `analysis_config.db_floor` at th
 | `bins` | int | Number of frequency bins. |
 | `strongest_bin_hz` | float | Only present if any bin ≥ 20 Hz exists. |
 | `strongest_bin_db` | float | Relative power in dB of the strongest displayed bin. This is `0.0` by definition for non-silent spectra because the spectrum is normalized to the strongest bin at or above 20 Hz. |
+| `band_energies` | object | Named band energy summaries derived from the same relative Welch average spectrum. |
+| `strongest_band` | string \| null | Band with highest relative band energy, if available. |
+
+Band names:
+
+| Band | Range |
+|---|---|
+| `sub` | 20-60 Hz |
+| `bass` | 60-120 Hz |
+| `low_mid` | 120-350 Hz |
+| `mid` | 350-2000 Hz |
+| `presence` | 2000-5000 Hz |
+| `high` | 5000-10000 Hz |
+| `air` | 10000-20000 Hz, capped by Nyquist |
+
+Each `band_energies.<band>` object contains:
+
+| Field | Type | Notes |
+|---|---|---|
+| `low_hz` | float | Band lower edge. |
+| `high_hz` | float | Band upper edge, capped by Nyquist. |
+| `energy_db` | float \| null | Mean relative Welch power in the band, in dB relative to the strongest displayed spectrum bin. |
+
+### `peak_timeline` (from `PeakTimelineResult.to_summary_dict`)
+
+Frame-wise clipping and near-clipping sample counts. This reuses
+`analysis_config.n_fft`, `analysis_config.hop_length`,
+`analysis_config.clipping_threshold`, and
+`analysis_config.near_clipping_threshold`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `frame_length` | int | Samples per peak-count window. |
+| `hop_length` | int | Hop between windows. |
+| `frames` | int | Number of frames. |
+| `clipping_threshold` | float | Absolute sample threshold for clipped counts. |
+| `near_clipping_threshold` | float | Absolute sample threshold for near-clipping counts. |
+| `times_seconds` | list[float] | Frame start times. |
+| `clipped_counts` | list[int] | Frame-wise count of sample values at or above `clipping_threshold`. |
+| `near_clipping_counts` | list[int] | Frame-wise count of sample values at or above `near_clipping_threshold`. |
+| `clipped_samples_in_frames` | int | Sum of frame-wise clipped counts. Overlapping windows can count the same sample more than once. |
+| `near_clipping_samples_in_frames` | int | Sum of frame-wise near-clipping counts. Overlapping windows can count the same sample more than once. |
+| `frames_with_near_clipping` | int | Number of frames where `near_clipping_counts > 0`. |
+| `near_clipping_time_ranges` | list[object] | Contiguous frame ranges where near-clipping counts are nonzero. |
 
 ### `stereo_correlation` (from `StereoCorrelationResult.to_summary_dict`)
 
@@ -144,6 +189,8 @@ and 1 are used.
 | `correlation_median` | float \| null \| absent | Median Pearson r over defined frames. `null` when no frames are defined; absent when `frames` is 0. |
 | `overall_correlation` | float \| null \| absent | Pearson r over the full left/right channel arrays. `null` when the full-channel value is undefined; absent when `frames` is 0. |
 | `warnings` | list[str] | Human-readable caveats; safe to ignore programmatically. |
+| `correlation_below_0_time_ranges` | list[object] | Contiguous frame ranges where defined L/R correlation is below 0.0. |
+| `correlation_below_0_3_time_ranges` | list[object] | Contiguous frame ranges where defined L/R correlation is below 0.3. |
 
 ### `mid_side_energy` (from `MidSideEnergyResult.to_summary_dict`)
 
@@ -165,6 +212,7 @@ mono signal and side is zero by convention with a warning.
 | `side_to_mid_ratio_db_median` | float \| null | Median `20 * log10(side_rms / mid_rms)` over frames with nonzero mid energy. |
 | `side_to_mid_ratio_db_mean` | float \| null | Mean side/mid ratio over frames with nonzero mid energy. |
 | `undefined_ratio_frames` | int | Frames where side/mid ratio is undefined because mid RMS is zero. |
+| `side_to_mid_ratio_above_minus_6_time_ranges` | list[object] | Contiguous frame ranges where side-to-mid ratio is above -6 dB. |
 | `warnings` | list[str] | Human-readable caveats; safe to ignore programmatically. |
 
 ### `plots`
@@ -200,7 +248,7 @@ New plots from future feature slices append numbered prefixes (`08_*`,
 | `evidence` | string | Summary field and value behind the finding. |
 | `why_it_matters` | string | Factual context, not advice or a verdict. |
 | `suggested_checks` | list[string] | Manual checks to consider. These are not fixes. |
-| `time_ranges` | list[object] | Optional time ranges. Empty for first-pass scalar rules. |
+| `time_ranges` | list[object] | Optional time ranges with `start`, `end`, and `duration` in seconds. |
 | `confidence` | `"low"` \| `"medium"` \| `"high"` | Confidence in the rule based on available measured evidence. |
 
 ## Example

@@ -27,6 +27,8 @@ def test_pipeline_writes_expected_outputs(tmp_path, sr):
     findings = json.loads(result.findings_path.read_text())
     assert "levels" in summary
     assert "metadata" in summary
+    assert "peak_timeline" in summary
+    assert "band_energies" in summary["average_spectrum"]
     assert "stereo_correlation" in summary
     assert "mid_side_energy" in summary
     assert len(summary["plots"]) == 7

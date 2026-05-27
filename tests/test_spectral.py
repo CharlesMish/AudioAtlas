@@ -40,6 +40,31 @@ def test_silent_spectral_displays_stay_at_floor(sr):
 
     assert np.allclose(spec.db, cfg.db_floor)
     assert np.allclose(spectrum.power_db, cfg.db_floor)
+    assert spectrum.to_summary_dict()["strongest_band"] is None
+
+
+def test_band_energy_identifies_low_frequency_signal(sr):
+    cfg = AnalysisConfig(welch_nperseg=4096)
+    t = np.arange(sr, dtype=np.float64) / sr
+    y = (0.5 * np.sin(2 * np.pi * 80 * t)).astype(np.float32)[:, None]
+
+    spectrum = compute_average_spectrum(y, sr, cfg)
+    summary = spectrum.to_summary_dict()
+
+    assert summary["strongest_band"] == "bass"
+    assert summary["band_energies"]["bass"]["energy_db"] > summary["band_energies"]["mid"]["energy_db"]
+
+
+def test_band_energy_identifies_high_frequency_signal(sr):
+    cfg = AnalysisConfig(welch_nperseg=4096)
+    t = np.arange(sr, dtype=np.float64) / sr
+    y = (0.5 * np.sin(2 * np.pi * 8000 * t)).astype(np.float32)[:, None]
+
+    spectrum = compute_average_spectrum(y, sr, cfg)
+    summary = spectrum.to_summary_dict()
+
+    assert summary["strongest_band"] == "high"
+    assert summary["band_energies"]["high"]["energy_db"] > summary["band_energies"]["mid"]["energy_db"]
 
 
 def test_log_spectrogram_plot_omits_zero_hz_on_log_axis(tmp_path, monkeypatch, sine_minus_6_dbfs, sr):

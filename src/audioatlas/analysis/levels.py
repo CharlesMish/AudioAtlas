@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 from scipy import signal
 
 from audioatlas.config import AnalysisConfig
-from audioatlas.utils import ensure_2d_audio, linear_to_dbfs, to_mono
+from audioatlas.utils import ensure_2d_audio, linear_to_dbfs, mask_to_time_ranges, to_mono
 
 try:  # optional at import time; pyproject installs it for normal use
     import pyloudnorm as pyln
@@ -89,6 +89,36 @@ class RmsEnvelopeResult:
             "rms_dbfs_min": float(np.min(self.rms_dbfs)) if len(self.rms_dbfs) else None,
             "rms_dbfs_max": float(np.max(self.rms_dbfs)) if len(self.rms_dbfs) else None,
             "rms_dbfs_mean": float(np.mean(self.rms_dbfs)) if len(self.rms_dbfs) else None,
+        }
+
+
+@dataclass(frozen=True)
+class PeakTimelineResult:
+    """Frame-wise clipping and near-clipping counts."""
+
+    times_seconds: NDArray[np.float64]
+    clipped_counts: NDArray[np.int64]
+    near_clipping_counts: NDArray[np.int64]
+    frame_length: int
+    hop_length: int
+    clipping_threshold: float
+    near_clipping_threshold: float
+    near_clipping_time_ranges: list[dict[str, float]]
+
+    def to_summary_dict(self) -> dict[str, object]:
+        return {
+            "frame_length": self.frame_length,
+            "hop_length": self.hop_length,
+            "frames": int(len(self.times_seconds)),
+            "clipping_threshold": self.clipping_threshold,
+            "near_clipping_threshold": self.near_clipping_threshold,
+            "times_seconds": [float(v) for v in self.times_seconds],
+            "clipped_counts": [int(v) for v in self.clipped_counts],
+            "near_clipping_counts": [int(v) for v in self.near_clipping_counts],
+            "clipped_samples_in_frames": int(np.sum(self.clipped_counts)),
+            "near_clipping_samples_in_frames": int(np.sum(self.near_clipping_counts)),
+            "frames_with_near_clipping": int(np.count_nonzero(self.near_clipping_counts)),
+            "near_clipping_time_ranges": self.near_clipping_time_ranges,
         }
 
 
@@ -214,6 +244,43 @@ def compute_scalar_levels(
         true_peak_linear_per_channel=true_peak_linear_per_channel,
         true_peak_dbtp_per_channel=true_peak_dbtp_per_channel,
         warnings=warnings,
+    )
+
+
+def compute_peak_timeline(
+    y: NDArray[np.floating], sr: int, config: AnalysisConfig | None = None
+) -> PeakTimelineResult:
+    """Compute frame-wise clipping and near-clipping sample counts."""
+
+    cfg = config or AnalysisConfig()
+    cfg.validate()
+    audio = ensure_2d_audio(y)
+    if sr <= 0:
+        raise ValueError("sr must be positive")
+    if audio.shape[0] == 0:
+        raise ValueError("audio has zero samples")
+
+    abs_audio = np.abs(audio.astype(np.float64, copy=False))
+    starts = np.arange(0, audio.shape[0], cfg.hop_length, dtype=np.int64)
+    clipped_counts = np.zeros(len(starts), dtype=np.int64)
+    near_counts = np.zeros(len(starts), dtype=np.int64)
+    for i, start in enumerate(starts):
+        end = min(start + cfg.n_fft, audio.shape[0])
+        frame = abs_audio[start:end]
+        clipped_counts[i] = np.count_nonzero(frame >= cfg.clipping_threshold)
+        near_counts[i] = np.count_nonzero(frame >= cfg.near_clipping_threshold)
+
+    times = (starts.astype(np.float64) / sr).astype(np.float64)
+    time_ranges = mask_to_time_ranges(near_counts > 0, times)
+    return PeakTimelineResult(
+        times_seconds=times,
+        clipped_counts=clipped_counts,
+        near_clipping_counts=near_counts,
+        frame_length=cfg.n_fft,
+        hop_length=cfg.hop_length,
+        clipping_threshold=cfg.clipping_threshold,
+        near_clipping_threshold=cfg.near_clipping_threshold,
+        near_clipping_time_ranges=time_ranges,
     )
 
 

@@ -3,7 +3,11 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from audioatlas.analysis.levels import compute_rms_envelope, compute_scalar_levels
+from audioatlas.analysis.levels import (
+    compute_peak_timeline,
+    compute_rms_envelope,
+    compute_scalar_levels,
+)
 from audioatlas.config import AnalysisConfig
 
 
@@ -87,3 +91,27 @@ def test_true_peak_per_channel_is_none_when_oversample_disabled_and_too_short(sr
     assert result.true_peak_dbtp is None
     assert result.true_peak_dbtp_per_channel is None
     assert result.true_peak_linear_per_channel is None
+
+
+def test_peak_timeline_finds_near_clipping_bursts(sr):
+    cfg = AnalysisConfig(n_fft=100, hop_length=100, true_peak_oversample=1)
+    y = np.zeros((1_000, 1), dtype=np.float32)
+    y[200:250, 0] = 0.995
+    y[700:720, 0] = -0.995
+
+    result = compute_peak_timeline(y, sr, cfg)
+
+    assert result.near_clipping_counts[2] == 50
+    assert result.near_clipping_counts[7] == 20
+    assert np.count_nonzero(result.near_clipping_counts) == 2
+    summary = result.to_summary_dict()
+    assert summary["frames_with_near_clipping"] == 2
+    assert summary["near_clipping_counts"][2] == 50
+    assert summary["near_clipping_counts"][7] == 20
+    assert len(result.near_clipping_time_ranges) == 2
+    assert result.near_clipping_time_ranges[0]["start"] == pytest.approx(200 / sr)
+    assert result.near_clipping_time_ranges[0]["end"] == pytest.approx(300 / sr)
+    assert result.near_clipping_time_ranges[0]["duration"] == pytest.approx(100 / sr)
+    assert result.near_clipping_time_ranges[1]["start"] == pytest.approx(700 / sr)
+    assert result.near_clipping_time_ranges[1]["end"] == pytest.approx(800 / sr)
+    assert result.near_clipping_time_ranges[1]["duration"] == pytest.approx(100 / sr)

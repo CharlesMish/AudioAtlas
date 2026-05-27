@@ -12,6 +12,16 @@ from scipy import signal
 from audioatlas.config import AnalysisConfig
 from audioatlas.utils import EPS, power_to_db, to_mono
 
+BANDS: tuple[tuple[str, float, float], ...] = (
+    ("sub", 20.0, 60.0),
+    ("bass", 60.0, 120.0),
+    ("low_mid", 120.0, 350.0),
+    ("mid", 350.0, 2000.0),
+    ("presence", 2000.0, 5000.0),
+    ("high", 5000.0, 10000.0),
+    ("air", 10000.0, 20000.0),
+)
+
 
 @dataclass(frozen=True)
 class SpectrogramResult:
@@ -39,19 +49,27 @@ class AverageSpectrumResult:
     power_db: NDArray[np.float64]
     sample_rate: int
     nperseg: int
+    band_energies: dict[str, dict[str, float | None]]
 
     def to_summary_dict(self) -> dict[str, object]:
         valid = self.freqs_hz >= 20
         if not np.any(valid):
-            return {"nperseg": self.nperseg, "bins": int(len(self.freqs_hz))}
+            return {
+                "nperseg": self.nperseg,
+                "bins": int(len(self.freqs_hz)),
+                "band_energies": self.band_energies,
+            }
         freqs = self.freqs_hz[valid]
         power = self.power_db[valid]
         peak_idx = int(np.argmax(power))
+        strongest_band = _strongest_band(self.band_energies)
         return {
             "nperseg": self.nperseg,
             "bins": int(len(self.freqs_hz)),
             "strongest_bin_hz": float(freqs[peak_idx]),
             "strongest_bin_db": float(power[peak_idx]),
+            "band_energies": self.band_energies,
+            "strongest_band": strongest_band,
         }
 
 
@@ -127,9 +145,55 @@ def compute_average_spectrum(
         valid = freqs >= 20
         ref_db = float(np.max(raw_power_db[valid])) if np.any(valid) else float(np.max(raw_power_db))
         power_db = np.maximum(raw_power_db - ref_db, cfg.db_floor)
+    band_energies = _compute_band_energies(
+        freqs.astype(np.float64), power_db, nyquist=float(sr / 2), floor_db=cfg.db_floor
+    )
     return AverageSpectrumResult(
         freqs_hz=freqs.astype(np.float64),
         power_db=power_db,
         sample_rate=int(sr),
         nperseg=int(nperseg),
+        band_energies=band_energies,
     )
+
+
+def _compute_band_energies(
+    freqs: NDArray[np.float64],
+    power_db: NDArray[np.float64],
+    *,
+    nyquist: float,
+    floor_db: float,
+) -> dict[str, dict[str, float | None]]:
+    rel_power = np.power(10.0, power_db / 10.0)
+    out: dict[str, dict[str, float | None]] = {}
+    for name, low_hz, high_hz in BANDS:
+        capped_high = min(high_hz, nyquist)
+        if capped_high <= low_hz:
+            energy_db = None
+        else:
+            mask = (freqs >= low_hz) & (freqs < capped_high)
+            if not np.any(mask):
+                energy_db = None
+            else:
+                energy_linear = float(np.mean(rel_power[mask]))
+                energy_db = float(max(power_to_db(energy_linear, floor_db=floor_db), floor_db))
+        out[name] = {
+            "low_hz": low_hz,
+            "high_hz": capped_high,
+            "energy_db": energy_db,
+        }
+    return out
+
+
+def _strongest_band(bands: dict[str, dict[str, float | None]]) -> str | None:
+    valid = [
+        (name, values["energy_db"])
+        for name, values in bands.items()
+        if isinstance(values.get("energy_db"), (int, float))
+    ]
+    if not valid:
+        return None
+    values = [float(item[1]) for item in valid]
+    if max(values) == min(values):
+        return None
+    return max(valid, key=lambda item: float(item[1]))[0]
