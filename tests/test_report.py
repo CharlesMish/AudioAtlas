@@ -319,13 +319,12 @@ def test_report_truncates_many_time_ranges(tmp_path: Path):
     assert "Time ranges: 12 regions" in text
     assert "total 2.400s" in text
     assert "longest 0.200s" in text
-    assert "First range: 0.000s-0.200s" in text
-    assert "Last range: 11.000s-11.200s" in text
-    assert "Showing first 8" in text
+    assert "Showing 5 example range(s)" in text
     assert "0.000s-0.200s" in text
-    assert "7.000s-7.200s" in text
-    assert "8.000s-8.200s" not in text
-    assert "...and 4 more range(s); see findings.json for full details." in text
+    assert "1.000s-1.200s" in text
+    assert "4.000s-4.200s" in text
+    assert "5.000s-5.200s" not in text
+    assert "see findings.json for full ranges" in text
 
 
 def test_findings_json_preserves_full_time_ranges(tmp_path: Path):
@@ -343,6 +342,50 @@ def test_findings_json_preserves_full_time_ranges(tmp_path: Path):
 
     assert len(parsed["findings"][0]["time_ranges"]) == 12
     assert parsed["findings"][0]["time_ranges"][-1]["start"] == 11.0
+
+
+def test_report_md_renders_grouped_stereo_evidence_as_bullets_and_deduped_ranges(
+    tmp_path: Path,
+):
+    summary = _make_summary()
+    findings = {
+        "count": 1,
+        "findings_shown": [
+            {
+                "severity": "warning",
+                "category": "stereo",
+                "title": "Stereo field shows sustained low-correlation / side-heavy regions",
+                "measured_value": 0.35,
+                "threshold": 0.5,
+                "unit": "mixed stereo metrics",
+                "evidence": "summary evidence",
+                "evidence_items": [
+                    "Median L/R correlation: 0.350.",
+                    "Minimum frame correlation: -0.400.",
+                    "Total time below 0 correlation: 5.000 seconds across 1 region(s).",
+                    "Total time below 0.3 correlation: 20.000 seconds across 1 region(s).",
+                    "Median side/mid ratio: -4.000 dB.",
+                ],
+                "why_it_matters": "Mono playback may change tone or apparent width.",
+                "does_not_mean": "This does not mean the stereo image is incorrect.",
+                "suggested_checks": [
+                    "Inspect the stereo correlation timeline around the lowest-correlation regions.",
+                    "Listen in mono around sustained low-correlation regions if mono compatibility matters.",
+                    "Inspect the mid/side energy plot around side-heavy regions.",
+                ],
+                "time_ranges": [
+                    {"start": 10.0, "end": 30.0, "duration": 20.0},
+                ],
+                "confidence": "medium",
+            }
+        ],
+    }
+    path = write_report_md(summary, summary["plots"], tmp_path, findings)
+    text = path.read_text(encoding="utf-8")
+
+    assert "- Evidence details:" in text
+    assert "  - Median L/R correlation: 0.350." in text
+    assert text.count("10.000s-30.000s") == 1
 
 
 def test_report_summary_sections_show_range_counts_not_raw_lists(tmp_path: Path):
@@ -497,6 +540,18 @@ def test_report_uses_friendly_prompt_labels_not_internal_severity_labels(
     assert "Suggested checks:" not in text
 
 
+def test_report_md_lufs_context_not_finding(tmp_path: Path):
+    summary = _make_summary()
+    summary["levels"]["integrated_lufs"] = -8.2
+    findings = {"count": 0, "findings": [], "findings_shown": []}
+    path = write_report_md(summary, summary["plots"], tmp_path, findings)
+    text = path.read_text(encoding="utf-8")
+
+    assert "Integrated loudness: -8.200 LUFS" in text
+    assert "platforms that normalize playback may reduce level" in text
+    assert "### Integrated loudness is above -10 LUFS" not in text
+
+
 def test_report_renders_plot_links_in_order(tmp_path: Path):
     summary = _make_summary()
     plot_files = ["01_waveform_rms.png", "02_rms_timeline.png"]
@@ -560,6 +615,7 @@ def _html_findings() -> dict:
 
 def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
     summary = _make_summary()
+    summary["levels"]["integrated_lufs"] = -8.2
     path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
     text = path.read_text(encoding="utf-8")
 
@@ -574,6 +630,7 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
     assert "This does not mean the passage is clipped." in text
     assert "Suggested listening checks" in text
     assert "1 lower-priority finding(s) suppressed" in text
+    assert "Delivery / headroom context" in text
 
 
 def test_write_report_html_contains_glossary_and_explanations(tmp_path: Path):
@@ -584,8 +641,13 @@ def test_write_report_html_contains_glossary_and_explanations(tmp_path: Path):
     assert "Understanding these numbers" in text
     assert "Onset density is an attack/activity map for this track" in text
     assert "It is not punch, groove quality, drum hits per second, or mix quality." in text
-    assert "Relative dB plots show shape within this track and are not dBFS." in text
+    assert "Relative dB plots show shape within this track." in text
     assert "PLR is the relationship between true peak and integrated loudness" in text
+    assert "Higher PLR means more peak headroom relative to loudness" in text
+    assert "+1 means nearly identical channels" in text
+    assert "0 dB means side and mid energy are similar" in text
+    assert "moves higher when energy shifts upward in frequency" in text
+    assert "not comparable to dBFS values from meters or other songs" in text
 
 
 def test_write_report_html_renders_relative_plot_links_and_curated_names(
@@ -646,3 +708,71 @@ def test_write_report_html_renders_friendly_no_findings_state(tmp_path: Path):
         "No prioritized findings surfaced. The plots and technical details still "
         "describe the track's measured shape."
     ) in text
+
+
+def test_write_report_html_how_to_read_and_notes_persistence(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert (
+        "Check before delivery / worth a listen / for reference indicate priority, not quality."
+        in text
+    )
+    assert (
+        "A report can have no prioritized findings; the plots still describe the track"
+        in text
+    )
+    assert (
+        "Notes typed here are temporary in this browser page and are not saved into the report files."
+        in text
+    )
+
+
+def test_write_report_html_renders_grouped_stereo_evidence_and_capped_ranges(
+    tmp_path: Path,
+):
+    summary = _make_summary()
+    ranges = [{"start": float(i), "end": float(i) + 0.5, "duration": 0.5} for i in range(8)]
+    ranges[5] = {"start": 20.0, "end": 24.0, "duration": 4.0}
+    ranges[6] = {"start": 30.0, "end": 33.0, "duration": 3.0}
+    ranges[7] = {"start": 40.0, "end": 42.0, "duration": 2.0}
+    findings = {
+        "count": 1,
+        "findings_shown": [
+            {
+                "severity": "warning",
+                "category": "stereo",
+                "title": "Stereo field shows sustained low-correlation / side-heavy regions",
+                "measured_value": 0.35,
+                "threshold": 0.5,
+                "unit": "mixed stereo metrics",
+                "evidence": "summary evidence",
+                "evidence_items": [
+                    "Median L/R correlation: 0.350.",
+                    "Minimum frame correlation: -0.400.",
+                    "Total time below 0.3 correlation: 20.000 seconds across 8 region(s).",
+                ],
+                "why_it_matters": "Mono playback may change tone or apparent width.",
+                "does_not_mean": "This does not mean the stereo image is incorrect.",
+                "suggested_checks": [
+                    "Inspect the stereo correlation timeline around the lowest-correlation regions.",
+                    "Listen in mono around sustained low-correlation regions if mono compatibility matters.",
+                    "Inspect the mid/side energy plot around side-heavy regions.",
+                ],
+                "time_ranges": ranges,
+                "confidence": "medium",
+            }
+        ],
+    }
+    path = write_report_html(summary, summary["plots"], tmp_path, findings)
+    text = path.read_text(encoding="utf-8")
+
+    assert "<li>Median L/R correlation: 0.350.</li>" in text
+    assert "20.000s-24.000s" in text
+    assert "30.000s-33.000s" in text
+    assert "40.000s-42.000s" in text
+    assert "0.000s-0.500s" in text
+    assert "1.000s-1.500s" in text
+    assert "2.000s-2.500s" not in text
+    assert "see findings.json for full ranges" in text

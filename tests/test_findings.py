@@ -191,12 +191,10 @@ def test_clipped_samples_generate_issue():
     assert findings[0].category == "levels"
 
 
-def test_high_integrated_lufs_generates_info():
+def test_high_integrated_lufs_does_not_generate_top_level_finding():
     findings = generate_findings(_summary(levels={"integrated_lufs": -9.5})).findings
 
-    assert len(findings) == 1
-    assert findings[0].severity == "info"
-    assert findings[0].unit == "LUFS"
+    assert findings == []
 
 
 def test_low_plr_generates_info_without_other_delivery_evidence():
@@ -256,7 +254,7 @@ def test_high_median_low_side_brief_negative_correlation_is_not_warning():
 
     assert not any(finding.severity == "warning" for finding in findings)
     assert [finding.title for finding in findings] == [
-        "Stereo field has a wide/decorrelated measurement"
+        "Stereo field shows sustained low-correlation / side-heavy regions"
     ]
 
 
@@ -332,7 +330,7 @@ def test_low_median_correlation_generates_warning():
 
     assert len(findings) == 1
     assert findings[0].severity == "warning"
-    assert "correlation_median" in findings[0].evidence
+    assert "Median L/R correlation" in findings[0].evidence
 
 
 def test_high_side_to_mid_ratio_generates_info():
@@ -377,10 +375,26 @@ def test_wide_low_correlation_track_retains_stereo_warnings_and_info():
     ).findings
 
     titles = [finding.title for finding in findings]
-    assert titles == ["Stereo field is relatively wide/decorrelated by several measurements"]
-    assert "correlation_min" in findings[0].evidence
-    assert "correlation_median" in findings[0].evidence
-    assert "side_to_mid_ratio_db_median" in findings[0].evidence
+    assert titles == ["Stereo field shows sustained low-correlation / side-heavy regions"]
+    assert "Minimum frame correlation" in findings[0].evidence
+    assert "Median L/R correlation" in findings[0].evidence
+    assert "Median side/mid ratio" in findings[0].evidence
+    assert findings[0].evidence_items == [
+        "Minimum frame correlation: -0.400.",
+        "Total time below 0 correlation: 5.000 seconds across 1 region(s).",
+        "Total time below 0.3 correlation: 20.000 seconds across 1 region(s).",
+        "Median L/R correlation: 0.350.",
+        "Median side/mid ratio: -4.000 dB.",
+        "Side/mid ratio above -6 dB: 1 region(s).",
+    ]
+    assert findings[0].suggested_checks == [
+        "Inspect the stereo correlation timeline around the lowest-correlation regions.",
+        "Listen in mono around sustained low-correlation regions if mono compatibility matters.",
+        "Inspect the mid/side energy plot around side-heavy regions.",
+    ]
+    assert findings[0].time_ranges == [
+        {"start": 10.0, "end": 30.0, "duration": 20.0}
+    ]
     assert any(finding.severity == "warning" for finding in findings)
 
 
@@ -749,6 +763,7 @@ def test_max_findings_caps_shown_and_records_suppressed_count():
             levels={
                 "clipped_samples": 2,
                 "near_clipping_samples": 3,
+                "true_peak_dbtp": 0.2,
                 "integrated_lufs": -9.0,
                 "plr_db": 7.0,
             },

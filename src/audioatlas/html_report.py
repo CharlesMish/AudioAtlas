@@ -14,6 +14,7 @@ from audioatlas.report import (
     _format_range_short,
     _normalized_time_ranges,
     _positive_int,
+    _select_time_range_examples,
 )
 from audioatlas.utils import mmss
 
@@ -78,7 +79,8 @@ GLOSSARY: list[tuple[str, str]] = [
     ),
     (
         "PLR",
-        "PLR is the relationship between true peak and integrated loudness. It is not a quality rating.",
+        "PLR is the relationship between true peak and integrated loudness. Higher PLR means "
+        "more peak headroom relative to loudness; lower PLR means the track is more consistently loud.",
     ),
     (
         "Clipping / near-clipping",
@@ -87,18 +89,18 @@ GLOSSARY: list[tuple[str, str]] = [
     ),
     (
         "Stereo correlation",
-        "Stereo correlation describes the L/R relationship, not whether the stereo image is suitable "
-        "for the track. Brief dips can be normal for panned effects.",
+        "Stereo correlation describes the L/R relationship. +1 means nearly identical channels; "
+        "0 means loosely related; negative values indicate opposite-polarity/decorrelated content.",
     ),
     (
         "Side/mid ratio",
-        "Side/mid ratio compares stereo-difference energy with center energy. Pair it with mono "
-        "listening checks when translation matters.",
+        "Side/mid ratio compares stereo-difference energy with center energy. 0 dB means side "
+        "and mid energy are similar; more negative means mid-dominant; closer to 0 means more side energy.",
     ),
     (
         "Spectral centroid",
-        "Spectral centroid is the spectrum's center-of-mass frequency. It is a statistic, not a "
-        "direct brightness verdict.",
+        "Spectral centroid is the spectrum's center-of-mass frequency. It moves higher when "
+        "energy shifts upward in frequency, and lower when energy is weighted toward lows/mids.",
     ),
     (
         "Rolloff",
@@ -126,7 +128,8 @@ GLOSSARY: list[tuple[str, str]] = [
     ),
     (
         "Relative dB",
-        "Relative dB plots show shape within this track and are not dBFS.",
+        "Relative dB plots show shape within this track. They are useful for shape within this "
+        "track; not comparable to dBFS values from meters or other songs.",
     ),
 ]
 
@@ -208,6 +211,8 @@ def write_report_html(
         "<p>Start with Findings, then inspect the referenced plots. AudioAtlas measurements "
         "are observations for listening and inspection, not quality judgments.</p>",
         f"<p>{_h(RELATIVE_DB_NOTE)}</p>",
+        "<p>Check before delivery / worth a listen / for reference indicate priority, not quality.</p>",
+        "<p>A report can have no prioritized findings; the plots still describe the track's measured shape.</p>",
         "</section>",
         '<section id="metrics">',
         "<h2>Key metrics</h2>",
@@ -222,6 +227,7 @@ def write_report_html(
         _metric_card("Median stereo correlation", stereo.get("correlation_median"), "Pearson r"),
         _metric_card("Median side/mid ratio", mid_side.get("side_to_mid_ratio_db_median"), "dB"),
         "</div>",
+        _delivery_context_html(levels),
         "</section>",
         _findings_section(findings, report_max_time_ranges),
         _plots_section(plot_files),
@@ -257,6 +263,24 @@ def _metric_card(label: str, value: Any, unit: str) -> str:
         f'<div class="metric-value">{_h(value_text)}</div>'
         f'<div class="metric-label">{_h(label)}</div>'
         f"{unit_html}</div>"
+    )
+
+
+def _delivery_context_html(levels: dict[str, Any]) -> str:
+    integrated_lufs = levels.get("integrated_lufs")
+    if (
+        not isinstance(integrated_lufs, (int, float))
+        or isinstance(integrated_lufs, bool)
+        or integrated_lufs <= -10.0
+    ):
+        return ""
+    return (
+        '<div class="context-card">'
+        "<h3>Delivery / headroom context</h3>"
+        f"<p>Integrated loudness: {_h(_fmt_value(integrated_lufs))} LUFS. "
+        "This is above many streaming normalization targets; platforms that "
+        "normalize playback may reduce level.</p>"
+        "</div>"
     )
 
 
@@ -311,8 +335,16 @@ def _finding_card(item: dict[str, Any], max_display: int) -> str:
         "</div>",
         f'<h3 class="finding-title">{_h(item.get("title", "Finding"))}</h3>',
         f'<p class="evidence"><strong>Evidence:</strong> {_h(item.get("evidence", ""))}</p>',
-        f'<p class="why"><strong>Why it matters:</strong> {_h(item.get("why_it_matters", ""))}</p>',
     ]
+    evidence_items = item.get("evidence_items")
+    if isinstance(evidence_items, list) and evidence_items:
+        lines.append('<ul class="evidence-list">')
+        for evidence_item in evidence_items:
+            lines.append(f"<li>{_h(evidence_item)}</li>")
+        lines.append("</ul>")
+    lines.append(
+        f'<p class="why"><strong>Why it matters:</strong> {_h(item.get("why_it_matters", ""))}</p>'
+    )
     does_not_mean = item.get("does_not_mean")
     if isinstance(does_not_mean, str) and does_not_mean:
         lines.append(f'<p class="why"><strong>Does not mean:</strong> {_h(does_not_mean)}</p>')
@@ -338,24 +370,19 @@ def _html_time_ranges(time_ranges: list[Any], max_display: int) -> list[str]:
         return []
     total_duration = sum(item["duration"] for item in ranges)
     longest = max(ranges, key=lambda item: item["duration"])
-    first = ranges[0]
-    last = ranges[-1]
+    examples = _select_time_range_examples(ranges, max_display=max_display)
     lines = [
         '<div class="time-ranges">',
         (
             f"{len(ranges)} regions, total {total_duration:.3f}s, "
             f"longest {longest['duration']:.3f}s."
         ),
-        f"<br>First range: {_h(_format_range_short(first))}",
-        f"<br>Last range: {_h(_format_range_short(last))}",
     ]
-    visible = ranges[:max_display]
     lines.append('<ul class="range-list">')
-    for item in visible:
+    for item in examples:
         lines.append(f"<li>{_h(_format_range_short(item))}</li>")
-    remaining = len(ranges) - max_display
-    if remaining > 0:
-        lines.append(f"<li>...and {remaining} more range(s); see findings.json.</li>")
+    if len(examples) < len(ranges):
+        lines.append("<li>see findings.json for full ranges</li>")
     lines.append("</ul>")
     lines.append("</div>")
     return lines
@@ -453,6 +480,7 @@ def _notes_section() -> str:
     lines = [
         '<section id="notes">',
         "<h2>Human notes</h2>",
+        '<p class="section-intro">Notes typed here are temporary in this browser page and are not saved into the report files.</p>',
         '<div class="notes-grid">',
     ]
     for index, label in enumerate(labels):
@@ -504,8 +532,11 @@ h3 { margin: 0; }
 .how-to-read p { margin: 4px 0; }
 .section-intro { font-size: 13px; color: var(--text-muted); max-width: 74ch; margin-bottom: 12px; }
 .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; }
-.metric-card, .finding-card, .plot-card, details, .note-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.metric-card, .finding-card, .plot-card, details, .note-box, .context-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
 .metric-card { padding: 14px 16px; }
+.context-card { margin-top: 12px; padding: 12px 16px; }
+.context-card h3 { font-size: 14px; margin: 0 0 4px; }
+.context-card p { margin: 0; color: var(--text-muted); }
 .metric-value { font-size: 22px; font-weight: 650; line-height: 1.1; margin-bottom: 2px; }
 .metric-label, .metric-note { font-size: 12px; color: var(--text-muted); }
 .findings-list { display: flex; flex-direction: column; gap: 12px; }
@@ -513,11 +544,13 @@ h3 { margin: 0; }
 .finding-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .priority { font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
 .priority-issue { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-.priority-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.priority-warning { background: #dbeafe; color: #1e3a8a; border: 1px solid #bfdbfe; }
 .priority-info { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
 .category { font-size: 11px; background: #f3f4f6; color: #374151; padding: 2px 7px; border-radius: 3px; }
 .finding-title { font-size: 16px; font-weight: 650; margin: 0 0 6px; line-height: 1.3; }
 .evidence, .why { margin: 6px 0; }
+.evidence-list { margin: 6px 0; padding-left: 20px; }
+.evidence-list li { margin-bottom: 2px; }
 .checks { margin: 6px 0; padding-left: 20px; }
 .finding-card h4 { margin: 10px 0 4px; font-size: 13px; }
 .time-ranges { font-size: 12px; background: #f8fafc; padding: 8px 10px; border-radius: 4px; margin-top: 8px; border-left: 3px solid #cbd5e1; }

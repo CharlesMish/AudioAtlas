@@ -155,25 +155,67 @@ def _format_time_ranges_for_report(
 
     total_duration = sum(item["duration"] for item in ranges)
     longest = max(ranges, key=lambda item: item["duration"])
-    first = ranges[0]
-    last = ranges[-1]
+    examples = _select_time_range_examples(ranges, max_display=max_display)
     lines = [
         (
             f"- Time ranges: {len(ranges)} regions, total {total_duration:.3f}s, "
             f"longest {longest['duration']:.3f}s."
         ),
-        f"- First range: {_format_range_short(first)}",
-        f"- Last range: {_format_range_short(last)}",
-        f"- Showing first {min(max_display, len(ranges))}:",
+        f"- Showing {len(examples)} example range(s):",
     ]
-    for item in ranges[:max_display]:
+    for item in examples:
         lines.append(f"  - {_format_range_short(item)}")
-    remaining = len(ranges) - max_display
-    if remaining > 0:
-        lines.append(
-            f"  - ...and {remaining} more range(s); see findings.json for full details."
-        )
+    if len(examples) < len(ranges):
+        lines.append("  - see findings.json for full ranges")
     return lines
+
+
+def _select_time_range_examples(
+    ranges: list[dict[str, float]],
+    *,
+    max_display: int,
+) -> list[dict[str, float]]:
+    """Pick compact examples: longest ranges first, plus earliest context."""
+
+    capped = max(0, min(max_display, 5))
+    if capped == 0:
+        return []
+    if len(ranges) <= capped:
+        return ranges
+
+    longest_count = min(3, capped)
+    longest = sorted(ranges, key=lambda item: (-item["duration"], item["start"]))[
+        :longest_count
+    ]
+    remaining_slots = capped - len(longest)
+    selected = list(longest)
+    for item in sorted(ranges, key=lambda item: item["start"]):
+        if len(selected) >= capped:
+            break
+        if item in selected:
+            continue
+        selected.append(item)
+        remaining_slots -= 1
+        if remaining_slots <= 0:
+            break
+    return sorted(selected, key=lambda item: item["start"])
+
+
+def _delivery_context_lines(levels: dict[str, Any]) -> list[str]:
+    integrated_lufs = levels.get("integrated_lufs")
+    if not isinstance(integrated_lufs, (int, float)) or isinstance(integrated_lufs, bool):
+        return []
+    if integrated_lufs <= -10.0:
+        return []
+    return [
+        "## Delivery / headroom context\n",
+        (
+            f"- Integrated loudness: {_fmt_value(integrated_lufs)} LUFS. "
+            "This is above many streaming normalization targets; platforms that "
+            "normalize playback may reduce level."
+        ),
+        "",
+    ]
 
 
 def write_report_md(
@@ -228,6 +270,7 @@ def write_report_md(
     for key, label, unit in LEVEL_METRIC_DISPLAY:
         lines.append(f"| {label} | {_fmt_value(levels.get(key))} | {unit} |")
     lines.append("")
+    lines.extend(_delivery_context_lines(levels))
 
     # Per-channel breakdown. Only render if at least one of the registered
     # per-channel fields is a non-null list (so mono files with all-null
@@ -397,6 +440,11 @@ def write_report_md(
                 )
                 lines.append(f"- Threshold: {_fmt_value(item.get('threshold'))}")
                 lines.append(f"- Evidence: {item.get('evidence', '')}")
+                evidence_items = item.get("evidence_items")
+                if isinstance(evidence_items, list) and evidence_items:
+                    lines.append("- Evidence details:")
+                    for evidence_item in evidence_items:
+                        lines.append(f"  - {evidence_item}")
                 lines.append(f"- Why it matters: {item.get('why_it_matters', '')}")
                 does_not_mean = item.get("does_not_mean")
                 if isinstance(does_not_mean, str) and does_not_mean:
