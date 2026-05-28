@@ -151,6 +151,19 @@ def test_tiny_near_clipping_with_true_peak_merges_into_true_peak_finding():
     assert near_clip == []
 
 
+def test_tiny_decoded_near_clipping_wording_is_singular():
+    findings = generate_findings(
+        _summary(
+            metadata={"filename": "song.mp3", "format": "MP3", "subtype": "MPEG_LAYER_III"},
+            levels={"near_clipping_samples": 1, "true_peak_dbtp": 0.2},
+        )
+    ).findings
+
+    assert len(findings) == 1
+    assert "1 decoded near-clipping sample" in findings[0].evidence
+    assert "1 in decoded samples" not in findings[0].evidence
+
+
 def test_substantial_near_clipping_with_true_peak_keeps_separate_finding():
     findings = generate_findings(
         _summary(
@@ -179,7 +192,7 @@ def test_lossy_metadata_uses_decoded_sample_wording_for_level_findings():
     text = " ".join(
         " ".join([finding.evidence, finding.why_it_matters]) for finding in findings
     ).lower()
-    assert "decoded samples" in text
+    assert "decoded near-clipping samples" in text
     assert "decoded audio" in text
 
 

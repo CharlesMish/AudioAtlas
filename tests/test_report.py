@@ -383,8 +383,9 @@ def test_report_md_renders_grouped_stereo_evidence_as_bullets_and_deduped_ranges
     path = write_report_md(summary, summary["plots"], tmp_path, findings)
     text = path.read_text(encoding="utf-8")
 
-    assert "- Evidence details:" in text
+    assert "- Evidence:" in text
     assert "  - Median L/R correlation: 0.350." in text
+    assert "summary evidence" not in text
     assert text.count("10.000s-30.000s") == 1
 
 
@@ -548,6 +549,8 @@ def test_report_md_lufs_context_not_finding(tmp_path: Path):
     text = path.read_text(encoding="utf-8")
 
     assert "Integrated loudness: -8.200 LUFS" in text
+    assert "streaming normalization reference levels" in text
+    assert "streaming normalization targets" not in text
     assert "platforms that normalize playback may reduce level" in text
     assert "### Integrated loudness is above -10 LUFS" not in text
 
@@ -631,6 +634,8 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
     assert "Suggested listening checks" in text
     assert "1 lower-priority finding(s) suppressed" in text
     assert "Delivery / headroom context" in text
+    assert "streaming normalization reference levels" in text
+    assert "streaming normalization targets" not in text
 
 
 def test_write_report_html_contains_glossary_and_explanations(tmp_path: Path):
@@ -662,6 +667,20 @@ def test_write_report_html_renders_relative_plot_links_and_curated_names(
     assert '<img src="09_band_energy_timeline.png" alt="Frequency Band Energy Timeline">' in text
     assert "plot-card plot-card-wide" in text
     assert "What this shows:" in text
+
+
+def test_write_report_html_keeps_polished_visual_structure(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert "--shadow-card:" in text
+    assert ".metric-card { min-height:" in text
+    assert ".finding-card { padding:" in text
+    assert ".plot-image-wrapper { background: var(--surface-muted)" in text
+    assert ".priority-warning { background: #ccfbf1" in text
+    assert ".priority-warning { background: #fef3c7" not in text
+    assert "letter-spacing: 0;" in text
 
 
 def test_write_report_html_escapes_filename_and_finding_text(tmp_path: Path):
@@ -769,6 +788,7 @@ def test_write_report_html_renders_grouped_stereo_evidence_and_capped_ranges(
     text = path.read_text(encoding="utf-8")
 
     assert "<li>Median L/R correlation: 0.350.</li>" in text
+    assert "summary evidence" not in text
     assert "20.000s-24.000s" in text
     assert "30.000s-33.000s" in text
     assert "40.000s-42.000s" in text

@@ -53,6 +53,10 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   nullability tracks the global value) and the new report section.
 
 ### Changed
+- Locked the single-track report UX as the regression baseline with
+  structural tests for friendly empty states, delivery/headroom context,
+  grouped stereo findings, near-clipping grouping, glossary wording, and
+  local relative plot links.
 - Report language keeps generated observations under `Findings`, includes
   explicit `does_not_mean` caveats, maps internal severity values to
   friendlier prompt labels, and repeats relative-dB context near relative

@@ -211,7 +211,7 @@ def _delivery_context_lines(levels: dict[str, Any]) -> list[str]:
         "## Delivery / headroom context\n",
         (
             f"- Integrated loudness: {_fmt_value(integrated_lufs)} LUFS. "
-            "This is above many streaming normalization targets; platforms that "
+            "This is above many streaming normalization reference levels; platforms that "
             "normalize playback may reduce level."
         ),
         "",
@@ -439,12 +439,13 @@ def write_report_md(
                     f"{item.get('unit', '')}".rstrip()
                 )
                 lines.append(f"- Threshold: {_fmt_value(item.get('threshold'))}")
-                lines.append(f"- Evidence: {item.get('evidence', '')}")
                 evidence_items = item.get("evidence_items")
                 if isinstance(evidence_items, list) and evidence_items:
-                    lines.append("- Evidence details:")
+                    lines.append("- Evidence:")
                     for evidence_item in evidence_items:
                         lines.append(f"  - {evidence_item}")
+                else:
+                    lines.append(f"- Evidence: {item.get('evidence', '')}")
                 lines.append(f"- Why it matters: {item.get('why_it_matters', '')}")
                 does_not_mean = item.get("does_not_mean")
                 if isinstance(does_not_mean, str) and does_not_mean:

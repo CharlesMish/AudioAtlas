@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import numpy as np
 import soundfile as sf
@@ -47,6 +48,13 @@ def test_pipeline_writes_expected_outputs(tmp_path, sr):
     assert "Findings" in html
     assert "Key metrics" in html
     assert "01_waveform_rms.png" in html
+    image_srcs = re.findall(r'<img src="([^"]+)"', html)
+    assert len(image_srcs) == 10
+    assert sorted(image_srcs) == sorted(summary["plots"])
+    for src in image_srcs:
+        assert "://" not in src
+        assert not src.startswith(("/", "\\"))
+        assert (result.out_dir / src).exists()
     assert findings["count"] == len(result.findings["findings"])
     all_titles = [item["title"] for item in findings["all_findings"]]
     assert len(all_titles) <= 4

@@ -90,6 +90,9 @@ def generate_findings(summary: dict) -> FindingsResult:
     track_duration = _number(levels, "duration_seconds")
     is_lossy = _is_lossy_metadata(metadata)
     sample_label = "decoded samples" if is_lossy else "samples"
+    near_clip_sample_label = (
+        "decoded near-clipping samples" if is_lossy else "near-clipping samples"
+    )
     audio_label = "decoded audio" if is_lossy else "audio"
 
     true_peak = _number(levels, "true_peak_dbtp")
@@ -107,8 +110,14 @@ def generate_findings(summary: dict) -> FindingsResult:
             and not meaningful_near_clip_ranges
             and (clipped is None or clipped <= 0)
         ):
+            near_clip_count = int(near_clipping)
+            near_clip_label = (
+                near_clip_sample_label.removesuffix("s")
+                if near_clip_count == 1
+                else near_clip_sample_label
+            )
             true_peak_evidence += (
-                f" near_clipping_samples measured {int(near_clipping)} in {sample_label}."
+                f" near_clipping_samples measured {near_clip_count} {near_clip_label}."
             )
         findings.append(
             Finding(
@@ -161,7 +170,10 @@ def generate_findings(summary: dict) -> FindingsResult:
                 measured_value=int(near_clipping),
                 threshold=0,
                 unit="samples",
-                evidence=f"near_clipping_samples measured {int(near_clipping)} in {sample_label}.",
+                evidence=(
+                    f"near_clipping_samples measured {int(near_clipping)} "
+                    f"{near_clip_sample_label}."
+                ),
                 why_it_matters=(
                     f"Near-full-scale {sample_label} can leave little margin for later encoding, "
                     "sample-rate conversion, or level changes."
