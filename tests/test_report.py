@@ -678,9 +678,39 @@ def test_write_report_html_keeps_polished_visual_structure(tmp_path: Path):
     assert ".metric-card { min-height:" in text
     assert ".finding-card { padding:" in text
     assert ".plot-image-wrapper { background: var(--surface-muted)" in text
-    assert ".priority-warning { background: #ccfbf1" in text
-    assert ".priority-warning { background: #fef3c7" not in text
+    assert ".priority-warning { background: var(--warning-bg)" in text
+    assert "--warning-bg:" in text
     assert "letter-spacing: 0;" in text
+
+
+def test_write_report_html_renders_default_and_non_default_themes(tmp_path: Path):
+    summary = _make_summary()
+    default_path = write_report_html(summary, summary["plots"], tmp_path / "default", _html_findings())
+    dark_path = write_report_html(
+        summary,
+        summary["plots"],
+        tmp_path / "dark",
+        _html_findings(),
+        theme_name="midnight_studio",
+    )
+
+    default_text = default_path.read_text(encoding="utf-8")
+    dark_text = dark_path.read_text(encoding="utf-8")
+
+    assert "--bg: #f5f7f8;" in default_text
+    assert "--bg: #0b1120;" in dark_text
+    assert "--lightbox-scrim:" in dark_text
+
+
+def test_write_report_html_uses_no_external_theme_assets(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert "<link" not in text
+    assert "src=\"http" not in text
+    assert "href=\"http" not in text
+    assert "cdn" not in text.lower()
 
 
 def test_write_report_html_escapes_filename_and_finding_text(tmp_path: Path):
@@ -796,3 +826,57 @@ def test_write_report_html_renders_grouped_stereo_evidence_and_capped_ranges(
     assert "1.000s-1.500s" in text
     assert "2.000s-2.500s" not in text
     assert "see findings.json for full ranges" in text
+
+
+def test_write_report_html_includes_lightbox_structure_and_plot_hooks(tmp_path: Path):
+    """Lightweight structural checks for the static plot lightbox (presentation only).
+
+    Verifies CSS/JS hooks, data attributes on plot cards, controls, aria basics,
+    and absence of any external/CDN references. Does not snapshot full HTML.
+    """
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    # Lightbox overlay container and dialog role
+    assert 'id="lightbox"' in text
+    assert 'class="lightbox"' in text
+    assert 'role="dialog"' in text
+    assert 'aria-modal="true"' in text
+    assert 'aria-label="Plot image viewer"' in text
+
+    # Controls present (prev/next/close + counter)
+    assert 'id="lb-prev"' in text
+    assert 'id="lb-next"' in text
+    assert 'id="lb-close"' in text
+    assert 'id="lb-counter"' in text
+    assert 'aria-label="Previous image"' in text
+    assert 'aria-label="Next image"' in text
+    assert 'aria-label="Close viewer"' in text
+
+    # Plot cards expose data attrs for the lightbox JS (real PNG srcs are used)
+    assert 'data-title="' in text
+    assert 'data-filename="' in text
+    assert 'class="plot-image-wrapper" data-title=' in text
+    # All 10 plots should participate
+    assert text.count('data-filename="') >= 10
+
+    # JS hooks: selector for plots grid wrappers + key handlers (no full source snapshot)
+    assert ".plots-grid .plot-image-wrapper" in text
+    assert "openLightbox" in text or "function openLightbox" in text
+    assert "ArrowLeft" in text and "ArrowRight" in text
+    assert "Escape" in text or "Esc" in text
+    assert "getAttribute('data-title')" in text or "data-title" in text
+
+    # No external dependencies or CDNs introduced (presentation layer only)
+    lowered = text.lower()
+    assert "http://" not in lowered
+    assert "https://" not in lowered
+    assert "cdn" not in lowered
+    assert "<script src=" not in text
+    assert 'src="//' not in text
+    assert "import " not in text  # no ESM
+
+    # Existing plot img tags remain relative and escaped (sanity)
+    assert '<img src="03_log_spectrogram.png"' in text
+    assert '<img src="01_waveform_rms.png"' in text

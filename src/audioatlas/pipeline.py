@@ -69,6 +69,7 @@ def analyze_file(
     *,
     config: AnalysisConfig | None = None,
     max_duration_seconds: float | None = None,
+    theme_name: str | None = None,
 ) -> AnalysisRunResult:
     """Run the v0.1 analysis pipeline for one file."""
 
@@ -122,7 +123,13 @@ def analyze_file(
     summary_path = write_summary_json(summary, out)
     findings_path = write_findings_json(findings, out)
     report_path = write_report_md(summary, [p.name for p in plot_paths], out, findings)
-    html_report_path = write_report_html(summary, [p.name for p in plot_paths], out, findings)
+    html_report_path = write_report_html(
+        summary,
+        [p.name for p in plot_paths],
+        out,
+        findings,
+        theme_name=theme_name,
+    )
 
     return AnalysisRunResult(
         out_dir=out,

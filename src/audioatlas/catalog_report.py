@@ -9,6 +9,7 @@ from pathlib import Path
 from statistics import mean, median
 from typing import Any
 
+from audioatlas.theme import default_theme_name, theme_css_variables, validate_theme_name
 from audioatlas.utils import mmss
 
 CATALOG_METRICS: tuple[str, ...] = (
@@ -447,8 +448,14 @@ def _decoded_context_md(catalog: dict[str, Any]) -> list[str]:
     ]
 
 
-def write_catalog_html(catalog: dict[str, Any], out_dir: str | Path) -> Path:
+def write_catalog_html(
+    catalog: dict[str, Any],
+    out_dir: str | Path,
+    *,
+    theme_name: str | None = None,
+) -> Path:
     out = Path(out_dir) / "catalog.html"
+    selected_theme = validate_theme_name(theme_name or default_theme_name())
     folder_name = Path(str(catalog.get("input_folder", "folder"))).name
     stats = catalog.get("statistics") if isinstance(catalog.get("statistics"), dict) else {}
     lines = [
@@ -459,7 +466,7 @@ def write_catalog_html(catalog: dict[str, Any], out_dir: str | Path) -> Path:
         '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
         f"<title>AudioAtlas Catalog - {_h(folder_name)}</title>",
         "<style>",
-        _css(),
+        _css(selected_theme),
         "</style>",
         "</head>",
         "<body>",
@@ -930,18 +937,10 @@ track reports are normalized within each track and are not calibrated dBFS.</p>
 """
 
 
-def _css() -> str:
-    return """
-:root {
-  --bg: #f5f7f8;
-  --surface: #ffffff;
-  --surface-muted: #f8fafc;
-  --text: #1f2937;
-  --text-muted: #4b5563;
-  --border: #dfe5eb;
-  --accent: #0f766e;
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 28px rgba(15, 23, 42, 0.04);
-}
+def _css(theme_name: str | None = None) -> str:
+    return (
+        theme_css_variables(theme_name)
+        + """
 * { box-sizing: border-box; }
 body {
   margin: 0;
@@ -958,18 +957,18 @@ h2 { font-size: 20px; font-weight: 680; margin: 42px 0 12px; padding-bottom: 8px
 h3 { margin: 0; }
 .subtitle { font-size: 14.5px; color: var(--text-muted); margin-bottom: 16px; }
 .meta-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-.chip { display: inline-flex; gap: 6px; background: #eef2f5; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; color: var(--text-muted); }
+.chip { display: inline-flex; gap: 6px; background: var(--chip-bg); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; color: var(--text-muted); }
 .chip strong { color: var(--text); font-weight: 550; }
-.how-to-read { background: #f1f5f9; border: 1px solid #d7e0ea; border-left: 4px solid #94a3b8; padding: 16px 18px; border-radius: 8px; font-size: 14px; color: #334155; }
+.how-to-read { background: var(--callout-bg); border: 1px solid var(--border); border-left: 4px solid var(--callout-border); padding: 16px 18px; border-radius: 8px; font-size: 14px; color: var(--text-muted); }
 .how-to-read strong { display: block; margin-bottom: 4px; color: var(--text); }
 .how-to-read p { margin: 4px 0; }
 .section-intro { font-size: 13.5px; color: var(--text-muted); max-width: 76ch; margin: 0 0 16px; }
 .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 12px; }
 .metric-card, .distribution-card, .fingerprint-card, .context-card, .pattern-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-card); }
 .metric-card { min-height: 116px; padding: 18px 16px 16px; display: flex; flex-direction: column; justify-content: space-between; }
-.metric-value { font-size: 24px; font-weight: 700; line-height: 1.05; margin-bottom: 8px; color: #111827; }
+.metric-value { font-size: 24px; font-weight: 700; line-height: 1.05; margin-bottom: 8px; color: var(--text); }
 .metric-label { font-size: 12.5px; color: var(--text-muted); font-weight: 560; }
-.metric-note { font-size: 12px; color: #64748b; margin: 8px 0 0; }
+.metric-note { font-size: 12px; color: var(--text-soft); margin: 8px 0 0; }
 .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-card); }
 .track-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .track-table th, .track-table td { padding: 9px 10px; border-bottom: 1px solid #edf1f5; text-align: left; white-space: nowrap; }
@@ -977,18 +976,18 @@ h3 { margin: 0; }
 .track-table a, .fingerprint-card a { color: var(--accent); font-weight: 600; text-decoration: none; }
 .track-table a:hover, .fingerprint-card a:hover { text-decoration: underline; }
 .trait-tags { display: flex; flex-wrap: wrap; gap: 4px; min-width: 180px; }
-.trait-tag { display: inline-flex; align-items: center; background: #eef2f5; border: 1px solid #dfe5eb; color: #475569; border-radius: 999px; padding: 2px 7px; font-size: 11.5px; }
-.shown-findings, .muted { color: #64748b; font-size: 12px; }
+.trait-tag { display: inline-flex; align-items: center; background: var(--trait-bg); border: 1px solid var(--trait-border); color: var(--trait-text); border-radius: 999px; padding: 2px 7px; font-size: 11.5px; }
+.shown-findings, .muted { color: var(--text-soft); font-size: 12px; }
 .distribution-grid, .fingerprint-grid, .pattern-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .distribution-card, .fingerprint-card, .context-card, .pattern-card { padding: 16px; }
 .distribution-card h3, .fingerprint-card h3, .pattern-card h3 { font-size: 15px; margin-bottom: 8px; color: #1e293b; }
-.pattern-count { display: inline-flex; color: #0f766e; background: #e6f4f1; border-radius: 999px; padding: 3px 8px; font-size: 12px; font-weight: 650; margin-bottom: 6px; }
+.pattern-count { display: inline-flex; color: var(--pattern-accent); background: var(--accent-muted); border-radius: 999px; padding: 3px 8px; font-size: 12px; font-weight: 650; margin-bottom: 6px; }
 .pattern-card p { margin: 6px 0; color: var(--text-muted); }
 .caveat { font-size: 12.5px; }
 .range-row { display: flex; justify-content: space-between; gap: 10px; color: var(--text-muted); font-size: 12.5px; }
 .range-bar { position: relative; height: 12px; background: #e2e8f0; border-radius: 999px; margin-top: 12px; }
-.track-dot { position: absolute; top: 50%; width: 6px; height: 6px; margin-left: -3px; margin-top: -3px; border-radius: 999px; background: #64748b; opacity: 0.65; }
-.median-tick { position: absolute; top: -3px; width: 2px; height: 18px; margin-left: -1px; border-radius: 2px; background: #0f766e; }
+.track-dot { position: absolute; top: 50%; width: 6px; height: 6px; margin-left: -3px; margin-top: -3px; border-radius: 999px; background: var(--distribution-dot); opacity: 0.65; }
+.median-tick { position: absolute; top: -3px; width: 2px; height: 18px; margin-left: -1px; border-radius: 2px; background: var(--distribution-median); }
 .fingerprint-card p, .context-card p { margin: 6px 0; color: var(--text-muted); }
 .glossary-list { display: grid; grid-template-columns: minmax(130px, 0.35fr) 1fr; gap: 6px 14px; margin: 12px 0 0; color: var(--text-muted); }
 .glossary-list dt { color: #334155; font-weight: 650; }
@@ -1000,3 +999,4 @@ h3 { margin: 0; }
   .glossary-list { grid-template-columns: 1fr; }
 }
 """
+    )

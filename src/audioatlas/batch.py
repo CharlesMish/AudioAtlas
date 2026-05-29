@@ -36,6 +36,7 @@ def analyze_folder(
     *,
     config: AnalysisConfig | None = None,
     max_duration_seconds: float | None = None,
+    theme_name: str | None = None,
 ) -> BatchRunResult:
     """Analyze supported audio files in a folder and write catalog reports."""
 
@@ -65,6 +66,7 @@ def analyze_folder(
             track_out,
             config=cfg,
             max_duration_seconds=max_duration_seconds,
+            theme_name=theme_name,
         )
         tracks.append(
             track_record_from_run(
@@ -83,7 +85,7 @@ def analyze_folder(
     )
     summary_path = write_catalog_summary_json(catalog, out)
     md_path = write_catalog_md(catalog, out)
-    html_path = write_catalog_html(catalog, out)
+    html_path = write_catalog_html(catalog, out, theme_name=theme_name)
     return BatchRunResult(
         out_dir=out,
         catalog_summary_path=summary_path,

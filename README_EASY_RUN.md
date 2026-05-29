@@ -59,3 +59,15 @@ If it does not open automatically, open that file in your browser.
 
 The catalog shows folder-level technical fingerprints, ranges, and
 medians. It does not score, rank, or judge tracks.
+
+## Themes
+
+The double-click scripts use the default theme. From a terminal, you can
+choose any built-in local theme:
+
+```bash
+audioatlas themes
+audioatlas batch input_audio --out output_reports --theme midnight_studio
+```
+
+Themes change presentation only. Reports remain static local HTML files.

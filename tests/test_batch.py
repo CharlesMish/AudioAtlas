@@ -49,6 +49,8 @@ def test_batch_cli_creates_per_track_reports_and_catalog_outputs(tmp_path: Path)
             "1024",
             "--true-peak-oversample",
             "1",
+            "--theme",
+            "warm_tape",
         ],
     )
 
@@ -71,11 +73,14 @@ def test_batch_cli_creates_per_track_reports_and_catalog_outputs(tmp_path: Path)
     assert catalog["tracks"][0]["report_path"] == "alpha/report.html"
 
     html = (out_dir / "catalog.html").read_text(encoding="utf-8")
+    track_html = (out_dir / "alpha" / "report.html").read_text(encoding="utf-8")
     md = (out_dir / "catalog.md").read_text(encoding="utf-8")
     assert 'href="alpha/report.html"' in html
     assert "[report.html](alpha/report.html)" in md
     assert "Folder-level technical fingerprints, not verdicts." in html
     assert "It does not rank tracks or judge quality." in html
+    assert "--bg: #f7f0e4;" in html
+    assert "--bg: #f7f0e4;" in track_html
 
 
 def test_catalog_statistics_calculate_folder_min_median_max():
@@ -223,6 +228,24 @@ def test_catalog_html_uses_trait_tags_and_distribution_median_ticks(tmp_path: Pa
     assert "median-tick" in html
     assert "track-dot" in html
     assert "<th>Findings</th>" not in html
+
+
+def test_catalog_html_renders_non_default_theme(tmp_path: Path):
+    catalog = build_catalog_summary(
+        input_folder=tmp_path / "input_audio",
+        output_folder=tmp_path / "reports",
+        tracks=[{"filename": "alpha.wav", "report_path": "alpha/report.html"}],
+        skipped_files=[],
+    )
+    html = write_catalog_html(catalog, tmp_path, theme_name="studio_blue").read_text(
+        encoding="utf-8"
+    )
+
+    assert "--bg: #f0f4f8;" in html
+    assert "--trait-bg:" in html
+    assert "<link" not in html
+    assert "src=\"http" not in html
+    assert "href=\"http" not in html
 
 
 def test_catalog_html_language_avoids_scoring_terms(tmp_path: Path):

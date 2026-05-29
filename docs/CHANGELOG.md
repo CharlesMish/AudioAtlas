@@ -6,6 +6,9 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- Built-in static HTML theme support for single-track and catalog reports,
+  including `--theme` on `analyze`/`batch` and `audioatlas themes` for
+  listing the 25 local theme IDs. Theme choice affects presentation only.
 - Catalog reports now include common folder patterns, MP3/decoded-audio
   delivery context when lossy files dominate a folder, neutral per-track
   trait tags, and distribution bars with median and per-track markers.
@@ -16,6 +19,9 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Static `report.html` output with embedded CSS, escaped dynamic content,
   key metric cards, findings, plot cards, glossary explanations,
   technical details, and blank human-note fields.
+- Clickable plot images in `report.html` open a calm, dependency-free
+  lightbox overlay (Esc / backdrop / arrows / buttons, real PNG srcs,
+  title + filename + counter, wraps, aria basics, all offline file:// safe).
 - Time-range summarization in `report.md` findings: long range lists now
   show counts, total duration, first/last range, longest range, and a
   capped preview while preserving full ranges in `findings.json`.

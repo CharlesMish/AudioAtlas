@@ -14,6 +14,7 @@ from audioatlas import __version__
 from audioatlas.batch import analyze_folder
 from audioatlas.config import AnalysisConfig
 from audioatlas.pipeline import analyze_file
+from audioatlas.theme import theme_listing_text, validate_theme_name
 
 
 @click.group()
@@ -48,6 +49,7 @@ def main() -> None:
     help="Polyphase oversample factor for the true-peak approximation. "
          "Set to 1 to disable oversampling and use sample peak.",
 )
+@click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
 def analyze(
     input_path: Path,
     out_dir: Path,
@@ -57,11 +59,19 @@ def analyze(
     rms_frame_length: int | None,
     db_floor: float,
     true_peak_oversample: int,
+    theme: str | None,
 ) -> None:
     """Analyze one audio file and write a report folder."""
 
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
-    result = analyze_file(input_path, out_dir, config=cfg, max_duration_seconds=max_duration)
+    selected_theme = _validate_theme_for_cli(theme)
+    result = analyze_file(
+        input_path,
+        out_dir,
+        config=cfg,
+        max_duration_seconds=max_duration,
+        theme_name=selected_theme,
+    )
     click.echo(f"AudioAtlas report written to: {result.out_dir}")
     click.echo(f"Summary: {result.summary_path}")
     click.echo(f"Report:  {result.report_path}")
@@ -102,6 +112,7 @@ def analyze(
     help="Polyphase oversample factor for the true-peak approximation. "
     "Set to 1 to disable oversampling and use sample peak.",
 )
+@click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
 def batch(
     input_folder: Path,
     out_dir: Path,
@@ -111,20 +122,37 @@ def batch(
     rms_frame_length: int | None,
     db_floor: float,
     true_peak_oversample: int,
+    theme: str | None,
 ) -> None:
     """Analyze a folder of audio files and write a neutral catalog."""
 
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
+    selected_theme = _validate_theme_for_cli(theme)
     result = analyze_folder(
         input_folder,
         out_dir,
         config=cfg,
         max_duration_seconds=max_duration,
+        theme_name=selected_theme,
     )
     click.echo(f"AudioAtlas catalog written to: {result.out_dir}")
     click.echo(f"Catalog summary: {result.catalog_summary_path}")
     click.echo(f"Catalog report:  {result.catalog_md_path}")
     click.echo(f"Catalog HTML:    {result.catalog_html_path}")
+
+
+@main.command()
+def themes() -> None:
+    """List built-in static report themes."""
+
+    click.echo(theme_listing_text())
+
+
+def _validate_theme_for_cli(theme: str | None) -> str:
+    try:
+        return validate_theme_name(theme)
+    except ValueError as exc:
+        raise click.BadParameter(str(exc), param_hint="--theme") from exc
 
 
 def _make_config(

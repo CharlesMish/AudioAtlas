@@ -93,6 +93,8 @@ pip install -e ".[dev]"
 ```bash
 audioatlas analyze /path/to/song.wav --out reports/song
 audioatlas batch /path/to/folder --out reports/catalog
+audioatlas analyze /path/to/song.wav --out reports/song_dark --theme midnight_studio
+audioatlas themes
 # or, from a source checkout without install:
 python -m audioatlas analyze /path/to/song.wav --out reports/song
 python -m audioatlas batch /path/to/folder --out reports/catalog
@@ -109,6 +111,11 @@ CLI flags:
 | `--rms-frame-length INT` | = `--n-fft` | RMS window length. |
 | `--db-floor FLOAT` | -100 | Floor for all dBFS / dBTP / dB metrics. |
 | `--true-peak-oversample INT` | 4 | Polyphase factor; 1 disables. |
+| `--theme THEME` | `default` | Built-in static HTML theme. Use `audioatlas themes` to list IDs. |
+
+Themes affect presentation only. All built-in themes are local, embedded
+in the generated HTML, and work offline without external CSS, JavaScript,
+CDN assets, or a server.
 
 ## Output
 

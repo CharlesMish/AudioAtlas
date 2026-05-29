@@ -16,6 +16,7 @@ from audioatlas.report import (
     _positive_int,
     _select_time_range_examples,
 )
+from audioatlas.theme import default_theme_name, theme_css_variables, validate_theme_name
 from audioatlas.utils import mmss
 
 WIDE_PLOTS = {
@@ -149,9 +150,12 @@ def write_report_html(
     plot_files: list[str],
     out_dir: str | Path,
     findings: dict[str, Any] | None = None,
+    *,
+    theme_name: str | None = None,
 ) -> Path:
     """Write a static, local report.html."""
 
+    selected_theme = validate_theme_name(theme_name or default_theme_name())
     metadata = summary.get("metadata") if isinstance(summary.get("metadata"), dict) else {}
     levels = summary.get("levels") if isinstance(summary.get("levels"), dict) else {}
     stereo = (
@@ -184,7 +188,7 @@ def write_report_html(
         '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
         f"<title>AudioAtlas Report - {_h(filename)}</title>",
         "<style>",
-        _css(),
+        _css(selected_theme),
         "</style>",
         "</head>",
         "<body>",
@@ -236,6 +240,7 @@ def write_report_html(
         _notes_section(),
         '<p class="footer-note">AudioAtlas reports measured facts and visual maps. The listener decides what matters for the track.</p>',
         "</div>",
+        _lightbox_overlay(),
         "</body>",
         "</html>",
         "",
@@ -409,7 +414,7 @@ def _plots_section(plot_files: list[str]) -> str:
             [
                 f'<article class="{class_name}">',
                 f"<h3>{_h(title)}</h3>",
-                '<div class="plot-image-wrapper">',
+                f'<div class="plot-image-wrapper" data-title="{_h(title)}" data-filename="{_h(filename)}">',
                 f'<img src="{_h(filename)}" alt="{_h(title)}">',
                 "</div>",
                 f'<div class="plot-filename">{_h(filename)}</div>',
@@ -496,24 +501,10 @@ def _notes_section() -> str:
     return "\n".join(lines)
 
 
-def _css() -> str:
-    return """
-:root {
-  --bg: #f5f7f8;
-  --surface: #ffffff;
-  --surface-muted: #f8fafc;
-  --text: #1f2937;
-  --text-muted: #4b5563;
-  --text-soft: #64748b;
-  --border: #dfe5eb;
-  --border-soft: #edf1f5;
-  --accent: #0f766e;
-  --accent-muted: #e6f4f1;
-  --chip-bg: #eef2f5;
-  --callout-bg: #f1f5f9;
-  --callout-border: #94a3b8;
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 28px rgba(15, 23, 42, 0.04);
-}
+def _css(theme_name: str | None = None) -> str:
+    return (
+        theme_css_variables(theme_name)
+        + """
 * { box-sizing: border-box; }
 body {
   margin: 0;
@@ -547,17 +538,17 @@ section { margin-top: 34px; }
 .context-card { margin-top: 14px; padding: 16px 18px; border-color: #cbd5e1; background: #fbfcfd; }
 .context-card h3 { font-size: 14px; margin: 0 0 6px; }
 .context-card p { margin: 0; color: var(--text-muted); }
-.metric-value { font-size: 24px; font-weight: 700; line-height: 1.05; margin-bottom: 8px; color: #111827; }
+.metric-value { font-size: 24px; font-weight: 700; line-height: 1.05; margin-bottom: 8px; color: var(--text); }
 .metric-label { font-size: 12.5px; color: var(--text-muted); font-weight: 560; }
 .metric-note { font-size: 11.5px; color: var(--text-soft); margin-top: 2px; }
 .findings-list { display: flex; flex-direction: column; gap: 14px; }
 .finding-card { padding: 18px 20px; font-size: 13.5px; }
 .finding-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .priority { font-size: 10.5px; font-weight: 680; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0; }
-.priority-issue { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-.priority-warning { background: #ccfbf1; color: #115e59; border: 1px solid #99f6e4; }
-.priority-info { background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1; }
-.category { font-size: 11px; background: var(--surface-muted); color: #475569; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border-soft); }
+.priority-issue { background: var(--issue-bg); color: var(--issue-text); border: 1px solid var(--issue-border); }
+.priority-warning { background: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning-border); }
+.priority-info { background: var(--info-bg); color: var(--info-text); border: 1px solid var(--info-border); }
+.category { font-size: 11px; background: var(--trait-bg); color: var(--trait-text); padding: 3px 8px; border-radius: 999px; border: 1px solid var(--trait-border); }
 .finding-title { font-size: 17px; font-weight: 680; margin: 0 0 10px; line-height: 1.3; }
 .evidence, .why { margin: 8px 0; color: #374151; }
 .evidence-list { margin: 6px 0 10px; padding-left: 20px; }
@@ -600,4 +591,245 @@ details[open] summary { border-bottom: 1px solid var(--border); }
   h2 { font-size: 18px; margin-top: 34px; }
   .metric-card { min-height: 100px; }
 }
+
+/* Lightbox overlay for plot images (static, offline, no external deps).
+   Calm dark scrim + surface modal. Matches AudioAtlas colors/spacing.
+   Clickable plot wrappers get affordance. */
+.plot-image-wrapper { cursor: zoom-in; }
+.plot-image-wrapper:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.06);
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: var(--lightbox-scrim);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 24px 16px;
+}
+.lightbox.open { display: flex; }
+.lightbox-content {
+  background: var(--lightbox-surface);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 1080px;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.lightbox-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.lightbox-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.lightbox-nav button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+.lightbox-nav button:hover {
+  background: var(--accent-muted);
+  border-color: #99f6e4;
+}
+.lightbox-nav button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.lightbox-counter {
+  font-size: 12.5px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+  min-width: 48px;
+  text-align: center;
+  padding: 0 6px;
+}
+.lightbox-meta {
+  flex: 1;
+  min-width: 0;
+  padding-left: 8px;
+}
+.lightbox-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lightbox-filename {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--text-soft);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lightbox-close {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+.lightbox-close:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+.lightbox-image-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-muted);
+  padding: 18px;
+  overflow: auto;
+  min-height: 240px;
+}
+.lightbox-image-wrap img {
+  max-width: 100%;
+  max-height: 72vh;
+  width: auto;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+  background: #fff;
+}
+.lightbox-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.lightbox-footer .hint { color: #94a3b8; font-size: 11.5px; }
+
+@media (max-width: 640px) {
+  .lightbox-content { max-height: 96vh; }
+  .lightbox-header { padding: 8px 10px; }
+  .lightbox-image-wrap { padding: 12px; }
+  .lightbox-title { font-size: 14px; }
+}
 """
+    )
+
+
+def _lightbox_overlay() -> str:
+    """Return the static lightbox overlay HTML + minimal inline JS.
+
+    - Uses real relative PNG srcs from the plot cards.
+    - All dynamic text comes from already-escaped data-* attrs.
+    - No external resources, no CDN, works on file:// .
+    - Matches the design prototype behavior and requirements.
+    """
+    html = (
+        '<div id="lightbox" class="lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Plot image viewer">'
+        '<div class="lightbox-content" role="document">'
+        '<div class="lightbox-header">'
+        '<div class="lightbox-nav">'
+        '<button id="lb-prev" type="button" aria-label="Previous image" title="Previous (left arrow)">←</button>'
+        '<button id="lb-next" type="button" aria-label="Next image" title="Next (right arrow)">→</button>'
+        '<span class="lightbox-counter" id="lb-counter">1 / 1</span>'
+        '</div>'
+        '<div class="lightbox-meta">'
+        '<div class="lightbox-title" id="lb-title">Plot</div>'
+        '<div class="lightbox-filename" id="lb-filename"></div>'
+        '</div>'
+        '<button class="lightbox-close" id="lb-close" type="button" aria-label="Close viewer" title="Close (Esc)">×</button>'
+        '</div>'
+        '<div class="lightbox-image-wrap" id="lb-image-wrap">'
+        '<img id="lb-img" alt="Enlarged plot image" />'
+        '</div>'
+        '<div class="lightbox-footer">'
+        '<span>Click dark backdrop or press <strong>Esc</strong> to close • Arrow keys or buttons navigate (wraps)</span>'
+        '</div>'
+        '</div>'
+        '</div>'
+        '<script>'
+        '(function(){'
+        '"use strict";'
+        'var lb=document.getElementById("lightbox"),'
+        'lbImg=document.getElementById("lb-img"),'
+        'lbTitle=document.getElementById("lb-title"),'
+        'lbFilename=document.getElementById("lb-filename"),'
+        'lbCounter=document.getElementById("lb-counter"),'
+        'btnPrev=document.getElementById("lb-prev"),'
+        'btnNext=document.getElementById("lb-next"),'
+        'btnClose=document.getElementById("lb-close"),'
+        'imageWrap=document.getElementById("lb-image-wrap");'
+        'var items=[],currentIndex=0,isOpen=false;'
+        'function collectItems(){'
+        'items=[];'
+        'var wrappers=document.querySelectorAll(".plots-grid .plot-image-wrapper");'
+        'for(var i=0;i<wrappers.length;i++){'
+        'var w=wrappers[i],img=w.querySelector("img");if(!img)continue;'
+        'items.push({'
+        'title:w.getAttribute("data-title")||"Plot",'
+        'filename:w.getAttribute("data-filename")||"",'
+        'src:img.getAttribute("src")||""'
+        '});'
+        '}'
+        '}'
+        'function updateCounter(){if(!items.length)return;lbCounter.textContent=(currentIndex+1)+" / "+items.length;}'
+        'function showItem(idx){if(!items.length)return;currentIndex=((idx%items.length)+items.length)%items.length;var it=items[currentIndex];lbImg.src=it.src;lbTitle.textContent=it.title;lbFilename.textContent=it.filename;updateCounter();}'
+        'function openLightbox(startIndex){if(!items.length)collectItems();if(!items.length)return;currentIndex=startIndex||0;showItem(currentIndex);lb.classList.add("open");lb.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";isOpen=true;setTimeout(function(){btnClose&&btnClose.focus();},30);}'
+        'function closeLightbox(){lb.classList.remove("open");lb.setAttribute("aria-hidden","true");document.body.style.overflow="";isOpen=false;}'
+        'function goPrev(){if(!items.length)return;showItem(currentIndex-1);}'
+        'function goNext(){if(!items.length)return;showItem(currentIndex+1);}'
+        'function attachClickHandlers(){'
+        'var wrappers=document.querySelectorAll(".plots-grid .plot-image-wrapper");'
+        'for(var i=0;i<wrappers.length;i++){(function(index){wrappers[index].addEventListener("click",function(e){openLightbox(index);});})(i);}'
+        '}'
+        'if(lb){lb.addEventListener("click",function(e){if(e.target===lb)closeLightbox();});}'
+        'if(btnPrev)btnPrev.addEventListener("click",function(e){e.stopPropagation();goPrev();});'
+        'if(btnNext)btnNext.addEventListener("click",function(e){e.stopPropagation();goNext();});'
+        'if(btnClose)btnClose.addEventListener("click",function(e){e.stopPropagation();closeLightbox();});'
+        'document.addEventListener("keydown",function(e){if(!isOpen)return;if(e.key==="Escape"||e.key==="Esc"){e.preventDefault();closeLightbox();}else if(e.key==="ArrowLeft"){e.preventDefault();goPrev();}else if(e.key==="ArrowRight"){e.preventDefault();goNext();}});'
+        'if(imageWrap&&lbImg)imageWrap.addEventListener("click",function(e){if(e.target===lbImg)goNext();});'
+        'if(lbImg)lbImg.addEventListener("dragstart",function(e){e.preventDefault();});'
+        'function init(){collectItems();attachClickHandlers();}'
+        'if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();'
+        '})();'
+        '</script>'
+    )
+    return html

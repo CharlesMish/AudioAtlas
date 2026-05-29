@@ -28,6 +28,7 @@ There is no statefulness, no plugin system, and no implicit configuration.
    │   ↓                                                         │
    │ report.py/html_report.py ──  dict → report.md/html/json     │
    │ catalog_report.py       ──  catalog dict → md/html/json     │
+   │ theme.py                ──  built-in theme tokens → CSS vars │
    └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -49,6 +50,7 @@ There is no statefulness, no plugin system, and no implicit configuration.
 | `batch.py` | `pipeline`, catalog report writers | DSP math, matplotlib calls |
 | `cli.py` | click + pipeline | DSP math, matplotlib, IO besides paths |
 | `report.py` / `html_report.py` / `catalog_report.py` | stdlib only, plus `utils` | DSP math, matplotlib, plotting |
+| `theme.py` | stdlib + packaged theme JSON | arbitrary user CSS, network access |
 | `io.py` | soundfile + utils | DSP math, plotting |
 
 If you find yourself wanting to break one of these (e.g. "I just need
