@@ -190,10 +190,12 @@ def test_lossy_metadata_uses_decoded_sample_wording_for_level_findings():
     ).findings
 
     text = " ".join(
-        " ".join([finding.evidence, finding.why_it_matters]) for finding in findings
+        " ".join([finding.evidence, finding.why_it_matters, finding.does_not_mean])
+        for finding in findings
     ).lower()
     assert "decoded near-clipping samples" in text
     assert "decoded audio" in text
+    assert "does not establish whether the original master clipped" in text
 
 
 def test_clipped_samples_generate_issue():

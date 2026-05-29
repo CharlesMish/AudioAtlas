@@ -147,6 +147,12 @@ reports/catalog/
 
 The catalog report shows folder-level ranges, medians, and technical
 fingerprints. It is descriptive and does not rank, score, or judge tracks.
+When a trait appears across a substantial share of the folder, catalog
+mode can show it once as a common pattern so repeated per-track findings
+read as folder context instead of isolated verdicts. For lossy-heavy
+folders such as MP3 collections, decoded clipping and true-peak context
+describe decoded audio as delivered; they do not establish what happened
+in the original master.
 
 ## Tests
 

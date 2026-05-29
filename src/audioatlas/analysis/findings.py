@@ -102,6 +102,21 @@ def generate_findings(summary: dict) -> FindingsResult:
         peak_timeline, "near_clipping_time_ranges", min_range_duration
     )
     clipped = _number(levels, "clipped_samples")
+    true_peak_does_not_mean = (
+        "This does not establish whether the original master clipped or is audibly distorting."
+        if is_lossy
+        else "This does not mean the file is audibly distorting."
+    )
+    near_clip_does_not_mean = (
+        "This does not establish whether the original master clipped."
+        if is_lossy
+        else "This does not mean the passage is clipped or audibly distorted."
+    )
+    clipped_does_not_mean = (
+        "This does not establish whether the original master clipped or what caused the decoded samples."
+        if is_lossy
+        else "This does not identify the cause of the clipping or whether it was intentional."
+    )
     if true_peak is not None and true_peak > 0.0:
         true_peak_evidence = f"true_peak_dbtp measured {_fmt_measure(true_peak)} dBTP."
         if (
@@ -132,7 +147,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                     "Samples reconstructed by downstream playback or encoding can exceed "
                     "nominal full scale when true peak is above 0 dBTP."
                 ),
-                does_not_mean="This does not mean the file is audibly distorting.",
+                does_not_mean=true_peak_does_not_mean,
                 suggested_checks=[
                     "Check a dedicated true-peak meter if this file will be encoded or limited.",
                     "Inspect the loudest passage for inter-sample peak behavior.",
@@ -178,7 +193,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                     f"Near-full-scale {sample_label} can leave little margin for later encoding, "
                     "sample-rate conversion, or level changes."
                 ),
-                does_not_mean="This does not mean the passage is clipped or audibly distorted.",
+                does_not_mean=near_clip_does_not_mean,
                 suggested_checks=[
                     "Inspect the sample histogram and peak values.",
                     "Check whether near-full-scale samples cluster in a specific passage.",
@@ -202,9 +217,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                     "Samples at or beyond the clipping threshold can indicate flattened "
                     f"waveform peaks in the {audio_label}."
                 ),
-                does_not_mean=(
-                    "This does not identify the cause of the clipping or whether it was intentional."
-                ),
+                does_not_mean=clipped_does_not_mean,
                 suggested_checks=[
                     "Inspect the waveform around peak sections.",
                     "Check whether clipping is intentional source material or processing.",

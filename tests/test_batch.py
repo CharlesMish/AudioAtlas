@@ -7,7 +7,15 @@ import numpy as np
 import soundfile as sf
 from click.testing import CliRunner
 
-from audioatlas.catalog_report import calculate_catalog_statistics, write_catalog_html
+from audioatlas.catalog_report import (
+    build_catalog_summary,
+    calculate_catalog_statistics,
+    decoded_audio_context,
+    detect_common_patterns,
+    track_record_from_run,
+    write_catalog_html,
+    write_catalog_md,
+)
 from audioatlas.cli import main
 
 
@@ -66,7 +74,7 @@ def test_batch_cli_creates_per_track_reports_and_catalog_outputs(tmp_path: Path)
     md = (out_dir / "catalog.md").read_text(encoding="utf-8")
     assert 'href="alpha/report.html"' in html
     assert "[report.html](alpha/report.html)" in md
-    assert "Folder-level technical fingerprints, not rankings." in html
+    assert "Folder-level technical fingerprints, not verdicts." in html
     assert "It does not rank tracks or judge quality." in html
 
 
@@ -86,6 +94,135 @@ def test_catalog_statistics_calculate_folder_min_median_max():
     assert stats["plr_db"]["count"] == 2
     assert stats["plr_db"]["median"] == 9.0
     assert stats["plr_db"]["missing_count"] == 1
+
+
+def test_catalog_track_record_extracts_spectral_shape_values():
+    record = track_record_from_run(
+        filename="shape.wav",
+        report_path="shape/report.html",
+        summary={
+            "metadata": {"samplerate": 48_000, "channels": 2},
+            "levels": {"duration_seconds": 1.0},
+            "spectral_shape": {
+                "centroid_median_hz": 2345.0,
+                "rolloff_95_median_hz": 9876.0,
+            },
+        },
+        findings={"findings_shown": []},
+    )
+
+    assert record["centroid_median_hz"] == 2345.0
+    assert record["rolloff_95_median_hz"] == 9876.0
+
+
+def test_common_patterns_detect_traits_above_threshold_and_ignore_rare_traits():
+    tracks = [
+        {"filename": f"track-{index}.mp3", "format": "MP3", "true_peak_dbtp": 0.2}
+        for index in range(7)
+    ]
+    tracks.extend(
+        {"filename": f"quiet-{index}.wav", "format": "WAV", "true_peak_dbtp": -1.0}
+        for index in range(3)
+    )
+    for index, track in enumerate(tracks):
+        track["clipped_samples"] = 1 if index == 0 else 0
+        track["near_clipping_samples"] = 0
+
+    patterns = detect_common_patterns(tracks)
+    ids = {pattern["id"] for pattern in patterns}
+
+    assert "true_peak_above_0" in ids
+    assert "decoded_level_footprint" in ids
+    assert "clipped_samples_present" not in ids
+
+
+def test_lossy_decoded_catalog_caveat_renders_for_mp3_heavy_folder(tmp_path: Path):
+    tracks = [
+        {
+            "filename": f"track-{index}.mp3",
+            "format": "MP3",
+            "subtype": "MPEG_LAYER_III",
+            "report_path": f"track-{index}/report.html",
+        }
+        for index in range(7)
+    ]
+    tracks.extend(
+        {
+            "filename": f"track-{index}.wav",
+            "format": "WAV",
+            "report_path": f"track-{index}/report.html",
+        }
+        for index in range(3)
+    )
+    catalog = build_catalog_summary(
+        input_folder=tmp_path / "input_audio",
+        output_folder=tmp_path / "reports",
+        tracks=tracks,
+        skipped_files=[],
+    )
+    assert decoded_audio_context(catalog["tracks"])["applies"] is True
+
+    html_path = write_catalog_html(catalog, tmp_path)
+    md_path = write_catalog_md(catalog, tmp_path)
+    html = html_path.read_text(encoding="utf-8")
+    md = md_path.read_text(encoding="utf-8")
+
+    assert "About these files" in html
+    assert "decoded-audio delivery context" in html
+    assert "do not establish whether the original master clipped" in html
+    assert "decoded-audio delivery context" in md
+
+
+def test_catalog_html_uses_trait_tags_and_distribution_median_ticks(tmp_path: Path):
+    tracks = [
+        {
+            "filename": "alpha.mp3",
+            "format": "MP3",
+            "report_path": "alpha/report.html",
+            "duration_seconds": 1.0,
+            "integrated_lufs": -8.0,
+            "true_peak_dbtp": 0.3,
+            "plr_db": 8.0,
+            "median_stereo_correlation": 0.2,
+            "median_side_to_mid_ratio_db": -5.0,
+            "rolloff_95_median_hz": 7000.0,
+            "strongest_band": "bass",
+            "clipped_samples": 2,
+            "near_clipping_samples": 10,
+            "findings_shown_count": 3,
+        },
+        {
+            "filename": "beta.mp3",
+            "format": "MP3",
+            "report_path": "beta/report.html",
+            "duration_seconds": 1.0,
+            "integrated_lufs": -12.0,
+            "true_peak_dbtp": -1.0,
+            "plr_db": 12.0,
+            "median_stereo_correlation": 0.8,
+            "median_side_to_mid_ratio_db": -12.0,
+            "rolloff_95_median_hz": 11000.0,
+            "strongest_band": "mid",
+            "clipped_samples": 0,
+            "near_clipping_samples": 0,
+            "findings_shown_count": 0,
+        },
+    ]
+    catalog = build_catalog_summary(
+        input_folder=tmp_path / "input_audio",
+        output_folder=tmp_path / "reports",
+        tracks=tracks,
+        skipped_files=[],
+    )
+    html = write_catalog_html(catalog, tmp_path).read_text(encoding="utf-8")
+
+    assert "<th>Traits</th>" in html
+    assert "<th>Shown findings</th>" in html
+    assert "decoded levels" in html
+    assert "3 shown" in html
+    assert "median-tick" in html
+    assert "track-dot" in html
+    assert "<th>Findings</th>" not in html
 
 
 def test_catalog_html_language_avoids_scoring_terms(tmp_path: Path):
@@ -113,7 +250,7 @@ def test_catalog_html_language_avoids_scoring_terms(tmp_path: Path):
     path = write_catalog_html(catalog, tmp_path)
     text = path.read_text(encoding="utf-8").lower()
 
-    for phrase in ["best", "worst", "score", "grade", "pass/fail", "better", "worse"]:
+    for phrase in ["best", "worst", "score", "grade", "pass/fail", "better", "worse", "leaderboard"]:
         assert phrase not in text
     assert "folder median" in text
     assert "technical fingerprints" in text

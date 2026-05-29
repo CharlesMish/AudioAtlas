@@ -408,6 +408,8 @@ Top-level fields:
 | `skipped_files` | list[object] | Files skipped with `filename` and `reason`. |
 | `tracks` | list[object] | One compact record per analyzed track. |
 | `statistics` | object | Folder-level scalar statistics by metric. |
+| `common_patterns` | list[object] | Folder-level traits that appear on more than 60% of analyzed tracks. |
+| `decoded_audio_context` | object | Lossy-source context with `applies`, `lossy_count`, `track_count`, and `share`. |
 
 Each `tracks` item includes:
 
@@ -418,7 +420,8 @@ Each `tracks` item includes:
 - `median_stereo_correlation`, `median_side_to_mid_ratio_db`
 - `strongest_band`, `centroid_median_hz`, `rolloff_95_median_hz`,
   `onset_density_median`
-- `findings_shown_count`, `findings_suppressed_count`, `top_findings`
+- `findings_shown_count`, `findings_suppressed_count`, `top_findings`,
+  `trait_tags`
 
 Each metric in `statistics` contains `count`, `min`, `median`, `max`,
 `mean`, and `missing_count`. Current catalog metrics are
@@ -426,6 +429,14 @@ Each metric in `statistics` contains `count`, `min`, `median`, `max`,
 `plr_db`, `median_stereo_correlation`, `median_side_to_mid_ratio_db`,
 `centroid_median_hz`, `rolloff_95_median_hz`, and
 `onset_density_median`.
+
+`common_patterns` entries contain `id`, `title`, `count`, `track_count`,
+`share`, `explanation`, and `does_not_mean`. Current patterns are derived
+from existing per-track summary values, including decoded-level footprint,
+true peak above 0 dBTP, clipped samples, near-clipping samples, 95%
+rolloff below 8 kHz, bass/sub strongest-band distribution, low median
+stereo correlation, high side/mid ratio, integrated LUFS above -10, and
+PLR below 10 dB. These are descriptive folder traits, not scores.
 
 ## Example
 

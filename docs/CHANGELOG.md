@@ -6,6 +6,9 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- Catalog reports now include common folder patterns, MP3/decoded-audio
+  delivery context when lossy files dominate a folder, neutral per-track
+  trait tags, and distribution bars with median and per-track markers.
 - Batch/catalog mode via `audioatlas batch FOLDER --out OUT_DIR`, which
   reuses the single-track pipeline for each supported audio file and
   writes `catalog_summary.json`, `catalog.md`, and `catalog.html` with
