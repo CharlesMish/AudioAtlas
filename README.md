@@ -92,8 +92,10 @@ pip install -e ".[dev]"
 
 ```bash
 audioatlas analyze /path/to/song.wav --out reports/song
+audioatlas batch /path/to/folder --out reports/catalog
 # or, from a source checkout without install:
 python -m audioatlas analyze /path/to/song.wav --out reports/song
+python -m audioatlas batch /path/to/folder --out reports/catalog
 ```
 
 CLI flags:
@@ -127,6 +129,24 @@ reports/song/
 `summary.json`'s schema is documented in `docs/SUMMARY_SCHEMA.md`.
 `report.html` is a static local file with embedded CSS and relative links
 to the PNG plots in the same output folder.
+
+Batch mode analyzes supported audio files in a folder (`.wav` and `.mp3`
+currently), writes the normal per-track report folders, and adds:
+
+```
+reports/catalog/
+├── catalog_summary.json
+├── catalog.md
+├── catalog.html
+├── track_a/
+│   ├── report.html
+│   └── ...
+└── track_b/
+    └── ...
+```
+
+The catalog report shows folder-level ranges, medians, and technical
+fingerprints. It is descriptive and does not rank, score, or judge tracks.
 
 ## Tests
 

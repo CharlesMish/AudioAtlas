@@ -18,7 +18,7 @@ There is no statefulness, no plugin system, and no implicit configuration.
    ┌─────────────────────────────────────────────────────────────┐
    │ cli.py                  ──  argparse + Click only           │
    │   ↓                                                         │
-   │ pipeline.py             ──  thin orchestrator               │
+   │ pipeline.py / batch.py   ──  thin orchestrators              │
    │   ↓                          (no DSP, no plotting)          │
    │ analysis/*.py           ──  pure arrays → dataclasses       │
    │   (levels, spectral, ...)    no file paths, no matplotlib   │
@@ -27,6 +27,7 @@ There is no statefulness, no plugin system, and no implicit configuration.
    │   (waveform, ...)            no re-analysis allowed         │
    │   ↓                                                         │
    │ report.py/html_report.py ──  dict → report.md/html/json     │
+   │ catalog_report.py       ──  catalog dict → md/html/json     │
    └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -45,8 +46,9 @@ There is no statefulness, no plugin system, and no implicit configuration.
 | `analysis/*` | numpy, scipy, librosa, pyloudnorm, `config`, `utils` | matplotlib, file paths, `io`, `pipeline` |
 | `visualize/*` | matplotlib, the analysis dataclasses it plots | re-running analysis, soundfile, `io` |
 | `pipeline.py` | all analysis + visualize + report + io | DSP math, matplotlib calls |
+| `batch.py` | `pipeline`, catalog report writers | DSP math, matplotlib calls |
 | `cli.py` | click + pipeline | DSP math, matplotlib, IO besides paths |
-| `report.py` / `html_report.py` | stdlib only, plus `utils` | DSP math, matplotlib, plotting |
+| `report.py` / `html_report.py` / `catalog_report.py` | stdlib only, plus `utils` | DSP math, matplotlib, plotting |
 | `io.py` | soundfile + utils | DSP math, plotting |
 
 If you find yourself wanting to break one of these (e.g. "I just need

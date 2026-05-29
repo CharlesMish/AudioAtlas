@@ -390,6 +390,43 @@ above 0 dBTP remain higher-priority level findings. Relative-to-track
 spectral centroid, band-energy, and onset-density movement remains in
 the summaries and plots rather than default findings.
 
+## catalog_summary.json
+
+Batch mode writes `catalog_summary.json` next to `catalog.md` and
+`catalog.html`. It summarizes a folder of single-track analyses without
+ranking, scoring, or judging tracks.
+
+Top-level fields:
+
+| Field | Type | Notes |
+|---|---|---|
+| `schema_version` | string | Catalog schema version. |
+| `generated_at` | string | UTC ISO-8601 timestamp for the catalog run. |
+| `input_folder` | string | Folder passed to `audioatlas batch`. |
+| `output_folder` | string | Folder where catalog outputs were written. |
+| `track_count` | int | Number of supported files successfully analyzed. |
+| `skipped_files` | list[object] | Files skipped with `filename` and `reason`. |
+| `tracks` | list[object] | One compact record per analyzed track. |
+| `statistics` | object | Folder-level scalar statistics by metric. |
+
+Each `tracks` item includes:
+
+- `filename`, `report_path`, `duration_seconds`, `sample_rate`,
+  `channels`, `format`, `subtype`
+- `integrated_lufs`, `true_peak_dbtp`, `sample_peak_dbfs`, `rms_dbfs`,
+  `plr_db`, `clipped_samples`, `near_clipping_samples`
+- `median_stereo_correlation`, `median_side_to_mid_ratio_db`
+- `strongest_band`, `centroid_median_hz`, `rolloff_95_median_hz`,
+  `onset_density_median`
+- `findings_shown_count`, `findings_suppressed_count`, `top_findings`
+
+Each metric in `statistics` contains `count`, `min`, `median`, `max`,
+`mean`, and `missing_count`. Current catalog metrics are
+`integrated_lufs`, `true_peak_dbtp`, `sample_peak_dbfs`, `rms_dbfs`,
+`plr_db`, `median_stereo_correlation`, `median_side_to_mid_ratio_db`,
+`centroid_median_hz`, `rolloff_95_median_hz`, and
+`onset_density_median`.
+
 ## Example
 
 A full example from a synthetic 1 kHz / -6 dBFS sine appears as the

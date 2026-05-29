@@ -6,6 +6,10 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- Batch/catalog mode via `audioatlas batch FOLDER --out OUT_DIR`, which
+  reuses the single-track pipeline for each supported audio file and
+  writes `catalog_summary.json`, `catalog.md`, and `catalog.html` with
+  neutral folder-level ranges, medians, and technical fingerprints.
 - Static `report.html` output with embedded CSS, escaped dynamic content,
   key metric cards, findings, plot cards, glossary explanations,
   technical details, and blank human-note fields.
