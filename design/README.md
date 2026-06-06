@@ -1,12 +1,28 @@
-# AudioAtlas Static HTML Report Mockup (Refined)
+# AudioAtlas Static HTML Report Mockups
 
-This directory contains a **design-only** static HTML prototype for a possible future `report.html` output.
+This directory is documented design reference material. It is not generated
+release output and it is not part of the runtime package.
+
+The mockups are kept here for implementation reference because they describe
+report layout, wording, and local/offline HTML behavior. If this area grows
+beyond report design references, move it under `docs/design/` before release.
+
+## Current Prototype
 
 **Refined:** design-only task — no changes were made to the analysis pipeline, CLI, tests, schemas, or any Python code. Only `design/report_mockup.html` and this README were edited.
 
 ## Files
-- `report_mockup.html` — the complete, self-contained mockup (embedded CSS only, no external dependencies, minimal inline JS limited to graceful image fallback).
+- `report_mockup.html` — the complete, self-contained report mockup (embedded CSS only, no external dependencies, minimal inline JS limited to graceful image fallback).
+- `lightbox_prototype.html` — design-only lightbox interaction prototype used to validate plot zoom behavior before implementation.
+- `themes/` — design-only theme exploration material:
+  - `theme_gallery.html`, `theme_preview.html` — self-contained static previews.
+  - `theme_tokens.json`, `all_themes.json` — token sets for theme design and production-reference comparison.
+  - `theme_*.css` — standalone CSS references for selected themes.
+  - `all_themes.md`, `theme_profiles.md` — design notes and historical theme rationale.
 - This README.
+
+These files are safe to include as public alpha design documentation. They do
+not contain audio, generated reports, model review packages, or runtime code.
 
 ## Major refinements in this version (for Codex implementation reference)
 - All 10 plot cards now use real `<img src="0N_....png">` elements exclusively (no SVG proxies or text placeholders for the visuals).

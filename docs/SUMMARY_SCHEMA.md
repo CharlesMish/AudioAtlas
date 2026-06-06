@@ -46,7 +46,7 @@ Current schema version: **`0.1.0`**.
       "measured_value": 12,
       "threshold": 0,
       "unit": "samples",
-      "evidence": "near_clipping_samples measured 12.",
+      "evidence": "Near-clipping count measured 12 near-clipping samples.",
       "why_it_matters": "...",
       "does_not_mean": "...",
       "suggested_checks": ["Inspect the sample histogram."],

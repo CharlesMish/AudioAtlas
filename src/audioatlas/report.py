@@ -6,9 +6,12 @@ Markdown and JSON report helpers. Static HTML lives in ``html_report.py``.
 from __future__ import annotations
 
 import json
+import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from audioatlas import __version__
 from audioatlas.utils import mmss
 
 # Human-friendly labels and units for the level-metrics block of report.md.
@@ -218,6 +221,42 @@ def _delivery_context_lines(levels: dict[str, Any]) -> list[str]:
     ]
 
 
+def report_timestamp() -> str:
+    """Return a UTC timestamp for generated reports."""
+
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def git_short_hash() -> str | None:
+    """Return the current git short hash when the report is generated from a repo."""
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+    value = result.stdout.strip()
+    return value or None
+
+
+def report_build_metadata() -> dict[str, str]:
+    """Build human-facing report metadata."""
+
+    metadata = {
+        "generated_at": report_timestamp(),
+        "audioatlas_version": __version__,
+    }
+    git_hash = git_short_hash()
+    if git_hash:
+        metadata["git_hash"] = git_hash
+    return metadata
+
+
 def write_report_md(
     summary: dict[str, Any],
     plot_files: list[str],
@@ -249,6 +288,7 @@ def write_report_md(
 
     lines: list[str] = []
     lines.append(f"# AudioAtlas Report: {metadata.get('filename', 'unknown')}\n")
+    build_metadata = report_build_metadata()
 
     duration = levels.get("duration_seconds")
     if isinstance(duration, (int, float)):
@@ -263,6 +303,12 @@ def write_report_md(
     lines.append(
         f"- Format: {metadata.get('format', 'unknown')} / {metadata.get('subtype', 'unknown')}\n"
     )
+    lines.append("## Report metadata\n")
+    lines.append(f"- Generated: {build_metadata['generated_at']}")
+    lines.append(f"- AudioAtlas: {build_metadata['audioatlas_version']}")
+    if "git_hash" in build_metadata:
+        lines.append(f"- Git: {build_metadata['git_hash']}")
+    lines.append("- Release label: public early alpha\n")
 
     lines.append("## Level metrics\n")
     lines.append("| Metric | Value | Unit |")

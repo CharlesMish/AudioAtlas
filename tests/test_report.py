@@ -235,6 +235,9 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     # Top-level headings
     assert "# AudioAtlas Report: test.wav" in text
     assert "## File" in text
+    assert "## Report metadata" in text
+    assert "AudioAtlas: 0.1.0a1" in text
+    assert "Release label: public early alpha" in text
     assert "## Level metrics" in text
     assert "## Per-channel breakdown" in text
     assert "## Warnings / caveats" in text
@@ -262,7 +265,7 @@ def test_write_report_md_contains_findings_section(tmp_path: Path):
                 "measured_value": 12,
                 "threshold": 0,
                 "unit": "samples",
-                "evidence": "near_clipping_samples measured 12.",
+                "evidence": "Near-clipping count measured 12 samples.",
                 "why_it_matters": "Measured sample values are near full scale.",
                 "does_not_mean": "This does not mean the passage is clipped.",
                 "suggested_checks": ["Inspect the sample histogram."],
@@ -304,7 +307,7 @@ def test_report_truncates_many_time_ranges(tmp_path: Path):
                 "measured_value": 1482,
                 "threshold": 0,
                 "unit": "samples",
-                "evidence": "near_clipping_samples measured 1482.",
+                "evidence": "Near-clipping count measured 1482 samples.",
                 "why_it_matters": "Measured sample values are near full scale.",
                 "suggested_checks": ["Inspect the sample histogram."],
                 "time_ranges": ranges,
@@ -428,7 +431,7 @@ def test_write_report_md_reports_suppressed_findings(tmp_path: Path):
                 "measured_value": 3,
                 "threshold": 0,
                 "unit": "samples",
-                "evidence": "clipped_samples measured 3.",
+                "evidence": "Sample clipping count measured 3 samples.",
                 "why_it_matters": "Measured sample values reached the clipping threshold.",
                 "suggested_checks": ["Inspect the waveform."],
                 "time_ranges": [],
@@ -524,7 +527,7 @@ def test_report_uses_friendly_prompt_labels_not_internal_severity_labels(
                 "measured_value": -9.5,
                 "threshold": -10.0,
                 "unit": "LUFS",
-                "evidence": "integrated_lufs measured -9.500 LUFS.",
+                "evidence": "Integrated loudness measured -9.500 LUFS.",
                 "why_it_matters": "Delivery systems may apply loudness normalization.",
                 "does_not_mean": "This does not mean the measured loudness is unsuitable.",
                 "suggested_checks": ["Compare with the intended delivery context."],
@@ -605,7 +608,7 @@ def _html_findings() -> dict:
                 "measured_value": 12,
                 "threshold": 0,
                 "unit": "samples",
-                "evidence": "near_clipping_samples measured 12.",
+                "evidence": "Near-clipping count measured 12 samples.",
                 "why_it_matters": "Measured samples are close to the configured ceiling.",
                 "does_not_mean": "This does not mean the passage is clipped.",
                 "suggested_checks": ["Inspect the sample histogram."],
@@ -624,6 +627,9 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
 
     assert path.name == "report.html"
     assert "Measurement-based findings, not quality judgments." in text
+    assert "public early alpha" in text
+    assert "AudioAtlas</strong> 0.1.0a1" in text
+    assert "Use this alpha report as a workflow" in text
     assert ">Findings<" in text
     assert "Listening prompts" not in text
     assert "Integrated LUFS" in text
@@ -700,6 +706,37 @@ def test_write_report_html_renders_default_and_non_default_themes(tmp_path: Path
     assert "--bg: #f5f7f8;" in default_text
     assert "--bg: #0b1120;" in dark_text
     assert "--lightbox-scrim:" in dark_text
+
+
+def test_dark_report_theme_uses_theme_variables_for_report_text_sections(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(
+        summary,
+        summary["plots"],
+        tmp_path,
+        _html_findings(),
+        theme_name="midnight_studio",
+    )
+    text = path.read_text(encoding="utf-8")
+
+    for leaked_color in [
+        "color: #1e293b",
+        "color: #334155",
+        "color: #374151",
+        "color: #475569",
+        "color: #4b5563",
+        "color: #64748b",
+        "color: #6b7280",
+        "color: #94a3b8",
+    ]:
+        assert leaked_color not in text
+    assert ".plot-card h3 { font-size: 14.5px; margin-bottom: 10px; color: var(--text);" in text
+    assert ".plot-desc { font-size: 12.5px; color: var(--text-muted);" in text
+    assert "details summary { padding: 12px 15px;" in text
+    assert "details summary { padding: 12px 15px; font-weight: 600; cursor: pointer; user-select: none; font-size: 14px; color: var(--text);" in text
+    assert ".metrics-table td { padding: 6px 0; border-bottom: 1px solid var(--border-soft);" in text
+    assert ".lightbox-title" in text
+    assert "color: var(--text);" in text
 
 
 def test_write_report_html_uses_no_external_theme_assets(tmp_path: Path):

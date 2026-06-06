@@ -1,46 +1,44 @@
-# Virtualenvs and tooling caches
+# Virtualenvs and Python tooling
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 
-# Build artifacts
+# Build/package artifacts
 dist/
 build/
 *.egg-info/
 
-# Local reports and demos
+# Generated AudioAtlas reports and local demo output
 reports/
+output_reports/
+catalog_reports/
+calibration_reports/
 
-# macOS noise
-.DS_Store
-
-# Audio files dropped into the repo by accident.
-# Note: the golden fixture under tests/fixtures/ IS committed - it's
-# negated below.
+# Audio dropped into the repo by accident
 *.wav
 *.mp3
 *.flac
 *.ogg
 *.m4a
+*.aiff
+*.aif
 !tests/fixtures/*.wav
-calibration_reports.zip
 
-# AudioAtlas generated/local artifacts
-reports/
-output_reports/
-input_audio/
+# Calibration and private review material
 calibration_audio/
+calibration*/
 model_review_package*/
+*_review_package*/
+
+# Archives generated for review/export
 *.zip
+*.tar
+*.tar.gz
 
-# Python/cache
-__pycache__/
-.pytest_cache/
-.ruff_cache/
-.venv/
-
-# macOS
+# OS/editor noise
 .DS_Store
+.idea/
+.vscode/

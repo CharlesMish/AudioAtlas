@@ -6,6 +6,12 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- Public v0.1-alpha release documentation: clearer README framing,
+  `docs/ALPHA_LIMITATIONS.md`, `examples/README.md`, and roadmap notes.
+- Single-track reports now include generation timestamp, AudioAtlas version,
+  git hash when available, and a public early-alpha release label.
+- `report.html` includes a short workflow near the top explaining how to use
+  Delivery & headroom context, Findings, plots, and listening checks together.
 - Built-in static HTML theme support for single-track and catalog reports,
   including `--theme` on `analyze`/`batch` and `audioatlas themes` for
   listing the 25 local theme IDs. Theme choice affects presentation only.
@@ -66,6 +72,14 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   nullability tracks the global value) and the new report section.
 
 ### Changed
+- User-facing finding evidence avoids raw internal field names such as
+  `true_peak_dbtp`, `near_clipping_samples`, and `plr_db`.
+- Integrated loudness above -10 LUFS is kept in Delivery & headroom context
+  rather than Findings.
+- Catalog report dark themes now avoid hard-coded light-theme colors in common
+  pattern, distribution, table, and glossary UI elements.
+- Repo hygiene rules now ignore generated reports, archives, calibration audio,
+  review packages, caches, and virtualenvs for public-alpha preparation.
 - Locked the single-track report UX as the regression baseline with
   structural tests for friendly empty states, delivery/headroom context,
   grouped stereo findings, near-clipping grouping, glossary wording, and

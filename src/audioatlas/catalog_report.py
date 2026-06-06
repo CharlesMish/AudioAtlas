@@ -971,8 +971,8 @@ h3 { margin: 0; }
 .metric-note { font-size: 12px; color: var(--text-soft); margin: 8px 0 0; }
 .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-card); }
 .track-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.track-table th, .track-table td { padding: 9px 10px; border-bottom: 1px solid #edf1f5; text-align: left; white-space: nowrap; }
-.track-table th { color: #334155; background: var(--surface-muted); font-weight: 650; }
+.track-table th, .track-table td { padding: 9px 10px; border-bottom: 1px solid var(--border-soft); text-align: left; white-space: nowrap; }
+.track-table th { color: var(--text); background: var(--surface-muted); font-weight: 650; }
 .track-table a, .fingerprint-card a { color: var(--accent); font-weight: 600; text-decoration: none; }
 .track-table a:hover, .fingerprint-card a:hover { text-decoration: underline; }
 .trait-tags { display: flex; flex-wrap: wrap; gap: 4px; min-width: 180px; }
@@ -980,17 +980,17 @@ h3 { margin: 0; }
 .shown-findings, .muted { color: var(--text-soft); font-size: 12px; }
 .distribution-grid, .fingerprint-grid, .pattern-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .distribution-card, .fingerprint-card, .context-card, .pattern-card { padding: 16px; }
-.distribution-card h3, .fingerprint-card h3, .pattern-card h3 { font-size: 15px; margin-bottom: 8px; color: #1e293b; }
+.distribution-card h3, .fingerprint-card h3, .pattern-card h3 { font-size: 15px; margin-bottom: 8px; color: var(--text); }
 .pattern-count { display: inline-flex; color: var(--pattern-accent); background: var(--accent-muted); border-radius: 999px; padding: 3px 8px; font-size: 12px; font-weight: 650; margin-bottom: 6px; }
 .pattern-card p { margin: 6px 0; color: var(--text-muted); }
 .caveat { font-size: 12.5px; }
 .range-row { display: flex; justify-content: space-between; gap: 10px; color: var(--text-muted); font-size: 12.5px; }
-.range-bar { position: relative; height: 12px; background: #e2e8f0; border-radius: 999px; margin-top: 12px; }
+.range-bar { position: relative; height: 12px; background: var(--surface-muted); border: 1px solid var(--border-soft); border-radius: 999px; margin-top: 12px; }
 .track-dot { position: absolute; top: 50%; width: 6px; height: 6px; margin-left: -3px; margin-top: -3px; border-radius: 999px; background: var(--distribution-dot); opacity: 0.65; }
 .median-tick { position: absolute; top: -3px; width: 2px; height: 18px; margin-left: -1px; border-radius: 2px; background: var(--distribution-median); }
 .fingerprint-card p, .context-card p { margin: 6px 0; color: var(--text-muted); }
 .glossary-list { display: grid; grid-template-columns: minmax(130px, 0.35fr) 1fr; gap: 6px 14px; margin: 12px 0 0; color: var(--text-muted); }
-.glossary-list dt { color: #334155; font-weight: 650; }
+.glossary-list dt { color: var(--text); font-weight: 650; }
 .glossary-list dd { margin: 0; }
 @media (max-width: 520px) {
   .container { padding: 20px 12px 56px; }

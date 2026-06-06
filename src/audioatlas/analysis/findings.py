@@ -118,7 +118,9 @@ def generate_findings(summary: dict) -> FindingsResult:
         else "This does not identify the cause of the clipping or whether it was intentional."
     )
     if true_peak is not None and true_peak > 0.0:
-        true_peak_evidence = f"true_peak_dbtp measured {_fmt_measure(true_peak)} dBTP."
+        true_peak_evidence = (
+            f"Approximate true peak measured {_fmt_measure(true_peak)} dBTP."
+        )
         if (
             near_clipping is not None
             and 0 < near_clipping <= 10
@@ -132,7 +134,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                 else near_clip_sample_label
             )
             true_peak_evidence += (
-                f" near_clipping_samples measured {near_clip_count} {near_clip_label}."
+                f" Near-clipping count measured {near_clip_count} {near_clip_label}."
             )
         findings.append(
             Finding(
@@ -186,7 +188,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                 threshold=0,
                 unit="samples",
                 evidence=(
-                    f"near_clipping_samples measured {int(near_clipping)} "
+                    f"Near-clipping count measured {int(near_clipping)} "
                     f"{near_clip_sample_label}."
                 ),
                 why_it_matters=(
@@ -212,7 +214,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                 measured_value=int(clipped),
                 threshold=0,
                 unit="samples",
-                evidence=f"clipped_samples measured {int(clipped)} in {sample_label}.",
+                evidence=f"Sample clipping count measured {int(clipped)} in {sample_label}.",
                 why_it_matters=(
                     "Samples at or beyond the clipping threshold can indicate flattened "
                     f"waveform peaks in the {audio_label}."
@@ -243,7 +245,7 @@ def generate_findings(summary: dict) -> FindingsResult:
                 measured_value=plr,
                 threshold=8.0,
                 unit="dB",
-                evidence=f"plr_db measured {_fmt_measure(plr)} dB.",
+                evidence=f"Peak-to-loudness ratio measured {_fmt_measure(plr)} dB.",
                 why_it_matters=(
                     "Lower PLR means peaks sit closer to the track's integrated loudness, which "
                     "can change how much short-term impact remains after level normalization."
@@ -400,7 +402,8 @@ def generate_findings(summary: dict) -> FindingsResult:
                 threshold=8000.0,
                 unit="Hz",
                 evidence=(
-                    f"rolloff_95_median_hz measured {_fmt_measure(rolloff_95_median)} Hz."
+                    "Median 95% spectral rolloff measured "
+                    f"{_fmt_measure(rolloff_95_median)} Hz."
                 ),
                 why_it_matters=(
                     "A lower 95% rolloff can indicate that less measured energy reaches the "

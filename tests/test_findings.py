@@ -146,7 +146,7 @@ def test_tiny_near_clipping_with_true_peak_merges_into_true_peak_finding():
 
     assert len(findings) == 1
     assert "true peak" in findings[0].title.lower()
-    assert "near_clipping_samples measured 3" in findings[0].evidence
+    assert "Near-clipping count measured 3" in findings[0].evidence
     near_clip = [finding for finding in findings if "Near-full-scale" in finding.title]
     assert near_clip == []
 

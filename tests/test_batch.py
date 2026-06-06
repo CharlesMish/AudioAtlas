@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import numpy as np
@@ -246,6 +247,57 @@ def test_catalog_html_renders_non_default_theme(tmp_path: Path):
     assert "<link" not in html
     assert "src=\"http" not in html
     assert "href=\"http" not in html
+
+
+def test_dark_catalog_theme_uses_theme_variables_for_common_pattern_cards(tmp_path: Path):
+    tracks = [
+        {
+            "filename": f"track-{index}.mp3",
+            "format": "MP3",
+            "report_path": f"track-{index}/report.html",
+            "true_peak_dbtp": 0.2,
+            "near_clipping_samples": 1,
+            "clipped_samples": 0,
+        }
+        for index in range(7)
+    ]
+    tracks.extend(
+        {
+            "filename": f"quiet-{index}.wav",
+            "format": "WAV",
+            "report_path": f"quiet-{index}/report.html",
+            "true_peak_dbtp": -1.0,
+            "near_clipping_samples": 0,
+            "clipped_samples": 0,
+        }
+        for index in range(3)
+    )
+    catalog = build_catalog_summary(
+        input_folder=tmp_path / "input_audio",
+        output_folder=tmp_path / "reports",
+        tracks=tracks,
+        skipped_files=[],
+    )
+    html = write_catalog_html(catalog, tmp_path, theme_name="midnight_studio").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Common patterns in this folder" in html
+    for leaked_color in [
+        "color: #1e293b",
+        "color: #334155",
+        "color: #475569",
+        "color: #64748b",
+        "color: #94a3b8",
+    ]:
+        assert leaked_color not in html
+    assert re.search(
+        r"\.distribution-card h3, \.fingerprint-card h3, \.pattern-card h3 \{[^}]*color: var\(--text\)",
+        html,
+    )
+    assert ".pattern-card p { margin: 6px 0; color: var(--text-muted);" in html
+    assert ".track-table th { color: var(--text);" in html
+    assert ".glossary-list dt { color: var(--text);" in html
 
 
 def test_catalog_html_language_avoids_scoring_terms(tmp_path: Path):

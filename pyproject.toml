@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "audioatlas"
-version = "0.1.0"
+version = "0.1.0a1"
 description = "A local single-track audio analysis framework for factual music maps."
 readme = "README.md"
 requires-python = ">=3.11"

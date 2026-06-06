@@ -1,86 +1,48 @@
 # AudioAtlas
 
-AudioAtlas is a local, single-track "song microscope" for music
-production, mixing, mastering, and deep listening.
+AudioAtlas is a local, single-track audio analysis tool for music production,
+mix review, mastering checks, and deep listening. It turns an audio file into
+measurement-based reports: level metrics, stereo context, spectral shape,
+activity maps, PNG plots, `summary.json`, `findings.json`, `report.md`, and a
+static offline `report.html`.
 
-It analyzes one audio file and produces factual visual maps and
-metering-style measurements. It does **not** try to be an automated
-mastering engineer, and it deliberately avoids fake mix-health scores.
+## Status: v0.1-alpha
 
-## Status
+This is a public early-alpha release. The core reports are usable, but findings
+are heuristic, wording and thresholds may change, and the project is not a
+mastering system. Treat reports as structured listening prompts and technical
+context, not final decisions.
 
-Pre-v0.1 framework, intentionally small. Designed to be extended one
-"feature slice" at a time. Most extension work is meant to be done by
-agentic coding tools (Codex / GrokBuild) following the brief at
-`AGENT_BRIEF.md`.
+## What AudioAtlas Does
 
-## What ships today
+- Preserves original levels; it does not normalize input audio.
+- Analyzes one file with scalar level metrics, approximate true peak, clipping
+  and near-clipping counts, RMS timeline, stereo correlation, mid/side energy,
+  spectral shape, band energy, and onset/activity density.
+- Writes local static reports that work without a server, CDN, external CSS, or
+  external JavaScript.
+- Provides factual findings such as true-peak overs, clipping, substantial
+  near-clipping, and grouped stereo observations.
+- Supports batch/catalog reports for folders of supported files.
 
-- Python package skeleton under `src/audioatlas/`
-- CLI: `audioatlas analyze song.wav --out reports/song`
-- WAV/FLAC/OGG loading via `soundfile`, internal shape
-  `(n_samples, n_channels)`, no auto-normalization
-- Scalar level metrics (sample peak, true peak approx., RMS, crest
-  factor, integrated LUFS, PLR, clipping & near-clipping counts,
-  per-channel breakdowns, DC offset)
-- RMS dBFS timeline
-- Log-frequency STFT spectrogram
-- Welch average power spectrum
-- Sample histogram
-- `summary.json`, `findings.json`, `report.md`, and static `report.html`
-- 39 unit / integration / golden tests covering DSP assumptions,
-  utilities, report rendering, and an end-to-end pipeline run
+## What AudioAtlas Does Not Do
 
-## Repo tour
-
-```
-audioatlas/
-├── AGENT_BRIEF.md            ← read first if you're an agent
-├── README.md
-├── Makefile                  ← `make test`, `make check`, `make demo`
-├── pyproject.toml
-├── docs/
-│   ├── ARCHITECTURE.md       ← layering rules, where code goes
-│   ├── SUMMARY_SCHEMA.md     ← the summary.json contract
-│   ├── AGENT_TASKS.md        ← prioritized backlog with acceptance criteria
-│   ├── AGENT_START_PROMPT.md ← suggested first prompt for Codex/Grok Build
-│   └── CHANGELOG.md
-├── src/audioatlas/
-│   ├── __init__.py
-│   ├── __main__.py           ← supports `python -m audioatlas ...`
-│   ├── cli.py                ← thin click entry point
-│   ├── pipeline.py           ← thin orchestrator
-│   ├── config.py             ← AnalysisConfig dataclass
-│   ├── utils.py
-│   ├── io.py                 ← audio loading + metadata
-│   ├── report.py             ← Markdown + JSON writers
-│   ├── analysis/
-│   │   ├── levels.py
-│   │   ├── spectral.py
-│   │   ├── stereo.py            (v0.2 stub)
-│   │   ├── spectral_features.py (v0.2 stub)
-│   │   └── tonal.py             (v0.2 stub)
-│   └── visualize/
-│       ├── waveform.py
-│       ├── spectrogram.py
-│       ├── spectrum.py
-│       └── histogram.py
-└── tests/
-    ├── conftest.py
-    ├── fixtures/
-    │   ├── _build_golden.py
-    │   ├── sine_1k_-6dbfs_2s.wav
-    │   └── sine_1k_-6dbfs_2s.expected.json
-    ├── test_io.py
-    ├── test_levels.py
-    ├── test_spectral.py
-    ├── test_utils.py
-    ├── test_report.py
-    ├── test_pipeline.py
-    └── test_golden.py
-```
+- No mix score, loudness score, or automated pass/fail verdict.
+- No automated mastering advice.
+- No reference-track comparison.
+- No source separation, instrument detection, or section segmentation.
+- No real-time playback cursor or DAW integration.
+- No claim that a finding is audible, bad, or musically wrong.
 
 ## Install
+
+With `uv` from a source checkout:
+
+```bash
+uv sync --extra dev
+```
+
+With `pip`:
 
 ```bash
 python -m venv .venv
@@ -90,14 +52,27 @@ pip install -e ".[dev]"
 
 ## Run
 
+With `uv`:
+
+```bash
+uv run audioatlas analyze /path/to/song.wav --out reports/song
+uv run audioatlas batch /path/to/folder --out reports/catalog
+uv run audioatlas themes
+```
+
+With an activated virtualenv:
+
 ```bash
 audioatlas analyze /path/to/song.wav --out reports/song
 audioatlas batch /path/to/folder --out reports/catalog
 audioatlas analyze /path/to/song.wav --out reports/song_dark --theme midnight_studio
 audioatlas themes
-# or, from a source checkout without install:
+```
+
+From a checkout without installing the console script:
+
+```bash
 python -m audioatlas analyze /path/to/song.wav --out reports/song
-python -m audioatlas batch /path/to/folder --out reports/catalog
 ```
 
 CLI flags:
@@ -109,17 +84,15 @@ CLI flags:
 | `--n-fft INT` | 4096 | FFT size for spectrogram. |
 | `--hop-length INT` | 1024 | Hop size for time-axis analyses. |
 | `--rms-frame-length INT` | = `--n-fft` | RMS window length. |
-| `--db-floor FLOAT` | -100 | Floor for all dBFS / dBTP / dB metrics. |
-| `--true-peak-oversample INT` | 4 | Polyphase factor; 1 disables. |
-| `--theme THEME` | `default` | Built-in static HTML theme. Use `audioatlas themes` to list IDs. |
+| `--db-floor FLOAT` | -100 | Floor for displayed dBFS / dBTP / dB metrics. |
+| `--true-peak-oversample INT` | 4 | Polyphase factor; 1 disables oversampling. |
+| `--theme THEME` | `default` | Built-in static HTML theme. |
 
-Themes affect presentation only. All built-in themes are local, embedded
-in the generated HTML, and work offline without external CSS, JavaScript,
-CDN assets, or a server.
+## Example Output
 
-## Output
+Single-track output:
 
-```
+```text
 reports/song/
 ├── summary.json
 ├── findings.json
@@ -133,51 +106,66 @@ reports/song/
 └── ...
 ```
 
-`summary.json`'s schema is documented in `docs/SUMMARY_SCHEMA.md`.
-`report.html` is a static local file with embedded CSS and relative links
-to the PNG plots in the same output folder.
+Open `report.html` in a browser. Start with the short workflow near the top,
+review Delivery & headroom context, scan Findings, then inspect plots and listen
+to the referenced regions.
 
-Batch mode analyzes supported audio files in a folder (`.wav` and `.mp3`
-currently), writes the normal per-track report folders, and adds:
+Batch mode writes the same per-track folders plus:
 
-```
+```text
 reports/catalog/
 ├── catalog_summary.json
 ├── catalog.md
 ├── catalog.html
 ├── track_a/
-│   ├── report.html
-│   └── ...
+│   └── report.html
 └── track_b/
-    └── ...
+    └── report.html
 ```
 
-The catalog report shows folder-level ranges, medians, and technical
-fingerprints. It is descriptive and does not rank, score, or judge tracks.
-When a trait appears across a substantial share of the folder, catalog
-mode can show it once as a common pattern so repeated per-track findings
-read as folder context instead of isolated verdicts. For lossy-heavy
-folders such as MP3 collections, decoded clipping and true-peak context
-describe decoded audio as delivered; they do not establish what happened
-in the original master.
+## Interpretation Cautions
+
+- Findings are heuristic prompts derived from measured thresholds and time
+  ranges. They are not proof of audible problems.
+- Relative dB in spectrum and band-energy plots is not dBFS. It shows shape
+  within the analyzed track and should not be compared directly to meter levels
+  or other songs.
+- Onset density means measured attack/activity over time. It is not punch,
+  groove quality, drum-hit count, or production quality.
+- Integrated loudness above -10 LUFS is shown as Delivery & headroom context,
+  not as a Finding.
+- AudioAtlas does not produce a mix score and does not give automated mastering
+  advice.
+
+## Docs
+
+- [Alpha limitations](docs/ALPHA_LIMITATIONS.md)
+- [Summary schema](docs/SUMMARY_SCHEMA.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Changelog](docs/CHANGELOG.md)
+- [Examples](examples/README.md)
+
+## Roadmap
+
+- Batch/catalog mode refinements.
+- Report UX improvements.
+- Optional interactive report view.
+- More calibration testing across formats and musical material.
 
 ## Tests
 
 ```bash
-make test           # pytest
-make check          # pytest + ruff
-make demo           # run the CLI on the golden fixture
+PATH=.venv/bin:$PATH make check
 ```
 
-Or directly:
+Equivalent direct commands:
 
 ```bash
 pytest
 ruff check .
-audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav --out /tmp/aa_demo
 ```
 
-## Design principles
+## Design Principles
 
 1. Preserve original levels. Do not normalize unless the user explicitly asks.
 2. Use internal audio shape `(n_samples, n_channels)` everywhere.
@@ -185,22 +173,8 @@ audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav --out /tmp/aa_demo
 4. Analysis functions are pure: arrays in, dataclasses out.
 5. Visualization functions never re-run analysis.
 6. Use measured facts and visualizations, not automated judgment.
-7. Add features one slice at a time: dataclass → analysis fn → test →
-   plot → summary entry → report entry → pipeline wiring.
-
-See `docs/ARCHITECTURE.md` for the full layering contract.
-
-## v0.1 intentionally does not include
-
-- PDF output
-- Reference-track comparison
-- Mix-health score or any verdict
-- AI mastering advice
-- Section segmentation
-- Streamlit / GUI / real-time playback cursor
-
-Those can come later, in the order set out in `docs/AGENT_TASKS.md`,
-after the core engine is trustworthy.
+7. Add features one slice at a time: dataclass -> analysis function -> test ->
+   plot -> summary entry -> report entry -> pipeline wiring.
 
 ## License
 

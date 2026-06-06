@@ -15,6 +15,7 @@ from audioatlas.report import (
     _normalized_time_ranges,
     _positive_int,
     _select_time_range_examples,
+    report_build_metadata,
 )
 from audioatlas.theme import default_theme_name, theme_css_variables, validate_theme_name
 from audioatlas.utils import mmss
@@ -179,6 +180,7 @@ def write_report_html(
         duration_label = f"{duration:.2f}s ({mmss(float(duration))})"
     else:
         duration_label = "unknown"
+    build_metadata = report_build_metadata()
 
     lines = [
         "<!DOCTYPE html>",
@@ -201,6 +203,10 @@ def write_report_html(
         _chip("Sample rate", f"{_fmt_value(metadata.get('samplerate'))} Hz"),
         _chip("Channels", _fmt_value(metadata.get("channels"))),
         _chip("Format", f"{_fmt_value(metadata.get('format'))} / {_fmt_value(metadata.get('subtype'))}"),
+        _chip("Generated", build_metadata["generated_at"]),
+        _chip("AudioAtlas", build_metadata["audioatlas_version"]),
+        _chip("Git", build_metadata.get("git_hash", "unavailable")),
+        _chip("Release", "public early alpha"),
         "</div>",
         '<nav class="top-nav" aria-label="Report sections">',
         '<a href="#findings">Findings</a><span>.</span>',
@@ -212,8 +218,9 @@ def write_report_html(
         "</header>",
         '<section class="how-to-read" id="how-to-read">',
         "<strong>How to read this report</strong>",
-        "<p>Start with Findings, then inspect the referenced plots. AudioAtlas measurements "
-        "are observations for listening and inspection, not quality judgments.</p>",
+        "<p>Use this alpha report as a workflow: review Delivery / headroom context, "
+        "scan Findings for checks worth prioritizing, then inspect the referenced plots "
+        "and verify by listening.</p>",
         f"<p>{_h(RELATIVE_DB_NOTE)}</p>",
         "<p>Check before delivery / worth a listen / for reference indicate priority, not quality.</p>",
         "<p>A report can have no prioritized findings; the plots still describe the track's measured shape.</p>",
@@ -526,16 +533,16 @@ h3 { margin: 0; }
 .top-nav { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13.5px; margin: 10px 0 26px; padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .top-nav a { color: var(--accent); text-decoration: none; font-weight: 550; }
 .top-nav a:hover { text-decoration: underline; }
-.top-nav span { color: #cbd5e1; }
+.top-nav span { color: var(--text-soft); }
 section { margin-top: 34px; }
-.how-to-read { background: var(--callout-bg); border: 1px solid #d7e0ea; border-left: 4px solid var(--callout-border); padding: 16px 18px; margin: 0 0 30px; border-radius: 8px; font-size: 14px; color: #334155; box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02); }
+.how-to-read { background: var(--callout-bg); border: 1px solid var(--border); border-left: 4px solid var(--callout-border); padding: 16px 18px; margin: 0 0 30px; border-radius: 8px; font-size: 14px; color: var(--text-muted); box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02); }
 .how-to-read strong { display: block; margin-bottom: 4px; color: var(--text); }
 .how-to-read p { margin: 4px 0; }
 .section-intro { font-size: 13.5px; color: var(--text-muted); max-width: 76ch; margin: 0 0 16px; }
 .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; }
 .metric-card, .finding-card, .plot-card, details, .note-box, .context-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-card); }
 .metric-card { min-height: 116px; padding: 18px 16px 16px; display: flex; flex-direction: column; justify-content: space-between; }
-.context-card { margin-top: 14px; padding: 16px 18px; border-color: #cbd5e1; background: #fbfcfd; }
+.context-card { margin-top: 14px; padding: 16px 18px; border-color: var(--border); background: var(--surface); }
 .context-card h3 { font-size: 14px; margin: 0 0 6px; }
 .context-card p { margin: 0; color: var(--text-muted); }
 .metric-value { font-size: 24px; font-weight: 700; line-height: 1.05; margin-bottom: 8px; color: var(--text); }
@@ -550,40 +557,40 @@ section { margin-top: 34px; }
 .priority-info { background: var(--info-bg); color: var(--info-text); border: 1px solid var(--info-border); }
 .category { font-size: 11px; background: var(--trait-bg); color: var(--trait-text); padding: 3px 8px; border-radius: 999px; border: 1px solid var(--trait-border); }
 .finding-title { font-size: 17px; font-weight: 680; margin: 0 0 10px; line-height: 1.3; }
-.evidence, .why { margin: 8px 0; color: #374151; }
+.evidence, .why { margin: 8px 0; color: var(--text-muted); }
 .evidence-list { margin: 6px 0 10px; padding-left: 20px; }
 .evidence-list li { margin-bottom: 4px; }
 .checks { margin: 6px 0 2px; padding-left: 20px; }
 .checks li { margin-bottom: 4px; }
-.finding-card h4 { margin: 14px 0 5px; font-size: 13px; color: #334155; }
-.time-ranges { font-size: 12.5px; background: var(--surface-muted); padding: 10px 12px; border-radius: 6px; margin-top: 12px; border: 1px solid var(--border-soft); border-left: 3px solid #94a3b8; color: #475569; }
+.finding-card h4 { margin: 14px 0 5px; font-size: 13px; color: var(--text); }
+.time-ranges { font-size: 12.5px; background: var(--surface-muted); padding: 10px 12px; border-radius: 6px; margin-top: 12px; border: 1px solid var(--border-soft); border-left: 3px solid var(--callout-border); color: var(--text-muted); }
 .range-list { margin: 6px 0 0; padding-left: 18px; }
-.suppressed-note, .empty { font-size: 13px; color: #6b7280; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; box-shadow: var(--shadow-card); }
+.suppressed-note, .empty { font-size: 13px; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; box-shadow: var(--shadow-card); }
 .plots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 18px; }
 .plot-card { padding: 16px 16px 15px; }
 .plot-card-wide { grid-column: 1 / -1; }
-.plot-card h3 { font-size: 14.5px; margin-bottom: 10px; color: #1e293b; }
+.plot-card h3 { font-size: 14.5px; margin-bottom: 10px; color: var(--text); }
 .plot-image-wrapper { background: var(--surface-muted); border: 1px solid var(--border-soft); border-radius: 6px; padding: 8px; margin-bottom: 10px; overflow: hidden; }
 .plot-image-wrapper img { width: 100%; height: auto; display: block; border-radius: 4px; }
-.plot-filename { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #64748b; text-align: center; }
-.plot-desc { font-size: 12.5px; color: #4b5563; margin: 8px 0 0; }
+.plot-filename { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-soft); text-align: center; }
+.plot-desc { font-size: 12.5px; color: var(--text-muted); margin: 8px 0 0; }
 details { margin-bottom: 10px; overflow: hidden; }
-details summary { padding: 12px 15px; font-weight: 600; cursor: pointer; user-select: none; font-size: 14px; color: #1e293b; }
+details summary { padding: 12px 15px; font-weight: 600; cursor: pointer; user-select: none; font-size: 14px; color: var(--text); }
 details[open] summary { border-bottom: 1px solid var(--border); }
 .details-body { padding: 14px 16px 16px; font-size: 13px; }
 .glossary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .glossary-item { padding: 2px 0; }
-.glossary-item h3 { font-size: 14px; margin-bottom: 5px; color: #1e293b; }
+.glossary-item h3 { font-size: 14px; margin-bottom: 5px; color: var(--text); }
 .glossary-item p { margin: 0; color: var(--text-muted); }
 .metrics-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.metrics-table td { padding: 6px 0; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+.metrics-table td { padding: 6px 0; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
 .metrics-table td:first-child { width: 36%; color: var(--text-muted); }
 .notes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .note-box { padding: 13px 14px; }
 .note-box label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 7px; color: var(--text-muted); }
-.note-box textarea { width: 100%; min-height: 96px; border: 1px solid var(--border); border-radius: 6px; padding: 9px; font-family: inherit; font-size: 13px; resize: vertical; background: #fbfcfd; color: var(--text); }
+.note-box textarea { width: 100%; min-height: 96px; border: 1px solid var(--border); border-radius: 6px; padding: 9px; font-family: inherit; font-size: 13px; resize: vertical; background: var(--surface-muted); color: var(--text); }
 .note-box textarea:focus { outline: 2px solid var(--accent-muted); border-color: #5eead4; }
-.footer-note { margin-top: 48px; font-size: 11.5px; color: #6b7280; border-top: 1px solid var(--border); padding-top: 16px; }
+.footer-note { margin-top: 48px; font-size: 11.5px; color: var(--text-soft); border-top: 1px solid var(--border); padding-top: 16px; }
 @media (max-width: 520px) {
   .plots-grid { grid-template-columns: 1fr; }
   .container { padding: 20px 12px 56px; }
@@ -597,7 +604,7 @@ details[open] summary { border-bottom: 1px solid var(--border); }
    Clickable plot wrappers get affordance. */
 .plot-image-wrapper { cursor: zoom-in; }
 .plot-image-wrapper:hover {
-  border-color: #cbd5e1;
+  border-color: var(--border);
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.06);
 }
 
@@ -656,7 +663,7 @@ details[open] summary { border-bottom: 1px solid var(--border); }
 }
 .lightbox-nav button:hover {
   background: var(--accent-muted);
-  border-color: #99f6e4;
+  border-color: var(--accent);
 }
 .lightbox-nav button:disabled {
   opacity: 0.4;
@@ -710,9 +717,9 @@ details[open] summary { border-bottom: 1px solid var(--border); }
   margin-left: 8px;
 }
 .lightbox-close:hover {
-  background: #fee2e2;
-  border-color: #fecaca;
-  color: #991b1b;
+  background: var(--issue-bg);
+  border-color: var(--issue-border);
+  color: var(--issue-text);
 }
 .lightbox-image-wrap {
   flex: 1;
@@ -742,7 +749,7 @@ details[open] summary { border-bottom: 1px solid var(--border); }
   background: var(--surface);
   flex-shrink: 0;
 }
-.lightbox-footer .hint { color: #94a3b8; font-size: 11.5px; }
+.lightbox-footer .hint { color: var(--text-soft); font-size: 11.5px; }
 
 @media (max-width: 640px) {
   .lightbox-content { max-height: 96vh; }
