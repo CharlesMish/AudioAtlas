@@ -192,7 +192,7 @@ reports/catalog/
 - Batch/catalog mode refinements.
 - Report UX improvements.
 - Optional interactive report view.
-- Optional YAML or simple editor workflow for saved section definitions.
+- Optional simple editor workflow for saved section definitions.
 - More calibration testing across formats and musical material.
 
 ## Tests

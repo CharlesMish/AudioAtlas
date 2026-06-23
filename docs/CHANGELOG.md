@@ -12,6 +12,8 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Manual section scans: `audioatlas analyze --start/--end` can analyze a
   source time range, and `audioatlas sections --section name:start:end` writes
   one report folder per supplied section plus a `section_index.md`.
+- Section reports now show their original source range in `report.md` and
+  `report.html`, so sliced reports are not mistaken for whole-song analyses.
 - Public v0.1-alpha release documentation: clearer README framing,
   `docs/ALPHA_LIMITATIONS.md`, `examples/README.md`, and roadmap notes.
 - Single-track reports now include generation timestamp, AudioAtlas version,
@@ -78,6 +80,12 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   nullability tracks the global value) and the new report section.
 
 ### Changed
+- Findings hygiene: small rule tweak (rolloff 95% threshold lowered from 8 kHz
+  to 7 kHz for fewer generic triggers on typical material) + reworded
+  `why_it_matters` for PLR and rolloff findings so they describe practical
+  audible or post-normalization delivery consequences rather than restating
+  metric relations or heuristics. Updated focused tests. No new measurements,
+  no verdicts.
 - User-facing finding evidence avoids raw internal field names such as
   `true_peak_dbtp`, `near_clipping_samples`, and `plr_db`.
 - Integrated loudness above -10 LUFS is kept in Delivery & headroom context
@@ -132,12 +140,6 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   into the new `## Per-channel breakdown` section. The main table is now
   globals-only, which makes the per-channel block read consistently for
   every per-channel metric.
-- Findings hygiene: small rule tweak (rolloff 95% threshold lowered from 8 kHz
-  to 7 kHz for fewer generic triggers on typical material) + reworded
-  `why_it_matters` for PLR and rolloff findings so they describe practical
-  audible or post-normalization delivery consequences rather than restating
-  metric relations or heuristics. Updated focused tests + report test data.
-  No new measurements, no verdicts.
 
 ---
 

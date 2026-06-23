@@ -253,6 +253,18 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Human notes" in text
 
 
+def test_report_md_shows_source_range_for_manual_section(tmp_path: Path):
+    summary = _make_summary()
+    summary["metadata"]["source_start_seconds"] = 30.0
+    summary["metadata"]["source_end_seconds"] = 62.0
+    summary["metadata"]["source_duration_seconds"] = 252.0
+
+    path = write_report_md(summary, summary["plots"], tmp_path)
+    text = path.read_text(encoding="utf-8")
+
+    assert "Source range: 30.000s-62.000s of 252.000s" in text
+
+
 def test_write_report_md_contains_findings_section(tmp_path: Path):
     summary = _make_summary()
     findings = {
@@ -266,7 +278,7 @@ def test_write_report_md_contains_findings_section(tmp_path: Path):
                 "threshold": 0,
                 "unit": "samples",
                 "evidence": "Near-clipping count measured 12 samples.",
-                "why_it_matters": "Measured sample values are near full scale.",
+                "why_it_matters": "Near-full-scale samples can leave little margin for encoding or level changes.",
                 "does_not_mean": "This does not mean the passage is clipped.",
                 "suggested_checks": ["Inspect the sample histogram."],
                 "time_ranges": [{"start": 1.0, "end": 1.5, "duration": 0.5}],
@@ -308,7 +320,7 @@ def test_report_truncates_many_time_ranges(tmp_path: Path):
                 "threshold": 0,
                 "unit": "samples",
                 "evidence": "Near-clipping count measured 1482 samples.",
-                "why_it_matters": "Measured sample values are near full scale.",
+                "why_it_matters": "Near-full-scale samples can leave little margin for encoding or level changes.",
                 "suggested_checks": ["Inspect the sample histogram."],
                 "time_ranges": ranges,
                 "confidence": "high",
@@ -499,7 +511,7 @@ def test_report_does_not_make_verdicts(tmp_path: Path):
                 "threshold": 120,
                 "unit": "Hz",
                 "evidence": "strongest_bin_hz measured 220.000 Hz.",
-                "why_it_matters": "This identifies where the strongest bin falls.",
+                "why_it_matters": "Dominant energy location may affect perceived balance or masking on playback systems.",
                 "suggested_checks": ["Inspect the average spectrum plot."],
                 "time_ranges": [],
                 "confidence": "medium",
@@ -528,7 +540,7 @@ def test_report_uses_friendly_prompt_labels_not_internal_severity_labels(
                 "threshold": -10.0,
                 "unit": "LUFS",
                 "evidence": "Integrated loudness measured -9.500 LUFS.",
-                "why_it_matters": "Delivery systems may apply loudness normalization.",
+                "why_it_matters": "Higher average loudness can reduce available headroom for peaks and transients after distribution normalization.",
                 "does_not_mean": "This does not mean the measured loudness is unsuitable.",
                 "suggested_checks": ["Compare with the intended delivery context."],
                 "time_ranges": [],
@@ -609,7 +621,7 @@ def _html_findings() -> dict:
                 "threshold": 0,
                 "unit": "samples",
                 "evidence": "Near-clipping count measured 12 samples.",
-                "why_it_matters": "Measured samples are close to the configured ceiling.",
+                "why_it_matters": "Near-full-scale samples can leave little margin for encoding or level changes.",
                 "does_not_mean": "This does not mean the passage is clipped.",
                 "suggested_checks": ["Inspect the sample histogram."],
                 "time_ranges": [{"start": 1.0, "end": 1.5, "duration": 0.5}],
@@ -642,6 +654,18 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
     assert "Delivery / headroom context" in text
     assert "streaming normalization reference levels" in text
     assert "streaming normalization targets" not in text
+
+
+def test_report_html_shows_source_range_for_manual_section(tmp_path: Path):
+    summary = _make_summary()
+    summary["metadata"]["source_start_seconds"] = 30.0
+    summary["metadata"]["source_end_seconds"] = 62.0
+    summary["metadata"]["source_duration_seconds"] = 252.0
+
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert "<strong>Source range</strong> 30.000s-62.000s of 252.000s" in text
 
 
 def test_write_report_html_contains_glossary_and_explanations(tmp_path: Path):

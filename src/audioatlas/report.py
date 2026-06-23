@@ -221,6 +221,22 @@ def _delivery_context_lines(levels: dict[str, Any]) -> list[str]:
     ]
 
 
+def _source_range_label(metadata: dict[str, Any]) -> str | None:
+    start = metadata.get("source_start_seconds")
+    end = metadata.get("source_end_seconds")
+    source_duration = metadata.get("source_duration_seconds")
+    if not all(isinstance(value, (int, float)) for value in (start, end, source_duration)):
+        return None
+    start_f = float(start)
+    end_f = float(end)
+    duration_f = float(source_duration)
+    if duration_f <= 0:
+        return None
+    if abs(start_f) < 1e-9 and abs(end_f - duration_f) < 1e-6:
+        return None
+    return f"{start_f:.3f}s-{end_f:.3f}s of {duration_f:.3f}s"
+
+
 def report_timestamp() -> str:
     """Return a UTC timestamp for generated reports."""
 
@@ -298,6 +314,9 @@ def write_report_md(
 
     lines.append("## File\n")
     lines.append(f"- Duration: {duration_label}")
+    source_range = _source_range_label(metadata)
+    if source_range is not None:
+        lines.append(f"- Source range: {source_range}")
     lines.append(f"- Sample rate: {metadata.get('samplerate', 'unknown')} Hz")
     lines.append(f"- Channels: {metadata.get('channels', 'unknown')}")
     lines.append(

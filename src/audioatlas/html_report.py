@@ -15,6 +15,7 @@ from audioatlas.report import (
     _normalized_time_ranges,
     _positive_int,
     _select_time_range_examples,
+    _source_range_label,
     report_build_metadata,
 )
 from audioatlas.theme import default_theme_name, theme_css_variables, validate_theme_name
@@ -180,6 +181,7 @@ def write_report_html(
         duration_label = f"{duration:.2f}s ({mmss(float(duration))})"
     else:
         duration_label = "unknown"
+    source_range = _source_range_label(metadata)
     build_metadata = report_build_metadata()
 
     lines = [
@@ -200,6 +202,7 @@ def write_report_html(
         '<div class="subtitle">Measurement-based findings, not quality judgments.</div>',
         '<div class="meta-chips">',
         _chip("Duration", duration_label),
+        _chip("Source range", source_range) if source_range is not None else "",
         _chip("Sample rate", f"{_fmt_value(metadata.get('samplerate'))} Hz"),
         _chip("Channels", _fmt_value(metadata.get("channels"))),
         _chip("Format", f"{_fmt_value(metadata.get('format'))} / {_fmt_value(metadata.get('subtype'))}"),

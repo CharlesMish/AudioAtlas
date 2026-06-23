@@ -478,12 +478,15 @@ def test_spectral_centroid_reduced_ranges_do_not_generate_default_prompt():
 
 def test_low_rolloff_95_generates_factual_info():
     findings = generate_findings(
-        _summary(spectral_shape={"rolloff_95_median_hz": 7000.0})
+        _summary(spectral_shape={"rolloff_95_median_hz": 6500.0})
     ).findings
 
     assert len(findings) == 1
     assert "rolloff" in findings[0].title.lower()
     assert findings[0].unit == "Hz"
+    # hygiene: why_it_matters must describe audible/delivery consequence
+    assert "air" in findings[0].why_it_matters.lower() or "detail" in findings[0].why_it_matters.lower()
+    assert "normalization" not in findings[0].why_it_matters.lower()  # not PLR text
 
 
 def test_large_centroid_shift_ranges_do_not_generate_default_prompt():
@@ -498,6 +501,25 @@ def test_large_centroid_shift_ranges_do_not_generate_default_prompt():
     ).findings
 
     assert findings == []
+
+
+def test_marginal_rolloff_above_new_threshold_does_not_generate_finding():
+    """Hygiene: 7200 Hz rolloff (would have fired at old 8 kHz) no longer triggers.
+    Makes the finding more selective for clearly limited HF material."""
+    findings = generate_findings(
+        _summary(spectral_shape={"rolloff_95_median_hz": 7200.0})
+    ).findings
+    assert findings == []
+
+
+def test_plr_why_it_matters_describes_consequence_not_definition():
+    """Hygiene: PLR why must focus on practical impact after normalization."""
+    findings = generate_findings(_summary(levels={"plr_db": 6.0})).findings
+    assert len(findings) == 1
+    why = findings[0].why_it_matters.lower()
+    assert "reduced margin" in why or "dynamic contrast" in why
+    assert "loudness normalization" in why or "normalization" in why
+    assert "lower plr means" not in why  # no definition phrasing
 
 
 def test_band_energy_elevated_ranges_do_not_generate_default_prompt():

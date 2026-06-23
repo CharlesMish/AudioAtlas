@@ -83,6 +83,9 @@ suppresses them.
 | `format` | string | libsndfile format, e.g. `"WAV"`. |
 | `subtype` | string | e.g. `"PCM_16"`, `"FLOAT"`. |
 | `endian` | string \| null | If applicable. |
+| `source_start_seconds` | float \| null | Start time in the original source used for this analysis. `0.0` for full-file analysis. |
+| `source_end_seconds` | float \| null | End time in the original source used for this analysis. |
+| `source_duration_seconds` | float \| null | Full source-file duration before manual section slicing or truncation. |
 
 ### `analysis_config` (from `audioatlas.config.AnalysisConfig`)
 

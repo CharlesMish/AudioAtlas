@@ -247,8 +247,9 @@ def generate_findings(summary: dict) -> FindingsResult:
                 unit="dB",
                 evidence=f"Peak-to-loudness ratio measured {_fmt_measure(plr)} dB.",
                 why_it_matters=(
-                    "Lower PLR means peaks sit closer to the track's integrated loudness, which "
-                    "can change how much short-term impact remains after level normalization."
+                    "When peak levels sit close to the track average loudness, there is reduced "
+                    "margin for transients and dynamic contrast once loudness normalization is "
+                    "applied during playback or distribution."
                 ),
                 does_not_mean="This does not mean the track is over-compressed by itself.",
                 suggested_checks=[
@@ -392,22 +393,23 @@ def generate_findings(summary: dict) -> FindingsResult:
         )
 
     rolloff_95_median = _number(spectral_shape, "rolloff_95_median_hz")
-    if rolloff_95_median is not None and rolloff_95_median < 8000.0:
+    if rolloff_95_median is not None and rolloff_95_median < 7000.0:
         findings.append(
             Finding(
                 severity="info",
                 category="spectrum",
-                title="Median 95% spectral rolloff is below 8 kHz",
+                title="Median 95% spectral rolloff is below 7 kHz",
                 measured_value=rolloff_95_median,
-                threshold=8000.0,
+                threshold=7000.0,
                 unit="Hz",
                 evidence=(
                     "Median 95% spectral rolloff measured "
                     f"{_fmt_measure(rolloff_95_median)} Hz."
                 ),
                 why_it_matters=(
-                    "A lower 95% rolloff can indicate that less measured energy reaches the "
-                    "upper spectrum over the track, which may affect perceived openness or source detail."
+                    "Tracks with 95% of spectral energy below 7 kHz typically carry less "
+                    "high-frequency content, which can reduce the impression of air, cymbal "
+                    "detail or vocal presence on full-range listening systems."
                 ),
                 does_not_mean=(
                     "This does not mean the track is dull or that high-frequency content is missing."

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch: {}
 
 jobs:
@@ -46,4 +46,10 @@ jobs:
             --out /tmp/aa_ci_demo
           test -f /tmp/aa_ci_demo/summary.json
           test -f /tmp/aa_ci_demo/report.md
+          test -f /tmp/aa_ci_demo/report.html
           test -f /tmp/aa_ci_demo/01_waveform_rms.png
+          audioatlas sections tests/fixtures/sine_1k_-6dbfs_2s.wav \
+            --out /tmp/aa_ci_sections \
+            --section first:0:1 \
+            --section second:1:
+          test -f /tmp/aa_ci_sections/section_index.md
