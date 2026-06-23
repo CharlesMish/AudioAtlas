@@ -61,6 +61,26 @@ def test_dense_clicks_have_higher_density_than_sparse_clicks(sr):
     )
 
 
+def test_onset_density_short_section_keeps_array_lengths_aligned(sr):
+    cfg = AnalysisConfig(n_fft=4096, hop_length=1024, onset_density_window_seconds=1.0)
+    y = _click_train(sr, duration=0.5, interval_seconds=0.05)
+
+    result = compute_onset_density(y, sr, cfg)
+
+    assert len(result.times_seconds) == len(result.onset_strength)
+    assert len(result.smoothed_onset_density) == len(result.onset_strength)
+    assert result.smoothing_window_frames <= len(result.onset_strength)
+
+
+def test_plot_onset_density_short_section_writes_png(tmp_path, sr):
+    cfg = AnalysisConfig(n_fft=4096, hop_length=1024, onset_density_window_seconds=1.0)
+    result = compute_onset_density(_click_train(sr, duration=0.5, interval_seconds=0.05), sr, cfg)
+    path = plot_onset_density(result, tmp_path / "short_onset_density.png")
+
+    assert path.exists()
+    assert path.stat().st_size > 0
+
+
 def test_plot_onset_density_writes_png(tmp_path, sr):
     cfg = AnalysisConfig(n_fft=2048, hop_length=512)
     result = compute_onset_density(_click_train(sr, duration=1.0, interval_seconds=0.1), sr, cfg)

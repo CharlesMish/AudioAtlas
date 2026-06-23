@@ -221,6 +221,38 @@ sections:
     assert "string name" in result.output
 
 
+def test_cli_sections_yaml_accepts_short_section_range(tmp_path):
+    path = tmp_path / "short.wav"
+    sr = 48_000
+    y = np.zeros((sr * 2, 1), dtype=np.float32)
+    y[: sr // 2, 0] = 0.2
+    sf.write(path, y, sr)
+    config_path = tmp_path / "short.yaml"
+    config_path.write_text(
+        """\
+sections:
+  - name: middle
+    start: 1
+    end: 1.5
+""",
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "short_section"
+
+    result = CliRunner().invoke(
+        main,
+        ["sections", str(path), "--out", str(out_dir), "--config", str(config_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    section_dir = out_dir / _section_slug("middle", 1.0, 1.5)
+    assert (section_dir / "report.html").exists()
+    assert (section_dir / "summary.json").exists()
+    summary = json.loads((section_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["metadata"]["source_start_seconds"] == 1.0
+    assert summary["metadata"]["source_end_seconds"] == 1.5
+
+
 def test_cli_sections_rejects_yaml_invalid_range(tmp_path):
     path = tmp_path / "sections.wav"
     _write_sections_fixture(path)

@@ -94,8 +94,13 @@ def compute_onset_density(
         normalized = onset_strength / max_strength
 
     window_frames = max(1, int(round(cfg.onset_density_window_seconds * sr / cfg.hop_length)))
+    # np.convolve(..., mode="same") returns max(len(signal), len(kernel)); cap the
+    # kernel so short sections keep smoothed density aligned with onset frames.
+    window_frames = min(window_frames, len(onset_strength))
     kernel = np.ones(window_frames, dtype=np.float64) / window_frames
     density = np.convolve(onset_strength, kernel, mode="same").astype(np.float64)
+    if len(density) != len(onset_strength):
+        raise ValueError("onset density smoothing length mismatch")
     times = librosa.frames_to_time(
         np.arange(len(onset_strength)), sr=sr, hop_length=cfg.hop_length
     ).astype(np.float64)

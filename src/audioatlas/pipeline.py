@@ -69,6 +69,8 @@ def analyze_file(
     *,
     config: AnalysisConfig | None = None,
     max_duration_seconds: float | None = None,
+    start_seconds: float | None = None,
+    end_seconds: float | None = None,
     theme_name: str | None = None,
 ) -> AnalysisRunResult:
     """Run the v0.1 analysis pipeline for one file."""
@@ -78,7 +80,12 @@ def analyze_file(
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
 
-    audio = load_audio(input_path, max_duration_seconds=max_duration_seconds)
+    audio = load_audio(
+        input_path,
+        max_duration_seconds=max_duration_seconds,
+        start_seconds=start_seconds,
+        end_seconds=end_seconds,
+    )
 
     levels = compute_scalar_levels(audio.y, audio.sr, cfg)
     rms = compute_rms_envelope(audio.y, audio.sr, cfg)
