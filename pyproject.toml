@@ -21,7 +21,8 @@ dependencies = [
   "librosa>=0.11",
   "matplotlib>=3.8",
   "pyloudnorm>=0.1.1",
-  "click>=8.1"
+  "click>=8.1",
+  "PyYAML>=6.0"
 ]
 
 [project.optional-dependencies]

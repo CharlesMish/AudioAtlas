@@ -13,10 +13,10 @@ When you start a task:
 4. Run `make check` (tests + lint) before declaring done.
 5. Update `docs/CHANGELOG.md` under the unreleased section.
 
-**Recommended first task:** Start with `T-002 — Stereo correlation timeline`.
-It is visible, useful, and straightforward to test. Do **not** start with
-`T-001` unless explicitly assigned; true-peak refinement is subtle DSP work
-and should not be the first agent pass.
+**Recommended next task:** Start with a small findings-hygiene or docs
+reconciliation pass unless a specific measurement slice is assigned. Do **not**
+start with `T-001` unless explicitly assigned; true-peak refinement is subtle
+DSP work and should not be a casual agent pass.
 
 ---
 
@@ -46,14 +46,13 @@ filter) just for this.
 
 ---
 
-## T-002 — Stereo correlation timeline [v0.2]
+## T-002 — Stereo correlation timeline [done]
 
-**Status:** open. **Layer:** analysis + visualize + pipeline.
+**Status:** implemented. **Layer:** analysis + visualize + pipeline.
 
-**What:** Implement `compute_stereo_correlation` in
-`src/audioatlas/analysis/stereo.py` (currently a stub). Per-frame
-Pearson correlation of L and R using `cfg.n_fft`-sized windows hopping
-by `cfg.hop_length`.
+**What:** Implemented as `compute_stereo_correlation` in
+`src/audioatlas/analysis/stereo.py`. Per-frame Pearson correlation of L and R
+using `cfg.n_fft`-sized windows hopping by `cfg.hop_length`.
 
 **Acceptance criteria:**
 - Mono input → constant +1.0 series and a single non-fatal warning in
@@ -68,13 +67,13 @@ by `cfg.hop_length`.
 
 ---
 
-## T-003 — Mid/Side energy [v0.2]
+## T-003 — Mid/Side energy [done]
 
-**Status:** open. **Layer:** analysis + visualize + pipeline.
+**Status:** implemented. **Layer:** analysis + visualize + pipeline.
 
-**What:** Implement `compute_mid_side_energy` in
-`src/audioatlas/analysis/stereo.py`. Returns mid and side RMS over time
-plus a ratio in dB (positive = mid-heavy, negative = side-heavy).
+**What:** Implemented as `compute_mid_side_energy` in
+`src/audioatlas/analysis/stereo.py`. Returns mid and side RMS over time plus a
+side-to-mid ratio in dB.
 
 **Acceptance criteria:**
 - Mono input: side energy is exactly zero; M/S ratio in summary is
@@ -87,22 +86,16 @@ plus a ratio in dB (positive = mid-heavy, negative = side-heavy).
 
 ---
 
-## T-004 — Spectral centroid + rolloff [v0.2]
+## T-004 — Spectral centroid + rolloff [done]
 
-**Status:** open. **Layer:** analysis + visualize + pipeline.
+**Status:** implemented. **Layer:** analysis + visualize + pipeline.
 
-**What:** Implement both in
-`src/audioatlas/analysis/spectral_features.py` (currently a stub),
-delegating to `librosa.feature.spectral_centroid` and
-`librosa.feature.spectral_rolloff`.
+**What:** Implemented as `compute_spectral_shape` in
+`src/audioatlas/analysis/spectral.py`, with centroid, 85%/95% rolloff,
+bandwidth summaries, a plot, summary schema docs, and findings integration.
 
-**Acceptance criteria:**
-- A 1 kHz sine produces median centroid in [950, 1050] Hz.
-- A 1 kHz sine produces rolloff (85th percentile) close to 1 kHz.
-- White noise has higher rolloff than pink-ish noise (use 1/f filter).
-- Single combined plot at `visualize/spectral_features.py` overlaying
-  centroid and rolloff over time, with frequency on log y-axis.
-- Wired into `pipeline.py` as `08_spectral_centroid_rolloff.png`.
+The old `spectral_features.py` stub remains only as historical placeholder
+context and should not be used for new spectral-shape work.
 
 ---
 
@@ -176,6 +169,32 @@ The implementation is dependency-light and uses embedded CSS.
 - Tests cover key metric cards, findings, glossary copy, plot links,
   escaping, and pipeline output.
 
+## T-009 — Manual section scans [done]
+
+**Status:** implemented. **Layer:** IO + pipeline + CLI + report.
+
+**What:** `audioatlas analyze --start/--end` analyzes one source time range,
+and `audioatlas sections --section name:start:end` writes one report folder per
+manual section plus a `section_index.md`.
+
+**Notes:** This is not automatic section detection. Ranges are supplied by the
+user, report timelines remain section-relative, and reports include source
+range context.
+
+---
+
+## T-010 — YAML section definitions [done]
+
+**Status:** implemented. **Layer:** CLI/config parsing.
+
+**What:** `audioatlas sections --config sections.yaml` loads a top-level
+`sections` list with `name`, `start`, and optional `end` fields. Repeated
+`--section name:start:end` flags and `--config` both feed the same section
+parser/validator. Omitting `end` means through EOF.
+
+**Notes:** Manual section definitions only. No automatic section detection or
+GUI behavior.
+
 ---
 
 ## Out of scope (do not add)
@@ -186,7 +205,7 @@ explicit go-ahead from the maintainer.
 - Reference-track comparison.
 - "Mix health" score, A/B grading, or any automated verdict.
 - Real-time / playback / Streamlit UI.
-- Section / structure segmentation (verse/chorus detection).
+- Automatic section / structure segmentation (verse/chorus detection).
 - Vocal isolation, source separation, transcription.
 - Genre classification.
 - AI-generated mastering suggestions of any kind.

@@ -56,6 +56,13 @@ With `uv`:
 
 ```bash
 uv run audioatlas analyze /path/to/song.wav --out reports/song
+uv run audioatlas analyze /path/to/song.wav --out reports/verse --start 30 --end 62
+uv run audioatlas sections /path/to/song.wav --out reports/song_sections \
+  --section intro:0:30 \
+  --section verse:30:62 \
+  --section ending:62:
+uv run audioatlas sections /path/to/song.wav --out reports/song_sections \
+  --config sections.yaml
 uv run audioatlas batch /path/to/folder --out reports/catalog
 uv run audioatlas themes
 ```
@@ -64,6 +71,13 @@ With an activated virtualenv:
 
 ```bash
 audioatlas analyze /path/to/song.wav --out reports/song
+audioatlas analyze /path/to/song.wav --out reports/verse --start 30 --end 62
+audioatlas sections /path/to/song.wav --out reports/song_sections \
+  --section intro:0:30 \
+  --section verse:30:62 \
+  --section ending:62:
+audioatlas sections /path/to/song.wav --out reports/song_sections \
+  --config sections.yaml
 audioatlas batch /path/to/folder --out reports/catalog
 audioatlas analyze /path/to/song.wav --out reports/song_dark --theme midnight_studio
 audioatlas themes
@@ -81,6 +95,8 @@ CLI flags:
 |---|---|---|
 | `--out PATH` | required | Output directory. |
 | `--max-duration FLOAT` | none | Truncate input for quick dev runs. |
+| `--start FLOAT` | none | Start analysis at this source time in seconds. |
+| `--end FLOAT` | none | End analysis at this source time in seconds. |
 | `--n-fft INT` | 4096 | FFT size for spectrogram. |
 | `--hop-length INT` | 1024 | Hop size for time-axis analyses. |
 | `--rms-frame-length INT` | = `--n-fft` | RMS window length. |
@@ -110,6 +126,30 @@ Open `report.html` in a browser. Start with the short workflow near the top,
 review Delivery & headroom context, scan Findings, then inspect plots and listen
 to the referenced regions.
 
+Manual section output:
+
+```text
+reports/song_sections/
+├── section_index.md
+├── 000p000_030p000_intro/
+│   ├── report.html
+│   └── ...
+├── 030p000_062p000_verse/
+│   ├── report.html
+│   └── ...
+└── 062p000_EOF_ending/
+    └── ...
+```
+
+Section scans are manual. AudioAtlas does not detect song parts; it analyzes
+the source ranges you provide. This is useful when a whole-song average hides
+distinct intros, drops, bridges, endings, or other intentional changes.
+
+Save section ranges in YAML and pass `--config sections.yaml` to
+`audioatlas sections`, or repeat `--section name:start:end` on the command
+line. Omit `end` in YAML (or leave the end blank in `--section`) to analyze
+through EOF. Both forms use the same parser and produce identical folder names.
+
 Batch mode writes the same per-track folders plus:
 
 ```text
@@ -136,6 +176,8 @@ reports/catalog/
   not as a Finding.
 - AudioAtlas does not produce a mix score and does not give automated mastering
   advice.
+- Manual section scans require user-supplied ranges. They are not automatic
+  song-section detection.
 
 ## Docs
 
@@ -150,6 +192,7 @@ reports/catalog/
 - Batch/catalog mode refinements.
 - Report UX improvements.
 - Optional interactive report view.
+- Optional YAML or simple editor workflow for saved section definitions.
 - More calibration testing across formats and musical material.
 
 ## Tests
