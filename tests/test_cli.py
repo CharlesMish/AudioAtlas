@@ -65,6 +65,17 @@ def test_cli_sections_writes_one_report_per_manual_section(tmp_path):
     assert "manual" in index
     assert "intro" in index
     assert "louder" in index
+    # New comparison table assertions (uses existing summary fields)
+    assert "Section comparison (manual sections only)" in index
+    assert "Integrated LUFS" in index
+    assert "PLR (dB)" in index
+    assert "Median stereo corr." in index
+    assert "Median 95% rolloff (Hz)" in index
+    assert "report.md" in index
+    assert "report.html" in index
+    # different source ranges
+    assert "0s-3s" in index or "0.000s-3s" in index
+    assert "3s-6s" in index or "3.000s-6s" in index
 
 
 def test_cli_sections_accepts_yaml_config(tmp_path):

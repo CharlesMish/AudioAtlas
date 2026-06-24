@@ -119,7 +119,7 @@ context and should not be used for new spectral-shape work.
 
 ## T-006 — Short-term LUFS timeline [v0.2]
 
-**Status:** open. **Layer:** analysis + visualize + pipeline.
+**Status:** done. **Layer:** analysis + visualize + pipeline.
 
 **What:** Add a real K-weighted short-term LUFS timeline (3-second
 rolling integration, BS.1770) using pyloudnorm. This is the metric the
@@ -132,7 +132,7 @@ old "loudness_timeline" name *should* have meant.
 - Files shorter than 3s produce an empty result with a warning - do not
   raise.
 - Plot at `visualize/loudness.py::plot_short_term_lufs` as
-  `10_short_term_lufs.png`.
+  `13_short_term_lufs.png`.
 
 ---
 

@@ -52,7 +52,8 @@ def plot_short_term_lufs(
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("LUFS")
     ax.grid(True, alpha=0.25)
-    ax.legend(fontsize=9, loc="upper right")
+    if len(lufs_result.lufs) > 0:
+        ax.legend(fontsize=9, loc="upper right")
     fig.tight_layout()
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)

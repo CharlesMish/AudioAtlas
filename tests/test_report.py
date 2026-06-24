@@ -205,6 +205,15 @@ def _make_summary() -> dict:
             "dominant_pitch_class": "A",
             "warnings": [],
         },
+        "short_term_lufs": {
+            "window_seconds": 3.0,
+            "hop_seconds": 0.09,
+            "frames": 100,
+            "lufs_min": -18.5,
+            "lufs_median": -12.0,
+            "lufs_max": -9.5,
+            "warnings": [],
+        },
     }
 
 
@@ -272,6 +281,9 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Onset / transient density summary" in text
     assert "## Chroma CQT summary" in text
     assert "dominant_pitch_class: A" in text
+    assert "## Short-term LUFS summary" in text
+    assert "Short-term LUFS median: -12.000 LUFS" in text
+    assert "lufs_median" not in text
     assert "## Stereo correlation summary" in text
     assert "## Mid/side energy summary" in text
     assert "## Plots" in text
@@ -699,6 +711,7 @@ def test_write_report_html_contains_glossary_and_explanations(tmp_path: Path):
     text = path.read_text(encoding="utf-8")
 
     assert "Understanding these numbers" in text
+    assert "Short-term LUFS is a time-varying K-weighted loudness measurement" in text
     assert "Onset density is an attack/activity map for this track" in text
     assert "It is not punch, groove quality, drum hits per second, or mix quality." in text
     assert "Relative dB plots show shape within this track." in text

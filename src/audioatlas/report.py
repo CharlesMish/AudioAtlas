@@ -40,6 +40,15 @@ CREST_TIMELINE_DISPLAY: list[tuple[str, str, str]] = [
     ("crest_factor_db_max", "Crest factor max", "dB"),
 ]
 
+SHORT_TERM_LUFS_DISPLAY: list[tuple[str, str, str]] = [
+    ("window_seconds", "Window", "s"),
+    ("hop_seconds", "Hop", "s"),
+    ("frames", "Frames", ""),
+    ("lufs_min", "Short-term LUFS min", "LUFS"),
+    ("lufs_median", "Short-term LUFS median", "LUFS"),
+    ("lufs_max", "Short-term LUFS max", "LUFS"),
+]
+
 PER_CHANNEL_METRIC_DISPLAY: list[tuple[str, str, str]] = [
     ("peak_dbfs_per_channel",      "Sample peak",          "dBFS"),
     ("true_peak_dbtp_per_channel", "True-peak (approx.)",  "dBTP"),
@@ -317,6 +326,7 @@ def write_report_md(
     band_energy_timeline = summary.get("band_energy_timeline", {})
     onset_density = summary.get("onset_density", {})
     chroma_cqt = summary.get("chroma_cqt", {})
+    short_term_lufs = summary.get("short_term_lufs", {})
     stereo = summary.get("stereo_correlation", {})
     mid_side = summary.get("mid_side_energy", {})
 
@@ -495,6 +505,21 @@ def write_report_md(
         chroma_warnings = chroma_cqt.get("warnings") or []
         for warning in chroma_warnings:
             lines.append(f"- warning: {warning}")
+        lines.append("")
+
+    if short_term_lufs:
+        lines.append("## Short-term LUFS summary\n")
+        lines.append(
+            "K-weighted loudness over 3 s windows. This is distinct from the RMS timeline "
+            "and from integrated LUFS, which summarizes the whole track.\n"
+        )
+        for key, label, unit in SHORT_TERM_LUFS_DISPLAY:
+            if key in short_term_lufs:
+                unit_suffix = f" {unit}" if unit else ""
+                lines.append(f"- {label}: {_fmt_value(short_term_lufs.get(key))}{unit_suffix}")
+        lufs_warnings = short_term_lufs.get("warnings") or []
+        for warning in lufs_warnings:
+            lines.append(f"- Warning: {warning}")
         lines.append("")
 
     if stereo:

@@ -27,6 +27,7 @@ WIDE_PLOTS = {
     "10_band_energy_timeline.png",
     "11_onset_density.png",
     "12_chroma_cqt.png",
+    "13_short_term_lufs.png",
 }
 
 PLOT_CAPTIONS: dict[str, str] = {
@@ -67,6 +68,10 @@ PLOT_CAPTIONS: dict[str, str] = {
         "What this shows: pitch-class energy over time within this track. "
         "This is not key detection and values are not calibrated across unrelated songs."
     ),
+    "13_short_term_lufs.png": (
+        "What this shows: K-weighted short-term loudness in 3 s windows over time. "
+        "This is distinct from the RMS timeline and from integrated LUFS."
+    ),
 }
 
 GLOSSARY: list[tuple[str, str]] = [
@@ -74,6 +79,11 @@ GLOSSARY: list[tuple[str, str]] = [
         "LUFS",
         "Integrated LUFS is a whole-track loudness measurement weighted toward human hearing. "
         "It gives delivery context, not a quality judgment.",
+    ),
+    (
+        "Short-term LUFS",
+        "Short-term LUFS is a time-varying K-weighted loudness measurement using 3 s windows. "
+        "It shows where this track is louder or quieter over time and is distinct from RMS.",
     ),
     (
         "True peak",
@@ -152,6 +162,7 @@ TECHNICAL_BLOCKS: list[tuple[str, str]] = [
     ("Spectral shape", "spectral_shape"),
     ("Band energy timeline", "band_energy_timeline"),
     ("Onset density", "onset_density"),
+    ("Short-term LUFS", "short_term_lufs"),
     ("Analysis config", "analysis_config"),
 ]
 

@@ -111,12 +111,10 @@ def compute_short_term_lufs(
     data_for_meter = audio[:, 0] if audio.shape[1] == 1 else audio
 
     try:
-        # Configure meter for 3 s short-term blocks with high overlap (~10 Hz updates)
-        meter = pyln.Meter(
-            sr,
-            block_size=window_s,
-            overlap=0.97,
-        )
+        # Configure meter using config params (high overlap gives finer timeline)
+        overlap = 1.0 - (hop_s / window_s) if hop_s > 0 and hop_s < window_s else 0.75
+        overlap = max(0.0, min(0.99, overlap))
+        meter = pyln.Meter(sr, block_size=window_s, overlap=overlap)
         # Calling integrated populates meter.blockwise_loudness with the
         # ungated short-term loudness values for the configured blocks.
         integrated_lufs: float | None = None
@@ -141,7 +139,7 @@ def compute_short_term_lufs(
             )
 
         # Compute corresponding times (end of each block)
-        hop_time = window_s * (1.0 - 0.97)
+        hop_time = window_s * (1.0 - overlap)
         n = len(block_lufs)
         times = np.arange(n, dtype=np.float64) * hop_time + window_s
         duration = len(audio) / float(sr)
