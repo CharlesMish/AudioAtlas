@@ -59,6 +59,8 @@ PLOT_DISPLAY_NAMES: dict[str, str] = {
     "09_spectral_shape.png": "Spectral Shape Timeline",
     "10_band_energy_timeline.png": "Frequency Band Energy Timeline",
     "11_onset_density.png": "Onset / Transient Density Timeline",
+    "12_chroma_cqt.png": "Chroma CQT (Pitch-Class Energy)",
+    "13_short_term_lufs.png": "Short-term LUFS Timeline",
 }
 
 RELATIVE_DB_NOTE = (
@@ -69,6 +71,10 @@ RELATIVE_DB_NOTE = (
 PLOT_NOTES: dict[str, str] = {
     "05_average_spectrum.png": RELATIVE_DB_NOTE,
     "10_band_energy_timeline.png": RELATIVE_DB_NOTE,
+    "13_short_term_lufs.png": (
+        "Short-term LUFS uses 3 s K-weighted blocks (distinct from the RMS timeline). "
+        "The dashed reference line (when present) is the track integrated LUFS."
+    ),
 }
 
 SEVERITY_DISPLAY: dict[str, str] = {
@@ -310,6 +316,7 @@ def write_report_md(
     spectral_shape = summary.get("spectral_shape", {})
     band_energy_timeline = summary.get("band_energy_timeline", {})
     onset_density = summary.get("onset_density", {})
+    chroma_cqt = summary.get("chroma_cqt", {})
     stereo = summary.get("stereo_correlation", {})
     mid_side = summary.get("mid_side_energy", {})
 
@@ -464,6 +471,29 @@ def write_report_md(
             _append_summary_value(lines, key, value)
         onset_warnings = onset_density.get("warnings") or []
         for warning in onset_warnings:
+            lines.append(f"- warning: {warning}")
+        lines.append("")
+
+    if chroma_cqt:
+        lines.append("## Chroma CQT summary\n")
+        lines.append(
+            "Pitch-class energy within this track. This is not key detection "
+            "and values are not calibrated across unrelated songs.\n"
+        )
+        for key, value in chroma_cqt.items():
+            if key in {"warnings", "mean_chroma", "pitch_classes"}:
+                continue
+            _append_summary_value(lines, key, value)
+        mean_chroma = chroma_cqt.get("mean_chroma")
+        pitch_classes = chroma_cqt.get("pitch_classes")
+        if isinstance(mean_chroma, list) and isinstance(pitch_classes, list) and mean_chroma:
+            lines.append("")
+            lines.append("| Pitch class | Mean energy |")
+            lines.append("|---|---|")
+            for pitch_class, energy in zip(pitch_classes, mean_chroma, strict=True):
+                lines.append(f"| {pitch_class} | {_fmt_value(energy)} |")
+        chroma_warnings = chroma_cqt.get("warnings") or []
+        for warning in chroma_warnings:
             lines.append(f"- warning: {warning}")
         lines.append("")
 

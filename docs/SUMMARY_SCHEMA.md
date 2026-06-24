@@ -21,6 +21,8 @@ Current schema version: **`0.1.0`**.
   "spectral_shape":  { ... SpectralShapeResult.to_summary_dict() ... },
   "band_energy_timeline": { ... BandEnergyTimelineResult.to_summary_dict() ... },
   "onset_density":   { ... OnsetDensityResult.to_summary_dict() ... },
+  "chroma_cqt":      { ... ChromaCqtResult.to_summary_dict() ... },
+  "short_term_lufs": { ... ShortTermLufsResult.to_summary_dict() ... },
   "stereo_correlation": { ... StereoCorrelationResult.to_summary_dict() ... },
   "mid_side_energy": { ... MidSideEnergyResult.to_summary_dict() ... },
   "plots":           ["01_waveform_rms.png", ...]
@@ -93,7 +95,8 @@ Frozen dataclass, serialized via `dataclasses.asdict`. Includes
 `n_fft`, `hop_length`, `window`, `db_floor`, `rms_frame_length`,
 `clipping_threshold`, `near_clipping_threshold`, `true_peak_oversample`,
 `welch_nperseg`, `max_plot_points`, `correlation_min_rms_dbfs`,
-`onset_density_window_seconds`, `max_findings`,
+`onset_density_window_seconds`, `short_term_lufs_window_seconds`,
+`short_term_lufs_hop_seconds`, `max_findings`,
 `band_finding_min_duration_seconds`, and
 `band_finding_min_relative_db`, `finding_min_time_range_seconds`, and
 `report_max_time_ranges`.
@@ -302,6 +305,39 @@ summary density values use raw librosa onset-strength units.
 | `strongest_onset_density_time` | float \| absent | Time of the maximum smoothed onset-density frame. |
 | `warnings` | list[str] | Human-readable caveats; safe to ignore programmatically. |
 
+### `chroma_cqt` (from `ChromaCqtResult.to_summary_dict`)
+
+12-bin chromagram over time from a constant-Q transform on a mono channel
+average. This describes pitch-class energy within this track. It is not key
+detection and values are not calibrated across unrelated songs.
+
+| Field | Type | Notes |
+|---|---|---|
+| `hop_length` | int | Hop between chroma frames. |
+| `frames` | int | Number of chroma frames. |
+| `pitch_classes` | list[str] | Fixed 12-name pitch-class order used by the chromagram rows. |
+| `mean_chroma` | list[float] | Mean energy per pitch-class bin over time. |
+| `dominant_pitch_class` | string \| null | Pitch class with the largest `mean_chroma` value. `null` when chroma energy is effectively zero. Not a song key or tonic. |
+| `warnings` | list[str] | Human-readable caveats; safe to ignore programmatically. |
+
+### `short_term_lufs` (from `ShortTermLufsResult.to_summary_dict`)
+
+3-second K-weighted short-term LUFS timeline (BS.1770) computed via
+pyloudnorm blockwise processing. This provides a time-varying loudness
+view that is perceptually weighted, distinct from RMS. The integrated
+reference value is also included for context. Short files (< 3 s)
+produce an empty timeline with a warning.
+
+| Field | Type | Notes |
+|---|---|---|
+| `window_seconds` | float | Analysis window duration (3.0 s). |
+| `hop_seconds` | float | Hop between successive short-term blocks. |
+| `frames` | int | Number of short-term values produced. |
+| `lufs_min` | float \| null | Minimum short-term LUFS. |
+| `lufs_median` | float \| null | Median short-term LUFS. |
+| `lufs_max` | float \| null | Maximum short-term LUFS. |
+| `warnings` | list[str] | Human-readable caveats; safe to ignore programmatically. |
+
 ### `stereo_correlation` (from `StereoCorrelationResult.to_summary_dict`)
 
 Per-frame Pearson correlation between input channels 0 and 1. Mono input
@@ -367,10 +403,12 @@ order is fixed:
 09_spectral_shape.png
 10_band_energy_timeline.png
 11_onset_density.png
+12_chroma_cqt.png
+13_short_term_lufs.png
 ```
 
-New plots from future feature slices append numbered prefixes (`12_*`,
-`13_*`, ...) and are added to `plot_paths` in `pipeline.py`.
+New plots from future feature slices append numbered prefixes (`13_*`,
+`14_*`, ...) and are added to `plot_paths` in `pipeline.py`.
 
 ## findings.json blocks
 

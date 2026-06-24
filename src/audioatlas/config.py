@@ -24,6 +24,8 @@ class AnalysisConfig:
     max_plot_points: int = 250_000
     correlation_min_rms_dbfs: float = -80.0
     onset_density_window_seconds: float = 1.0
+    short_term_lufs_window_seconds: float = 3.0
+    short_term_lufs_hop_seconds: float = 0.1
     max_findings: int = 8
     band_finding_min_duration_seconds: float = 0.5
     band_finding_min_relative_db: float = -80.0
@@ -43,6 +45,10 @@ class AnalysisConfig:
             raise ValueError("correlation_min_rms_dbfs must be <= 0")
         if self.onset_density_window_seconds <= 0:
             raise ValueError("onset_density_window_seconds must be positive")
+        if self.short_term_lufs_window_seconds <= 0:
+            raise ValueError("short_term_lufs_window_seconds must be positive")
+        if self.short_term_lufs_hop_seconds <= 0:
+            raise ValueError("short_term_lufs_hop_seconds must be positive")
         if self.max_findings <= 0:
             raise ValueError("max_findings must be positive")
         if self.band_finding_min_duration_seconds < 0:

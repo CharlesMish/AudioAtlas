@@ -1,29 +1,108 @@
 """Tonal analysis (chroma).
 
-Status: STUB (v0.2 target). Not wired into the pipeline yet.
-
-Planned content:
-
-- ``ChromaCqtResult`` - 12-bin chromagram over time, plus aggregated
-  pitch-class energy.
-- ``compute_chroma_cqt(y, sr, config)`` - thin wrapper over
-  ``librosa.feature.chroma_cqt``.
-
-This is *descriptive* only - AudioAtlas does not attempt key detection
-in v0.1 or v0.2. The plot is the deliverable; any "this song is in C minor"
-claim would violate the no-verdict rule in AGENT_BRIEF.md.
-
-Required when implementing:
-
-1. Define result dataclass with frozen=True, including ``sample_rate``.
-2. Downmix to mono before calling librosa.
-3. Test that a pure A4 (440 Hz) sine produces a clear peak in the A
-   chroma bin and that the chromagram has shape (12, n_frames).
-4. Plot at ``audioatlas/visualize/chroma.py``.
-
-See ``docs/AGENT_TASKS.md`` (T-005).
+Descriptive pitch-class energy only — AudioAtlas does not attempt key
+detection. See ``AGENT_BRIEF.md`` for the no-verdict rule.
 """
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from dataclasses import dataclass
+
+import librosa
+import numpy as np
+from numpy.typing import NDArray
+
+from audioatlas.config import AnalysisConfig
+from audioatlas.utils import EPS, to_mono
+
+PITCH_CLASSES: tuple[str, ...] = (
+    "C",
+    "C#",
+    "D",
+    "D#",
+    "E",
+    "F",
+    "F#",
+    "G",
+    "G#",
+    "A",
+    "A#",
+    "B",
+)
+
+__all__ = ["ChromaCqtResult", "PITCH_CLASSES", "compute_chroma_cqt"]
+
+
+@dataclass(frozen=True)
+class ChromaCqtResult:
+    """12-bin chromagram over time from a constant-Q transform."""
+
+    chroma: NDArray[np.float64]
+    times_seconds: NDArray[np.float64]
+    pitch_classes: tuple[str, ...]
+    sample_rate: int
+    hop_length: int
+    warnings: list[str]
+
+    def to_summary_dict(self) -> dict[str, object]:
+        if self.chroma.shape[1] == 0:
+            return {
+                "frames": 0,
+                "hop_length": self.hop_length,
+                "pitch_classes": list(self.pitch_classes),
+                "mean_chroma": [0.0] * len(self.pitch_classes),
+                "dominant_pitch_class": None,
+                "warnings": self.warnings,
+            }
+        mean_chroma = self.chroma.mean(axis=1).astype(np.float64)
+        dominant_idx = int(np.argmax(mean_chroma))
+        dominant = self.pitch_classes[dominant_idx]
+        if float(np.max(mean_chroma)) <= EPS:
+            dominant = None
+        return {
+            "frames": int(self.chroma.shape[1]),
+            "hop_length": self.hop_length,
+            "pitch_classes": list(self.pitch_classes),
+            "mean_chroma": [float(v) for v in mean_chroma],
+            "dominant_pitch_class": dominant,
+            "warnings": self.warnings,
+        }
+
+
+def compute_chroma_cqt(
+    y: NDArray[np.floating], sr: int, config: AnalysisConfig | None = None
+) -> ChromaCqtResult:
+    """Compute a 12-bin chromagram over time using ``librosa.feature.chroma_cqt``.
+
+    The result describes pitch-class energy within this track. It is not key
+    detection and values are not calibrated across unrelated songs.
+    """
+
+    cfg = config or AnalysisConfig()
+    cfg.validate()
+    if sr <= 0:
+        raise ValueError("sr must be positive")
+    mono = to_mono(y).astype(np.float64)
+    if len(mono) == 0:
+        raise ValueError("audio has zero samples")
+
+    chroma = librosa.feature.chroma_cqt(
+        y=mono,
+        sr=sr,
+        hop_length=cfg.hop_length,
+    ).astype(np.float64)
+    warnings: list[str] = []
+    if float(np.max(chroma)) <= EPS:
+        warnings.append("no measurable chroma energy; chromagram is reported as zero")
+
+    times = librosa.frames_to_time(
+        np.arange(chroma.shape[1]), sr=sr, hop_length=cfg.hop_length
+    ).astype(np.float64)
+    return ChromaCqtResult(
+        chroma=chroma,
+        times_seconds=times,
+        pitch_classes=PITCH_CLASSES,
+        sample_rate=int(sr),
+        hop_length=cfg.hop_length,
+        warnings=warnings,
+    )

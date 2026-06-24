@@ -25,6 +25,7 @@ from audioatlas.analysis.levels import (
     compute_rms_envelope,
     compute_scalar_levels,
 )
+from audioatlas.analysis.loudness import compute_short_term_lufs
 from audioatlas.analysis.spectral import (
     compute_average_spectrum,
     compute_band_energy_timeline,
@@ -32,12 +33,15 @@ from audioatlas.analysis.spectral import (
     compute_spectral_shape,
 )
 from audioatlas.analysis.stereo import compute_mid_side_energy, compute_stereo_correlation
+from audioatlas.analysis.tonal import compute_chroma_cqt
 from audioatlas.config import AnalysisConfig
 from audioatlas.html_report import write_report_html
 from audioatlas.io import load_audio
 from audioatlas.report import write_findings_json, write_report_md, write_summary_json
 from audioatlas.visualize.band_energy import plot_band_energy_timeline
+from audioatlas.visualize.chroma import plot_chroma_cqt
 from audioatlas.visualize.histogram import plot_sample_histogram
+from audioatlas.visualize.loudness import plot_short_term_lufs
 from audioatlas.visualize.onset import plot_onset_density
 from audioatlas.visualize.spectral_shape import plot_spectral_shape
 from audioatlas.visualize.spectrogram import plot_log_spectrogram
@@ -95,12 +99,14 @@ def analyze_file(
     levels = compute_scalar_levels(audio.y, audio.sr, cfg)
     rms = compute_rms_envelope(audio.y, audio.sr, cfg)
     crest = compute_crest_factor_timeline(audio.y, audio.sr, cfg)
+    short_term = compute_short_term_lufs(audio.y, audio.sr, cfg)
     peaks = compute_peak_timeline(audio.y, audio.sr, cfg)
     spec = compute_log_spectrogram(audio.y, audio.sr, cfg)
     avg = compute_average_spectrum(audio.y, audio.sr, cfg)
     spectral_shape = compute_spectral_shape(audio.y, audio.sr, cfg)
     band_energy = compute_band_energy_timeline(audio.y, audio.sr, cfg)
     onset = compute_onset_density(audio.y, audio.sr, cfg)
+    chroma = compute_chroma_cqt(audio.y, audio.sr, cfg)
     stereo = compute_stereo_correlation(audio.y, audio.sr, cfg)
     mid_side = compute_mid_side_energy(audio.y, audio.sr, cfg)
 
@@ -116,6 +122,8 @@ def analyze_file(
     plot_paths.append(plot_spectral_shape(spectral_shape, out / "09_spectral_shape.png"))
     plot_paths.append(plot_band_energy_timeline(band_energy, out / "10_band_energy_timeline.png"))
     plot_paths.append(plot_onset_density(onset, out / "11_onset_density.png"))
+    plot_paths.append(plot_chroma_cqt(chroma, out / "12_chroma_cqt.png"))
+    plot_paths.append(plot_short_term_lufs(short_term, out / "13_short_term_lufs.png"))
 
     summary: dict[str, Any] = {
         "schema_version": "0.1.0",
@@ -129,6 +137,8 @@ def analyze_file(
         "spectral_shape": spectral_shape.to_summary_dict(),
         "band_energy_timeline": band_energy.to_summary_dict(),
         "onset_density": onset.to_summary_dict(),
+        "chroma_cqt": chroma.to_summary_dict(),
+        "short_term_lufs": short_term.to_summary_dict(),
         "stereo_correlation": stereo.to_summary_dict(),
         "mid_side_energy": mid_side.to_summary_dict(),
         "plots": [p.name for p in plot_paths],

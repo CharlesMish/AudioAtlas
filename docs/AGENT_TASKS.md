@@ -101,18 +101,17 @@ context and should not be used for new spectral-shape work.
 
 ## T-005 — Chroma CQT [v0.2]
 
-**Status:** open. **Layer:** analysis + visualize + pipeline.
+**Status:** done. **Layer:** analysis + visualize + pipeline.
 
 **What:** Implement `compute_chroma_cqt` in
-`src/audioatlas/analysis/tonal.py` (stub) using
+`src/audioatlas/analysis/tonal.py` using
 `librosa.feature.chroma_cqt`.
 
 **Acceptance criteria:**
 - A 440 Hz (A4) sine produces clear maximum energy in the "A" bin.
 - A C-major triad (C+E+G) produces three clear peaks.
-- Plot at `visualize/chroma.py::plot_chroma`, similar style to the
-  spectrogram (12 rows, time on x-axis).
-- Wired into `pipeline.py` as `09_chroma.png`.
+- Plot at `visualize/chroma.py::plot_chroma_cqt` (12 rows, time on x-axis).
+- Wired into `pipeline.py` as `12_chroma_cqt.png`.
 
 **Hard rule:** Do NOT add key detection. The plot is the deliverable.
 

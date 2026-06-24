@@ -26,6 +26,7 @@ WIDE_PLOTS = {
     "05_average_spectrum.png",
     "10_band_energy_timeline.png",
     "11_onset_density.png",
+    "12_chroma_cqt.png",
 }
 
 PLOT_CAPTIONS: dict[str, str] = {
@@ -61,6 +62,10 @@ PLOT_CAPTIONS: dict[str, str] = {
     ),
     "11_onset_density.png": (
         "What this shows: attack/activity movement within this track, not punch or quality."
+    ),
+    "12_chroma_cqt.png": (
+        "What this shows: pitch-class energy over time within this track. "
+        "This is not key detection and values are not calibrated across unrelated songs."
     ),
 }
 

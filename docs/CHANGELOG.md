@@ -6,6 +6,16 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- Short-term LUFS timeline: new `short_term_lufs` summary block,
+  `13_short_term_lufs.png` plot, and `compute_short_term_lufs` in
+  `src/audioatlas/analysis/loudness.py`. Uses pyloudnorm blockwise
+  processing with 3 s K-weighted windows (high overlap) to provide a
+  perceptually-weighted time-varying loudness view. Distinct from RMS.
+  Empty result + warning for files < 3 s. Integrated reference included.
+- Chroma CQT pitch-class energy: `chroma_cqt` summary block and
+  `12_chroma_cqt.png` plot (12-bin chromagram over time from
+  `librosa.feature.chroma_cqt` on a mono downmix). Descriptive only — not key
+  detection.
 - Per-frame crest factor timeline: `crest_factor_timeline` summary block and
   `03_crest_factor_timeline.png` plot (`20 * log10(frame_sample_peak / frame_rms)`
   per frame, all channels). Later plots renumbered `04`–`11`.

@@ -194,7 +194,17 @@ def _make_summary() -> dict:
             "09_spectral_shape.png",
             "10_band_energy_timeline.png",
             "11_onset_density.png",
+            "12_chroma_cqt.png",
+            "13_short_term_lufs.png",
         ],
+        "chroma_cqt": {
+            "frames": 100,
+            "hop_length": 1024,
+            "pitch_classes": ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
+            "mean_chroma": [0.1, 0.0, 0.0, 0.0, 0.2, 0.0, 0.0, 0.3, 0.0, 1.0, 0.0, 0.0],
+            "dominant_pitch_class": "A",
+            "warnings": [],
+        },
     }
 
 
@@ -260,6 +270,8 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Spectral shape summary" in text
     assert "## Band energy timeline summary" in text
     assert "## Onset / transient density summary" in text
+    assert "## Chroma CQT summary" in text
+    assert "dominant_pitch_class: A" in text
     assert "## Stereo correlation summary" in text
     assert "## Mid/side energy summary" in text
     assert "## Plots" in text
