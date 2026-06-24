@@ -100,6 +100,11 @@ GLOSSARY: list[tuple[str, str]] = [
         "or falls across the track.",
     ),
     (
+        "Crest factor",
+        "Crest factor is peak-to-RMS contrast in dB. It describes measured peak contrast, "
+        "not punch, quality, or dynamic range.",
+    ),
+    (
         "PLR",
         "PLR is the relationship between true peak and integrated loudness. Higher PLR means "
         "more peak headroom relative to loudness; lower PLR means the track is more consistently loud.",
@@ -149,6 +154,11 @@ GLOSSARY: list[tuple[str, str]] = [
         "quality comparisons across songs.",
     ),
     (
+        "Chroma CQT",
+        "Chroma CQT shows pitch-class energy within this track. It is not key detection, "
+        "chord detection, or harmonic-quality analysis.",
+    ),
+    (
         "Relative dB",
         "Relative dB plots show shape within this track. They are useful for shape within this "
         "track; not comparable to dBFS values from meters or other songs.",
@@ -157,11 +167,13 @@ GLOSSARY: list[tuple[str, str]] = [
 
 TECHNICAL_BLOCKS: list[tuple[str, str]] = [
     ("Level metrics", "levels"),
+    ("Crest factor timeline", "crest_factor_timeline"),
     ("Stereo metrics", "stereo_correlation"),
     ("Spectrum metrics", "average_spectrum"),
     ("Spectral shape", "spectral_shape"),
     ("Band energy timeline", "band_energy_timeline"),
     ("Onset density", "onset_density"),
+    ("Chroma CQT", "chroma_cqt"),
     ("Short-term LUFS", "short_term_lufs"),
     ("Analysis config", "analysis_config"),
 ]

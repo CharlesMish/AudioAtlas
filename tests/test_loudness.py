@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
+from audioatlas.analysis.levels import compute_scalar_levels
 from audioatlas.analysis.loudness import compute_short_term_lufs
 from audioatlas.config import AnalysisConfig
 from audioatlas.visualize.loudness import plot_short_term_lufs
@@ -51,6 +53,17 @@ def test_short_term_lufs_timeline_increases_for_louder_section(sr: int):
     early_med = float(np.median(res.lufs[quiet_mask]))
     late_med = float(np.median(res.lufs[loud_mask]))
     assert late_med > early_med + 5
+
+
+def test_short_term_lufs_integrated_reference_matches_scalar_levels(sr: int):
+    cfg = AnalysisConfig(short_term_lufs_hop_seconds=0.5, true_peak_oversample=1)
+    t = np.arange(int(sr * 5), dtype=np.float64) / sr
+    y = (0.3 * np.sin(2 * np.pi * 1000 * t))[:, None].astype(np.float32)
+
+    short_term = compute_short_term_lufs(y, sr, cfg)
+    levels = compute_scalar_levels(y, sr, cfg)
+
+    assert short_term.integrated_lufs == pytest.approx(levels.integrated_lufs, abs=1e-6)
 
 
 def test_short_term_lufs_plot_writes_png_and_handles_empty(tmp_path, sr: int):

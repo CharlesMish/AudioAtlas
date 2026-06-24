@@ -119,11 +119,13 @@ def compute_short_term_lufs(
         # ungated short-term loudness values for the configured blocks.
         integrated_lufs: float | None = None
         try:
-            il = meter.integrated_loudness(data_for_meter)
+            il = pyln.Meter(sr).integrated_loudness(data_for_meter)
             if np.isfinite(il):
                 integrated_lufs = float(il)
         except Exception as exc:  # pragma: no cover
             warnings.append(f"integrated LUFS reference failed: {exc}")
+
+        meter.integrated_loudness(data_for_meter)
 
         block_lufs = np.asarray(meter.blockwise_loudness, dtype=np.float64)
         if len(block_lufs) == 0:
