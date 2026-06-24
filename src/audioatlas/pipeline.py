@@ -20,6 +20,7 @@ from typing import Any
 from audioatlas.analysis.dynamics import compute_onset_density
 from audioatlas.analysis.findings import generate_findings
 from audioatlas.analysis.levels import (
+    compute_crest_factor_timeline,
     compute_peak_timeline,
     compute_rms_envelope,
     compute_scalar_levels,
@@ -42,7 +43,11 @@ from audioatlas.visualize.spectral_shape import plot_spectral_shape
 from audioatlas.visualize.spectrogram import plot_log_spectrogram
 from audioatlas.visualize.spectrum import plot_average_spectrum
 from audioatlas.visualize.stereo import plot_mid_side_energy, plot_stereo_correlation
-from audioatlas.visualize.waveform import plot_rms_timeline, plot_waveform_rms
+from audioatlas.visualize.waveform import (
+    plot_crest_factor_timeline,
+    plot_rms_timeline,
+    plot_waveform_rms,
+)
 
 
 @dataclass(frozen=True)
@@ -89,6 +94,7 @@ def analyze_file(
 
     levels = compute_scalar_levels(audio.y, audio.sr, cfg)
     rms = compute_rms_envelope(audio.y, audio.sr, cfg)
+    crest = compute_crest_factor_timeline(audio.y, audio.sr, cfg)
     peaks = compute_peak_timeline(audio.y, audio.sr, cfg)
     spec = compute_log_spectrogram(audio.y, audio.sr, cfg)
     avg = compute_average_spectrum(audio.y, audio.sr, cfg)
@@ -101,14 +107,15 @@ def analyze_file(
     plot_paths: list[Path] = []
     plot_paths.append(plot_waveform_rms(audio.y, audio.sr, rms, out / "01_waveform_rms.png", cfg))
     plot_paths.append(plot_rms_timeline(rms, out / "02_rms_timeline.png", cfg))
-    plot_paths.append(plot_log_spectrogram(spec, out / "03_log_spectrogram.png"))
-    plot_paths.append(plot_average_spectrum(avg, out / "04_average_spectrum.png", cfg))
-    plot_paths.append(plot_sample_histogram(audio.y, out / "05_sample_histogram.png", cfg))
-    plot_paths.append(plot_stereo_correlation(stereo, out / "06_stereo_correlation.png"))
-    plot_paths.append(plot_mid_side_energy(mid_side, out / "07_mid_side_energy.png", cfg))
-    plot_paths.append(plot_spectral_shape(spectral_shape, out / "08_spectral_shape.png"))
-    plot_paths.append(plot_band_energy_timeline(band_energy, out / "09_band_energy_timeline.png"))
-    plot_paths.append(plot_onset_density(onset, out / "10_onset_density.png"))
+    plot_paths.append(plot_crest_factor_timeline(crest, out / "03_crest_factor_timeline.png"))
+    plot_paths.append(plot_log_spectrogram(spec, out / "04_log_spectrogram.png"))
+    plot_paths.append(plot_average_spectrum(avg, out / "05_average_spectrum.png", cfg))
+    plot_paths.append(plot_sample_histogram(audio.y, out / "06_sample_histogram.png", cfg))
+    plot_paths.append(plot_stereo_correlation(stereo, out / "07_stereo_correlation.png"))
+    plot_paths.append(plot_mid_side_energy(mid_side, out / "08_mid_side_energy.png", cfg))
+    plot_paths.append(plot_spectral_shape(spectral_shape, out / "09_spectral_shape.png"))
+    plot_paths.append(plot_band_energy_timeline(band_energy, out / "10_band_energy_timeline.png"))
+    plot_paths.append(plot_onset_density(onset, out / "11_onset_density.png"))
 
     summary: dict[str, Any] = {
         "schema_version": "0.1.0",
@@ -116,6 +123,7 @@ def analyze_file(
         "analysis_config": asdict(cfg),
         "levels": levels.to_dict(),
         "rms_envelope": rms.to_summary_dict(),
+        "crest_factor_timeline": crest.to_summary_dict(),
         "peak_timeline": peaks.to_summary_dict(),
         "average_spectrum": avg.to_summary_dict(),
         "spectral_shape": spectral_shape.to_summary_dict(),

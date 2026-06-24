@@ -54,6 +54,15 @@ def _make_summary() -> dict:
             "rms_dbfs_max": -10.0,
             "rms_dbfs_mean": -14.5,
         },
+        "crest_factor_timeline": {
+            "frame_length": 4096,
+            "hop_length": 1024,
+            "frames": 100,
+            "crest_factor_db_min": 2.5,
+            "crest_factor_db_median": 3.0,
+            "crest_factor_db_max": 12.0,
+            "warnings": [],
+        },
         "average_spectrum": {
             "nperseg": 8192,
             "bins": 4097,
@@ -176,14 +185,15 @@ def _make_summary() -> dict:
         "plots": [
             "01_waveform_rms.png",
             "02_rms_timeline.png",
-            "03_log_spectrogram.png",
-            "04_average_spectrum.png",
-            "05_sample_histogram.png",
-            "06_stereo_correlation.png",
-            "07_mid_side_energy.png",
-            "08_spectral_shape.png",
-            "09_band_energy_timeline.png",
-            "10_onset_density.png",
+            "03_crest_factor_timeline.png",
+            "04_log_spectrogram.png",
+            "05_average_spectrum.png",
+            "06_sample_histogram.png",
+            "07_stereo_correlation.png",
+            "08_mid_side_energy.png",
+            "09_spectral_shape.png",
+            "10_band_energy_timeline.png",
+            "11_onset_density.png",
         ],
     }
 
@@ -242,6 +252,9 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "## Per-channel breakdown" in text
     assert "## Warnings / caveats" in text
     assert "## Frame RMS envelope summary" in text
+    assert "## Crest factor timeline summary" in text
+    assert "Crest factor median: 3.000 dB" in text
+    assert "crest_factor_db_median" not in text
     assert "## Average spectrum summary" in text
     assert "## Band energy summary" in text
     assert "## Spectral shape summary" in text
@@ -692,9 +705,9 @@ def test_write_report_html_renders_relative_plot_links_and_curated_names(
     path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
     text = path.read_text(encoding="utf-8")
 
-    assert '<img src="03_log_spectrogram.png" alt="Log-Frequency Spectrogram">' in text
-    assert '<img src="04_average_spectrum.png" alt="Welch Average Spectrum">' in text
-    assert '<img src="09_band_energy_timeline.png" alt="Frequency Band Energy Timeline">' in text
+    assert '<img src="04_log_spectrogram.png" alt="Log-Frequency Spectrogram">' in text
+    assert '<img src="05_average_spectrum.png" alt="Welch Average Spectrum">' in text
+    assert '<img src="10_band_energy_timeline.png" alt="Frequency Band Energy Timeline">' in text
     assert "plot-card plot-card-wide" in text
     assert "What this shows:" in text
 
@@ -784,7 +797,7 @@ def test_write_report_html_escapes_filename_and_finding_text(tmp_path: Path):
 
     path = write_report_html(
         summary,
-        ['03_log_spectrogram.png', 'bad"name.png'],
+        ['04_log_spectrogram.png', 'bad"name.png'],
         tmp_path,
         findings,
     )
@@ -939,5 +952,5 @@ def test_write_report_html_includes_lightbox_structure_and_plot_hooks(tmp_path: 
     assert "import " not in text  # no ESM
 
     # Existing plot img tags remain relative and escaped (sanity)
-    assert '<img src="03_log_spectrogram.png"' in text
+    assert '<img src="04_log_spectrogram.png"' in text
     assert '<img src="01_waveform_rms.png"' in text

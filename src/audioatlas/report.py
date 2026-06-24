@@ -31,6 +31,15 @@ LEVEL_METRIC_DISPLAY: list[tuple[str, str, str]] = [
 
 # Per-channel arrays. Order here is the row order in the report's
 # per-channel section.
+CREST_TIMELINE_DISPLAY: list[tuple[str, str, str]] = [
+    ("frame_length", "Frame length", "samples"),
+    ("hop_length", "Hop length", "samples"),
+    ("frames", "Frames", ""),
+    ("crest_factor_db_min", "Crest factor min", "dB"),
+    ("crest_factor_db_median", "Crest factor median", "dB"),
+    ("crest_factor_db_max", "Crest factor max", "dB"),
+]
+
 PER_CHANNEL_METRIC_DISPLAY: list[tuple[str, str, str]] = [
     ("peak_dbfs_per_channel",      "Sample peak",          "dBFS"),
     ("true_peak_dbtp_per_channel", "True-peak (approx.)",  "dBTP"),
@@ -41,14 +50,15 @@ PER_CHANNEL_METRIC_DISPLAY: list[tuple[str, str, str]] = [
 PLOT_DISPLAY_NAMES: dict[str, str] = {
     "01_waveform_rms.png": "Waveform + RMS Envelope",
     "02_rms_timeline.png": "Frame RMS Timeline",
-    "03_log_spectrogram.png": "Log-Frequency Spectrogram",
-    "04_average_spectrum.png": "Welch Average Spectrum",
-    "05_sample_histogram.png": "Sample Histogram",
-    "06_stereo_correlation.png": "Stereo Correlation Timeline",
-    "07_mid_side_energy.png": "Mid/Side Energy Timeline",
-    "08_spectral_shape.png": "Spectral Shape Timeline",
-    "09_band_energy_timeline.png": "Frequency Band Energy Timeline",
-    "10_onset_density.png": "Onset / Transient Density Timeline",
+    "03_crest_factor_timeline.png": "Frame Crest Factor Timeline",
+    "04_log_spectrogram.png": "Log-Frequency Spectrogram",
+    "05_average_spectrum.png": "Welch Average Spectrum",
+    "06_sample_histogram.png": "Sample Histogram",
+    "07_stereo_correlation.png": "Stereo Correlation Timeline",
+    "08_mid_side_energy.png": "Mid/Side Energy Timeline",
+    "09_spectral_shape.png": "Spectral Shape Timeline",
+    "10_band_energy_timeline.png": "Frequency Band Energy Timeline",
+    "11_onset_density.png": "Onset / Transient Density Timeline",
 }
 
 RELATIVE_DB_NOTE = (
@@ -57,8 +67,8 @@ RELATIVE_DB_NOTE = (
 )
 
 PLOT_NOTES: dict[str, str] = {
-    "04_average_spectrum.png": RELATIVE_DB_NOTE,
-    "09_band_energy_timeline.png": RELATIVE_DB_NOTE,
+    "05_average_spectrum.png": RELATIVE_DB_NOTE,
+    "10_band_energy_timeline.png": RELATIVE_DB_NOTE,
 }
 
 SEVERITY_DISPLAY: dict[str, str] = {
@@ -295,6 +305,7 @@ def write_report_md(
     )
     levels = summary.get("levels", {})
     rms = summary.get("rms_envelope", {})
+    crest_timeline = summary.get("crest_factor_timeline", {})
     spectrum = summary.get("average_spectrum", {})
     spectral_shape = summary.get("spectral_shape", {})
     band_energy_timeline = summary.get("band_energy_timeline", {})
@@ -375,6 +386,17 @@ def write_report_md(
     for key, value in rms.items():
         lines.append(f"- {key}: {_fmt_value(value)}")
     lines.append("")
+
+    if crest_timeline:
+        lines.append("## Crest factor timeline summary\n")
+        for key, label, unit in CREST_TIMELINE_DISPLAY:
+            if key in crest_timeline:
+                unit_suffix = f" {unit}" if unit else ""
+                lines.append(f"- {label}: {_fmt_value(crest_timeline.get(key))}{unit_suffix}")
+        crest_warnings = crest_timeline.get("warnings") or []
+        for warning in crest_warnings:
+            lines.append(f"- Warning: {warning}")
+        lines.append("")
 
     lines.append("## Average spectrum summary\n")
     lines.append(f"{RELATIVE_DB_NOTE}\n")

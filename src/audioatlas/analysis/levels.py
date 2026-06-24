@@ -95,6 +95,39 @@ class RmsEnvelopeResult:
 
 
 @dataclass(frozen=True)
+class CrestFactorTimelineResult:
+    """Per-frame crest factor: sample peak to RMS ratio in dB."""
+
+    times_seconds: NDArray[np.float64]
+    crest_factor_db: NDArray[np.float64]
+    frame_length: int
+    hop_length: int
+    warnings: list[str]
+
+    def to_summary_dict(self) -> dict[str, object]:
+        finite = self.crest_factor_db[np.isfinite(self.crest_factor_db)]
+        if len(finite) == 0:
+            return {
+                "frame_length": self.frame_length,
+                "hop_length": self.hop_length,
+                "frames": int(len(self.times_seconds)),
+                "crest_factor_db_min": None,
+                "crest_factor_db_median": None,
+                "crest_factor_db_max": None,
+                "warnings": self.warnings,
+            }
+        return {
+            "frame_length": self.frame_length,
+            "hop_length": self.hop_length,
+            "frames": int(len(self.times_seconds)),
+            "crest_factor_db_min": float(np.min(finite)),
+            "crest_factor_db_median": float(np.median(finite)),
+            "crest_factor_db_max": float(np.max(finite)),
+            "warnings": self.warnings,
+        }
+
+
+@dataclass(frozen=True)
 class PeakTimelineResult:
     """Frame-wise clipping and near-clipping counts."""
 
@@ -245,6 +278,62 @@ def compute_scalar_levels(
         rms_dbfs_per_channel=rms_dbfs_per_channel,
         true_peak_linear_per_channel=true_peak_linear_per_channel,
         true_peak_dbtp_per_channel=true_peak_dbtp_per_channel,
+        warnings=warnings,
+    )
+
+
+def compute_crest_factor_timeline(
+    y: NDArray[np.floating], sr: int, config: AnalysisConfig | None = None
+) -> CrestFactorTimelineResult:
+    """Compute per-frame crest factor from sample peak and RMS.
+
+    Each frame uses all channels: peak is the maximum absolute sample in the
+    window and RMS is computed across every sample in the window. Silent frames
+    produce ``NaN`` in the timeline.
+    """
+
+    cfg = config or AnalysisConfig()
+    cfg.validate()
+    audio = ensure_2d_audio(y).astype(np.float64, copy=False)
+    if sr <= 0:
+        raise ValueError("sr must be positive")
+    if audio.shape[0] == 0:
+        raise ValueError("audio has zero samples")
+
+    warnings: list[str] = []
+    frame_length = cfg.rms_frame_length
+    hop_length = cfg.hop_length
+    pad = frame_length // 2
+    padded = np.pad(audio, ((pad, pad), (0, 0)), mode="constant")
+    n_frames = len(
+        librosa.feature.rms(
+            y=to_mono(audio),
+            frame_length=frame_length,
+            hop_length=hop_length,
+            center=True,
+        )[0]
+    )
+    crest_db = np.full(n_frames, np.nan, dtype=np.float64)
+    for i in range(n_frames):
+        start = i * hop_length
+        end = start + frame_length
+        frame = padded[start:end]
+        peak = float(np.max(np.abs(frame)))
+        rms = float(np.sqrt(np.mean(frame**2)))
+        if rms > 0.0 and peak > 0.0:
+            crest_db[i] = 20.0 * np.log10(peak / rms)
+
+    if not np.any(np.isfinite(crest_db)):
+        warnings.append("no measurable crest factor; timeline is empty or all NaN")
+
+    times = librosa.frames_to_time(
+        np.arange(n_frames), sr=sr, hop_length=hop_length
+    ).astype(np.float64)
+    return CrestFactorTimelineResult(
+        times_seconds=times,
+        crest_factor_db=crest_db,
+        frame_length=frame_length,
+        hop_length=hop_length,
         warnings=warnings,
     )
 

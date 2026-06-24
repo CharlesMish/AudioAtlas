@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import NDArray
 
-from audioatlas.analysis.levels import RmsEnvelopeResult
+from audioatlas.analysis.levels import CrestFactorTimelineResult, RmsEnvelopeResult
 from audioatlas.config import AnalysisConfig
 from audioatlas.utils import to_mono
 
@@ -59,6 +59,28 @@ def plot_waveform_rms(
     ax2.set_ylabel("RMS (dBFS)")
     ax2.set_ylim(cfg.db_floor, 0)
 
+    fig.tight_layout()
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    return out
+
+
+def plot_crest_factor_timeline(
+    crest: CrestFactorTimelineResult,
+    out_path: str | Path,
+    *,
+    title: str = "Frame Crest Factor Timeline",
+) -> Path:
+    """Save a per-frame crest-factor timeline in dB."""
+
+    fig, ax = plt.subplots(figsize=(14, 4))
+    ax.plot(crest.times_seconds, crest.crest_factor_db, linewidth=1.25)
+    ax.set_title(title)
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Crest factor (dB)")
+    ax.grid(True, alpha=0.25)
     fig.tight_layout()
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)

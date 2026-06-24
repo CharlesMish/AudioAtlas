@@ -38,18 +38,20 @@ def test_pipeline_writes_expected_outputs(tmp_path, sr):
     assert "onset_density" in summary
     assert "stereo_correlation" in summary
     assert "mid_side_energy" in summary
-    assert len(summary["plots"]) == 10
-    assert "06_stereo_correlation.png" in summary["plots"]
-    assert "07_mid_side_energy.png" in summary["plots"]
-    assert "08_spectral_shape.png" in summary["plots"]
-    assert "09_band_energy_timeline.png" in summary["plots"]
-    assert "10_onset_density.png" in summary["plots"]
+    assert "crest_factor_timeline" in summary
+    assert len(summary["plots"]) == 11
+    assert "03_crest_factor_timeline.png" in summary["plots"]
+    assert "07_stereo_correlation.png" in summary["plots"]
+    assert "08_mid_side_energy.png" in summary["plots"]
+    assert "09_spectral_shape.png" in summary["plots"]
+    assert "10_band_energy_timeline.png" in summary["plots"]
+    assert "11_onset_density.png" in summary["plots"]
     assert "findings" in findings
     assert "Findings" in html
     assert "Key metrics" in html
     assert "01_waveform_rms.png" in html
     image_srcs = re.findall(r'<img src="([^"]+)"', html)
-    assert len(image_srcs) == 10
+    assert len(image_srcs) == 11
     assert sorted(image_srcs) == sorted(summary["plots"])
     for src in image_srcs:
         assert "://" not in src

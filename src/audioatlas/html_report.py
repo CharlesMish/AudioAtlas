@@ -22,40 +22,44 @@ from audioatlas.theme import default_theme_name, theme_css_variables, validate_t
 from audioatlas.utils import mmss
 
 WIDE_PLOTS = {
-    "03_log_spectrogram.png",
-    "04_average_spectrum.png",
-    "09_band_energy_timeline.png",
-    "10_onset_density.png",
+    "04_log_spectrogram.png",
+    "05_average_spectrum.png",
+    "10_band_energy_timeline.png",
+    "11_onset_density.png",
 }
 
 PLOT_CAPTIONS: dict[str, str] = {
     "01_waveform_rms.png": "What this shows: raw samples with the RMS envelope overlaid.",
     "02_rms_timeline.png": "What this shows: frame-by-frame RMS energy over time.",
-    "03_log_spectrogram.png": (
+    "03_crest_factor_timeline.png": (
+        "What this shows: per-frame peak-to-RMS contrast in dB. Higher values mean "
+        "more transient-like frames within this track; this is not punch or quality."
+    ),
+    "04_log_spectrogram.png": (
         "What this shows: frequency content over time on a log-frequency axis. "
         + RELATIVE_DB_NOTE
     ),
-    "04_average_spectrum.png": (
+    "05_average_spectrum.png": (
         "What this shows: the track's long-term Welch average spectrum. "
         + RELATIVE_DB_NOTE
     ),
-    "05_sample_histogram.png": (
+    "06_sample_histogram.png": (
         "What this shows: sample-value distribution with clipping and near-clipping thresholds."
     ),
-    "06_stereo_correlation.png": (
+    "07_stereo_correlation.png": (
         "What this shows: the measured left/right channel relationship over time."
     ),
-    "07_mid_side_energy.png": (
+    "08_mid_side_energy.png": (
         "What this shows: mid and side RMS energy over time with the side-to-mid ratio."
     ),
-    "08_spectral_shape.png": (
+    "09_spectral_shape.png": (
         "What this shows: spectral centroid, rolloff, and bandwidth movement over time."
     ),
-    "09_band_energy_timeline.png": (
+    "10_band_energy_timeline.png": (
         "What this shows: broad frequency-band energy movement within the track. "
         + RELATIVE_DB_NOTE
     ),
-    "10_onset_density.png": (
+    "11_onset_density.png": (
         "What this shows: attack/activity movement within this track, not punch or quality."
     ),
 }

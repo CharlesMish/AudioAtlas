@@ -6,6 +6,9 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 
 ### Added
+- Per-frame crest factor timeline: `crest_factor_timeline` summary block and
+  `03_crest_factor_timeline.png` plot (`20 * log10(frame_sample_peak / frame_rms)`
+  per frame, all channels). Later plots renumbered `04`–`11`.
 - YAML section definitions: `audioatlas sections --config sections.yaml` loads
   a top-level `sections` list (`name`, `start`, optional `end`) and runs the same
   manual section pipeline as repeated `--section name:start:end` flags.

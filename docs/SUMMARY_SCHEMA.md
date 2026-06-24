@@ -141,6 +141,23 @@ All `*_dbfs` and `*_dbtp` fields are clamped to `analysis_config.db_floor` at th
 | `rms_dbfs_max` | float \| null | dBFS. |
 | `rms_dbfs_mean` | float \| null | dBFS. |
 
+### `crest_factor_timeline` (from `CrestFactorTimelineResult.to_summary_dict`)
+
+Per-frame crest factor using sample peak and RMS across all channels in each
+window. Uses `analysis_config.rms_frame_length` and `analysis_config.hop_length`
+with the same center-padded framing as `rms_envelope`. Silent frames are
+`NaN` internally and omitted from summary min/median/max.
+
+| Field | Type | Notes |
+|---|---|---|
+| `frame_length` | int | Samples per analysis window. |
+| `hop_length` | int | Hop between windows. |
+| `frames` | int | Number of timeline values. |
+| `crest_factor_db_min` | float \| null | dB. `null` when no finite frames. |
+| `crest_factor_db_median` | float \| null | dB. |
+| `crest_factor_db_max` | float \| null | dB. |
+| `warnings` | list[str] | Human-readable caveats. |
+
 ### `average_spectrum` (from `AverageSpectrumResult.to_summary_dict`)
 
 | Field | Type | Notes |
@@ -341,18 +358,19 @@ order is fixed:
 ```
 01_waveform_rms.png
 02_rms_timeline.png
-03_log_spectrogram.png
-04_average_spectrum.png
-05_sample_histogram.png
-06_stereo_correlation.png
-07_mid_side_energy.png
-08_spectral_shape.png
-09_band_energy_timeline.png
-10_onset_density.png
+03_crest_factor_timeline.png
+04_log_spectrogram.png
+05_average_spectrum.png
+06_sample_histogram.png
+07_stereo_correlation.png
+08_mid_side_energy.png
+09_spectral_shape.png
+10_band_energy_timeline.png
+11_onset_density.png
 ```
 
-New plots from future feature slices append numbered prefixes (`11_*`,
-`12_*`, ...) and are added to `plot_paths` in `pipeline.py`.
+New plots from future feature slices append numbered prefixes (`12_*`,
+`13_*`, ...) and are added to `plot_paths` in `pipeline.py`.
 
 ## findings.json blocks
 

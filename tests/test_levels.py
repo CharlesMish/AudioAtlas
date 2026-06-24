@@ -4,11 +4,13 @@ import numpy as np
 import pytest
 
 from audioatlas.analysis.levels import (
+    compute_crest_factor_timeline,
     compute_peak_timeline,
     compute_rms_envelope,
     compute_scalar_levels,
 )
 from audioatlas.config import AnalysisConfig
+from audioatlas.visualize.waveform import plot_crest_factor_timeline
 
 
 def test_sine_minus_6_dbfs_peak_and_rms(sine_minus_6_dbfs, sr):
@@ -91,6 +93,57 @@ def test_true_peak_per_channel_is_none_when_oversample_disabled_and_too_short(sr
     assert result.true_peak_dbtp is None
     assert result.true_peak_dbtp_per_channel is None
     assert result.true_peak_linear_per_channel is None
+
+
+def test_crest_factor_timeline_sine_is_near_3_db(sine_minus_6_dbfs, sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512, rms_frame_length=2048)
+    result = compute_crest_factor_timeline(sine_minus_6_dbfs, sr, cfg)
+    rms = compute_rms_envelope(sine_minus_6_dbfs, sr, cfg)
+
+    assert len(result.times_seconds) == len(result.crest_factor_db)
+    assert len(result.times_seconds) == len(rms.times_seconds)
+    finite = result.crest_factor_db[np.isfinite(result.crest_factor_db)]
+    assert len(finite) > 0
+    assert float(np.median(finite)) == pytest.approx(3.01, abs=0.2)
+
+
+def test_crest_factor_timeline_impulse_is_higher_than_sine(sine_minus_6_dbfs, sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512, rms_frame_length=2048)
+    clicks = np.zeros((sr * 2, 1), dtype=np.float32)
+    click_len = max(1, int(0.002 * sr))
+    for start in np.arange(0.1, 2.0, 0.125):
+        idx = int(start * sr)
+        clicks[idx : idx + click_len, 0] = 0.8
+
+    sine_result = compute_crest_factor_timeline(sine_minus_6_dbfs, sr, cfg)
+    click_result = compute_crest_factor_timeline(clicks, sr, cfg)
+    sine_median = float(np.median(sine_result.crest_factor_db[np.isfinite(sine_result.crest_factor_db)]))
+    click_median = float(np.median(click_result.crest_factor_db[np.isfinite(click_result.crest_factor_db)]))
+
+    assert click_median > sine_median
+
+
+def test_crest_factor_timeline_silence_is_nan_safe(sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512, rms_frame_length=2048)
+    silent = np.zeros((sr, 1), dtype=np.float32)
+
+    result = compute_crest_factor_timeline(silent, sr, cfg)
+    summary = result.to_summary_dict()
+
+    assert summary["crest_factor_db_min"] is None
+    assert summary["crest_factor_db_median"] is None
+    assert summary["crest_factor_db_max"] is None
+    assert result.warnings
+    assert not np.any(np.isfinite(result.crest_factor_db))
+
+
+def test_plot_crest_factor_timeline_writes_png(tmp_path, sine_minus_6_dbfs, sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512, rms_frame_length=2048)
+    result = compute_crest_factor_timeline(sine_minus_6_dbfs, sr, cfg)
+    path = plot_crest_factor_timeline(result, tmp_path / "crest_factor_timeline.png")
+
+    assert path.exists()
+    assert path.stat().st_size > 0
 
 
 def test_peak_timeline_finds_near_clipping_bursts(sr):

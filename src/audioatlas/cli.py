@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Any
 
 import click
 import yaml
@@ -15,7 +16,7 @@ import yaml
 from audioatlas import __version__
 from audioatlas.batch import analyze_folder
 from audioatlas.config import AnalysisConfig
-from audioatlas.pipeline import analyze_file
+from audioatlas.pipeline import AnalysisRunResult, analyze_file
 from audioatlas.theme import theme_listing_text, validate_theme_name
 
 
@@ -230,16 +231,7 @@ def sections(
     parsed_sections = _collect_section_definitions(section_specs, config_path)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    index_lines = [
-        "# AudioAtlas section reports",
-        "",
-        f"Input: `{input_path.name}`",
-        "",
-        "These are manually supplied sections, not automatically detected song sections.",
-        "",
-        "| Section | Source range | Report | HTML |",
-        "|---|---:|---|---|",
-    ]
+    section_results: list[tuple[str, float, float | None, AnalysisRunResult]] = []
     for name, start_seconds, end_seconds in parsed_sections:
         section_dir = out_dir / _section_slug(name, start_seconds, end_seconds)
         try:
@@ -254,13 +246,19 @@ def sections(
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc
 
-        end_label = "EOF" if end_seconds is None else f"{end_seconds:g}s"
-        index_lines.append(
-            f"| {name} | {start_seconds:g}s-{end_label} | "
-            f"[{result.report_path.name}]({section_dir.name}/{result.report_path.name}) | "
-            f"[{result.html_report_path.name}]({section_dir.name}/{result.html_report_path.name}) |"
-        )
+        section_results.append((name, start_seconds, end_seconds, result))
         click.echo(f"Section report written to: {result.out_dir}")
+
+    # Build enhanced index with comparison table using existing summary data
+    index_lines: list[str] = [
+        "# AudioAtlas section reports",
+        "",
+        f"Input: `{input_path.name}`",
+        "",
+        "These are manually supplied sections, not automatically detected song sections.",
+        "",
+    ]
+    index_lines.extend(_build_section_comparison_table(section_results))
 
     index_path = out_dir / "section_index.md"
     index_path.write_text("\n".join(index_lines) + "\n", encoding="utf-8")
@@ -371,6 +369,69 @@ def _section_slug(name: str, start_seconds: float, end_seconds: float | None) ->
     start = f"{start_seconds:07.3f}".replace(".", "p")
     end = "EOF" if end_seconds is None else f"{end_seconds:07.3f}".replace(".", "p")
     return f"{start}_{end}_{safe_name}"
+
+
+def _fmt(v: Any, ndigits: int = 2) -> str:
+    if v is None or isinstance(v, bool):
+        return "n/a"
+    try:
+        fv = float(v)
+    except (TypeError, ValueError):
+        return "n/a"
+    if ndigits == 0:
+        return str(int(round(fv)))
+    return f"{fv:.{ndigits}f}"
+
+
+def _build_section_comparison_table(
+    sections: list[tuple[str, float, float | None, AnalysisRunResult]],
+) -> list[str]:
+    if not sections:
+        return []
+    lines: list[str] = []
+    lines.append("## Section comparison (manual sections only)")
+    lines.append("")
+    lines.append(
+        "| Section | Source range | Duration (s) | Integrated LUFS | PLR (dB) | "
+        "Sample peak (dBFS) | True peak (dBTP) | RMS (dBFS) | Median stereo corr. | "
+        "Median side/mid (dB) | Median 95% rolloff (Hz) | Median onset | Report | HTML |"
+    )
+    lines.append(
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|"
+    )
+    for name, start_seconds, end_seconds, result in sections:
+        summ = result.summary or {}
+        levels = summ.get("levels") or {}
+        stereo = summ.get("stereo_correlation") or {}
+        mid_side = summ.get("mid_side_energy") or {}
+        spectral = summ.get("spectral_shape") or {}
+        onset = summ.get("onset_density") or {}
+
+        dur = levels.get("duration_seconds")
+        lufs = levels.get("integrated_lufs")
+        plr = levels.get("plr_db")
+        spk = levels.get("sample_peak_dbfs")
+        tpk = levels.get("true_peak_dbtp")
+        rms = levels.get("rms_dbfs")
+        corr = stereo.get("correlation_median")
+        sm = mid_side.get("side_to_mid_ratio_db_median")
+        roll = spectral.get("rolloff_95_median_hz")
+        ons = onset.get("onset_density_median")
+
+        end_label = "EOF" if end_seconds is None else f"{end_seconds:g}s"
+        src = f"{start_seconds:g}s-{end_label}"
+
+        slug = _section_slug(name, start_seconds, end_seconds)
+        report_link = f"[{result.report_path.name}]({slug}/{result.report_path.name})"
+        html_link = f"[{result.html_report_path.name}]({slug}/{result.html_report_path.name})"
+
+        row = (
+            f"| {name} | {src} | {_fmt(dur, 1)} | {_fmt(lufs, 1)} | {_fmt(plr, 1)} | "
+            f"{_fmt(spk, 1)} | {_fmt(tpk, 1)} | {_fmt(rms, 1)} | {_fmt(corr, 2)} | "
+            f"{_fmt(sm, 1)} | {_fmt(roll, 0)} | {_fmt(ons, 3)} | {report_link} | {html_link} |"
+        )
+        lines.append(row)
+    return lines
 
 
 def _make_config(
