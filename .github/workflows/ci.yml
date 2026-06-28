@@ -45,9 +45,20 @@ jobs:
           audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav \
             --out /tmp/aa_ci_demo
           test -f /tmp/aa_ci_demo/summary.json
+          test -f /tmp/aa_ci_demo/findings.json
           test -f /tmp/aa_ci_demo/report.md
           test -f /tmp/aa_ci_demo/report.html
-          test -f /tmp/aa_ci_demo/01_waveform_rms.png
+          test "$(find /tmp/aa_ci_demo -maxdepth 1 -name '*.png' | wc -l | tr -d ' ')" -eq 14
+          test -f /tmp/aa_ci_demo/waveform_rms.png
+          test -f /tmp/aa_ci_demo/rms_timeline.png
+          test -f /tmp/aa_ci_demo/peak_timeline.png
+          audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav \
+            --out /tmp/aa_ci_full \
+            --graphs-profile full
+          test "$(find /tmp/aa_ci_full -maxdepth 1 -name '*.png' | wc -l | tr -d ' ')" -eq 17
+          test -f /tmp/aa_ci_full/peak_vs_rms.png
+          test -f /tmp/aa_ci_full/rms_histogram.png
+          test -f /tmp/aa_ci_full/stereo_correlation_histogram.png
           audioatlas sections tests/fixtures/sine_1k_-6dbfs_2s.wav \
             --out /tmp/aa_ci_sections \
             --section first:0:1 \
