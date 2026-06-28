@@ -62,7 +62,7 @@ using `cfg.n_fft`-sized windows hopping by `cfg.hop_length`.
 - A correlated stereo fixture (L == R, you'll need to add it) yields
   correlation ≥ 0.95.
 - A new plot at `visualize/stereo.py::plot_stereo_correlation`.
-- Wired into `pipeline.py` as `06_stereo_correlation.png`.
+- Wired through the graph registry as `stereo_correlation.png`.
 - `summary.json` gains a `stereo_correlation` block; schema doc updated.
 
 ---
@@ -81,8 +81,8 @@ side-to-mid ratio in dB.
 - Phase-inverted fixture: side ≫ mid; ratio in dB is strongly negative.
 - Plot at `visualize/stereo.py::plot_mid_side_energy` (two-line plot
   over time, in dBFS, sharing the timeline axis convention of
-  `02_rms_timeline.png`).
-- Wired into `pipeline.py` as `07_mid_side_energy.png`.
+  `rms_timeline.png`).
+- Wired through the graph registry as `mid_side_energy.png`.
 
 ---
 
@@ -111,7 +111,7 @@ context and should not be used for new spectral-shape work.
 - A 440 Hz (A4) sine produces clear maximum energy in the "A" bin.
 - A C-major triad (C+E+G) produces three clear peaks.
 - Plot at `visualize/chroma.py::plot_chroma_cqt` (12 rows, time on x-axis).
-- Wired into `pipeline.py` as `12_chroma_cqt.png`.
+- Wired through the graph registry as `chroma_cqt.png`.
 
 **Hard rule:** Do NOT add key detection. The plot is the deliverable.
 
@@ -132,7 +132,7 @@ old "loudness_timeline" name *should* have meant.
 - Files shorter than 3s produce an empty result with a warning - do not
   raise.
 - Plot at `visualize/loudness.py::plot_short_term_lufs` as
-  `13_short_term_lufs.png`.
+  `short_term_lufs.png`.
 
 ---
 

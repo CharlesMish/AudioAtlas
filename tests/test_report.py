@@ -11,6 +11,7 @@ import json
 import re
 from pathlib import Path
 
+from audioatlas.graphs import all_graphs
 from audioatlas.html_report import write_report_html
 from audioatlas.report import (
     LEVEL_METRIC_DISPLAY,
@@ -182,21 +183,7 @@ def _make_summary() -> dict:
             "strongest_onset_density_time": 12.0,
             "warnings": [],
         },
-        "plots": [
-            "01_waveform_rms.png",
-            "02_rms_timeline.png",
-            "03_crest_factor_timeline.png",
-            "04_log_spectrogram.png",
-            "05_average_spectrum.png",
-            "06_sample_histogram.png",
-            "07_stereo_correlation.png",
-            "08_mid_side_energy.png",
-            "09_spectral_shape.png",
-            "10_band_energy_timeline.png",
-            "11_onset_density.png",
-            "12_chroma_cqt.png",
-            "13_short_term_lufs.png",
-        ],
+        "plots": [graph.filename for graph in all_graphs()],
         "chroma_cqt": {
             "frames": 100,
             "hop_length": 1024,
@@ -256,7 +243,7 @@ def test_write_findings_json_roundtrips(tmp_path: Path):
 
 def test_write_report_md_contains_expected_sections(tmp_path: Path):
     summary = _make_summary()
-    plot_files = ["01_waveform_rms.png", "02_rms_timeline.png"]
+    plot_files = ["waveform_rms.png", "rms_timeline.png"]
     path = write_report_md(summary, plot_files, tmp_path)
     assert path.name == "report.md"
     text = path.read_text(encoding="utf-8")
@@ -265,7 +252,7 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "# AudioAtlas Report: test.wav" in text
     assert "## File" in text
     assert "## Report metadata" in text
-    assert "AudioAtlas: 0.1.0a1" in text
+    assert "AudioAtlas: 0.2.0a1" in text
     assert "Release label: public early alpha" in text
     assert "## Level metrics" in text
     assert "## Per-channel breakdown" in text
@@ -562,6 +549,62 @@ def test_report_does_not_make_verdicts(tmp_path: Path):
         assert phrase not in text, f"Banned verdict phrase appeared in report.md: {phrase!r}"
 
 
+def test_graph_registry_captions_avoid_verdict_and_advice_phrases():
+    banned = [
+        "mix is bad",
+        "fix your",
+        "well mastered",
+        "needs more",
+        "mix health",
+        "loudness score",
+        "score",
+        "pass/fail",
+        "mastering advice",
+        "too much",
+        "too little",
+        "mono compatible",
+        "mono incompatible",
+    ]
+
+    for graph in all_graphs():
+        text = f"{graph.display_name} {graph.report_note or ''} {graph.html_caption or ''}".lower()
+        for phrase in banned:
+            assert phrase not in text, f"{graph.key} contains banned phrase: {phrase!r}"
+
+
+def test_slice3_report_md_notes_include_product_boundary_language(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_md(
+        summary,
+        [
+            "peak_timeline.png",
+            "peak_vs_rms.png",
+            "rms_histogram.png",
+            "stereo_correlation_histogram.png",
+        ],
+        tmp_path,
+    )
+    text = path.read_text(encoding="utf-8")
+
+    assert (
+        "Per-frame sample-peak level over time (sample peak, not true peak). "
+        "Clipping and near-clipping markers flag threshold crossings; they do not "
+        "prove audible distortion."
+    ) in text
+    assert (
+        "Sample-peak and RMS levels on one dBFS axis. A levels-and-contrast view, "
+        "not a judgment about dynamics or compression."
+    ) in text
+    assert (
+        "How often each per-frame RMS level occurs across this track. "
+        "A distribution, not a loudness target."
+    ) in text
+    assert (
+        "Distribution of per-frame left/right correlation; undefined low-energy "
+        "frames are excluded. A distribution, not a mono-compatibility verdict."
+    ) in text
+
+
 def test_report_uses_friendly_prompt_labels_not_internal_severity_labels(
     tmp_path: Path,
 ):
@@ -609,13 +652,13 @@ def test_report_md_lufs_context_not_finding(tmp_path: Path):
 
 def test_report_renders_plot_links_in_order(tmp_path: Path):
     summary = _make_summary()
-    plot_files = ["01_waveform_rms.png", "02_rms_timeline.png"]
+    plot_files = ["waveform_rms.png", "rms_timeline.png"]
     path = write_report_md(summary, plot_files, tmp_path)
     text = path.read_text(encoding="utf-8")
     assert "Waveform + RMS Envelope" in text
     assert "Frame RMS Timeline" in text
-    idx_a = text.index("01_waveform_rms.png")
-    idx_b = text.index("02_rms_timeline.png")
+    idx_a = text.index("waveform_rms.png")
+    idx_b = text.index("rms_timeline.png")
     assert idx_a < idx_b
 
 
@@ -677,7 +720,7 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
     assert path.name == "report.html"
     assert "Measurement-based findings, not quality judgments." in text
     assert "public early alpha" in text
-    assert "AudioAtlas</strong> 0.1.0a1" in text
+    assert "AudioAtlas</strong> 0.2.0a1" in text
     assert "Use this alpha report as a workflow" in text
     assert ">Findings<" in text
     assert "Listening prompts" not in text
@@ -730,11 +773,33 @@ def test_write_report_html_renders_relative_plot_links_and_curated_names(
     path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
     text = path.read_text(encoding="utf-8")
 
-    assert '<img src="04_log_spectrogram.png" alt="Log-Frequency Spectrogram">' in text
-    assert '<img src="05_average_spectrum.png" alt="Welch Average Spectrum">' in text
-    assert '<img src="10_band_energy_timeline.png" alt="Frequency Band Energy Timeline">' in text
+    assert '<img src="log_spectrogram.png" alt="Log-Frequency Spectrogram">' in text
+    assert '<img src="average_spectrum.png" alt="Welch Average Spectrum">' in text
+    assert '<img src="band_energy_timeline.png" alt="Frequency Band Energy Timeline">' in text
     assert "plot-card plot-card-wide" in text
     assert "What this shows:" in text
+
+
+def test_slice3_report_html_captions_include_product_boundary_language(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(
+        summary,
+        [
+            "peak_timeline.png",
+            "peak_vs_rms.png",
+            "rms_histogram.png",
+            "stereo_correlation_histogram.png",
+        ],
+        tmp_path,
+        _html_findings(),
+    )
+    text = path.read_text(encoding="utf-8")
+
+    assert "sample peak level over time" in text
+    assert "they do not prove audible distortion" in text
+    assert "not a dynamics judgment" in text
+    assert "not a loudness target" in text
+    assert "not a mono-compatibility verdict" in text
 
 
 def test_write_report_html_keeps_polished_visual_structure(tmp_path: Path):
@@ -822,7 +887,7 @@ def test_write_report_html_escapes_filename_and_finding_text(tmp_path: Path):
 
     path = write_report_html(
         summary,
-        ['04_log_spectrogram.png', 'bad"name.png'],
+        ['log_spectrogram.png', 'bad"name.png'],
         tmp_path,
         findings,
     )
@@ -977,5 +1042,5 @@ def test_write_report_html_includes_lightbox_structure_and_plot_hooks(tmp_path: 
     assert "import " not in text  # no ESM
 
     # Existing plot img tags remain relative and escaped (sanity)
-    assert '<img src="04_log_spectrogram.png"' in text
-    assert '<img src="01_waveform_rms.png"' in text
+    assert '<img src="log_spectrogram.png"' in text
+    assert '<img src="waveform_rms.png"' in text

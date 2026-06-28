@@ -14,6 +14,8 @@ from audioatlas.catalog_report import (
     write_catalog_summary_json,
 )
 from audioatlas.config import AnalysisConfig
+from audioatlas.graphs import all_graphs
+from audioatlas.graphs.selection import GraphSelection
 from audioatlas.pipeline import analyze_file
 
 SUPPORTED_AUDIO_EXTENSIONS = {".wav", ".mp3"}
@@ -37,11 +39,14 @@ def analyze_folder(
     config: AnalysisConfig | None = None,
     max_duration_seconds: float | None = None,
     theme_name: str | None = None,
+    selection: GraphSelection | None = None,
 ) -> BatchRunResult:
     """Analyze supported audio files in a folder and write catalog reports."""
 
     cfg = config or AnalysisConfig()
     cfg.validate()
+    if selection is not None:
+        selection.resolve(all_graphs())
     input_path = Path(input_folder)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -67,6 +72,7 @@ def analyze_folder(
             config=cfg,
             max_duration_seconds=max_duration_seconds,
             theme_name=theme_name,
+            selection=selection,
         )
         tracks.append(
             track_record_from_run(

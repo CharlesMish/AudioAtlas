@@ -84,6 +84,48 @@ def test_batch_cli_creates_per_track_reports_and_catalog_outputs(tmp_path: Path)
     assert "--bg: #f7f0e4;" in track_html
 
 
+def test_batch_cli_graph_selection_applies_to_each_track_and_catalog_populates(
+    tmp_path: Path,
+):
+    input_dir = tmp_path / "audio"
+    input_dir.mkdir()
+    _write_sine(input_dir / "alpha.wav", freq=330)
+    _write_sine(input_dir / "beta.wav", freq=660)
+    out_dir = tmp_path / "catalog"
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "batch",
+            str(input_dir),
+            "--out",
+            str(out_dir),
+            "--graphs-profile",
+            "minimal",
+            "--n-fft",
+            "1024",
+            "--hop-length",
+            "256",
+            "--rms-frame-length",
+            "1024",
+            "--true-peak-oversample",
+            "1",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    for name in ["alpha", "beta"]:
+        summary = json.loads((out_dir / name / "summary.json").read_text(encoding="utf-8"))
+        assert len(summary["plots"]) == 4
+        assert "short_term_lufs" in summary
+        assert "stereo_correlation" in summary
+
+    catalog = json.loads((out_dir / "catalog_summary.json").read_text(encoding="utf-8"))
+    assert catalog["track_count"] == 2
+    assert all(track["integrated_lufs"] is not None for track in catalog["tracks"])
+    assert all("median_stereo_correlation" in track for track in catalog["tracks"])
+
+
 def test_catalog_statistics_calculate_folder_min_median_max():
     tracks = [
         {"integrated_lufs": -14.0, "plr_db": 10.0},

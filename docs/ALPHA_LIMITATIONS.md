@@ -1,6 +1,6 @@
 # AudioAtlas Alpha Limitations
 
-AudioAtlas v0.1-alpha is a measurement and report-generation tool. It is useful
+AudioAtlas v0.2-alpha is a measurement and report-generation tool. It is useful
 for structured listening and technical inspection, but it is not a mastering
 assistant or quality judge.
 

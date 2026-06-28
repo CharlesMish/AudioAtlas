@@ -17,41 +17,14 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from audioatlas.analysis.dynamics import compute_onset_density
+from audioatlas.analysis.bundle import AnalysisBundle
 from audioatlas.analysis.findings import generate_findings
-from audioatlas.analysis.levels import (
-    compute_crest_factor_timeline,
-    compute_peak_timeline,
-    compute_rms_envelope,
-    compute_scalar_levels,
-)
-from audioatlas.analysis.loudness import compute_short_term_lufs
-from audioatlas.analysis.spectral import (
-    compute_average_spectrum,
-    compute_band_energy_timeline,
-    compute_log_spectrogram,
-    compute_spectral_shape,
-)
-from audioatlas.analysis.stereo import compute_mid_side_energy, compute_stereo_correlation
-from audioatlas.analysis.tonal import compute_chroma_cqt
 from audioatlas.config import AnalysisConfig
+from audioatlas.graphs import all_graphs
+from audioatlas.graphs.selection import GraphSelection
 from audioatlas.html_report import write_report_html
 from audioatlas.io import load_audio
 from audioatlas.report import write_findings_json, write_report_md, write_summary_json
-from audioatlas.visualize.band_energy import plot_band_energy_timeline
-from audioatlas.visualize.chroma import plot_chroma_cqt
-from audioatlas.visualize.histogram import plot_sample_histogram
-from audioatlas.visualize.loudness import plot_short_term_lufs
-from audioatlas.visualize.onset import plot_onset_density
-from audioatlas.visualize.spectral_shape import plot_spectral_shape
-from audioatlas.visualize.spectrogram import plot_log_spectrogram
-from audioatlas.visualize.spectrum import plot_average_spectrum
-from audioatlas.visualize.stereo import plot_mid_side_energy, plot_stereo_correlation
-from audioatlas.visualize.waveform import (
-    plot_crest_factor_timeline,
-    plot_rms_timeline,
-    plot_waveform_rms,
-)
 
 
 @dataclass(frozen=True)
@@ -81,11 +54,14 @@ def analyze_file(
     start_seconds: float | None = None,
     end_seconds: float | None = None,
     theme_name: str | None = None,
+    selection: GraphSelection | None = None,
 ) -> AnalysisRunResult:
     """Run the v0.1 analysis pipeline for one file."""
 
     cfg = config or AnalysisConfig()
     cfg.validate()
+    graph_selection = selection or GraphSelection()
+    selected_graphs = graph_selection.resolve(all_graphs())
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -96,34 +72,23 @@ def analyze_file(
         end_seconds=end_seconds,
     )
 
-    levels = compute_scalar_levels(audio.y, audio.sr, cfg)
-    rms = compute_rms_envelope(audio.y, audio.sr, cfg)
-    crest = compute_crest_factor_timeline(audio.y, audio.sr, cfg)
-    short_term = compute_short_term_lufs(audio.y, audio.sr, cfg)
-    peaks = compute_peak_timeline(audio.y, audio.sr, cfg)
-    spec = compute_log_spectrogram(audio.y, audio.sr, cfg)
-    avg = compute_average_spectrum(audio.y, audio.sr, cfg)
-    spectral_shape = compute_spectral_shape(audio.y, audio.sr, cfg)
-    band_energy = compute_band_energy_timeline(audio.y, audio.sr, cfg)
-    onset = compute_onset_density(audio.y, audio.sr, cfg)
-    chroma = compute_chroma_cqt(audio.y, audio.sr, cfg)
-    stereo = compute_stereo_correlation(audio.y, audio.sr, cfg)
-    mid_side = compute_mid_side_energy(audio.y, audio.sr, cfg)
+    bundle = AnalysisBundle(audio, cfg)
+    levels = bundle.get("levels")
+    rms = bundle.get("rms")
+    crest = bundle.get("crest")
+    short_term = bundle.get("short_term")
+    peaks = bundle.get("peaks")
+    avg = bundle.get("average_spectrum")
+    spectral_shape = bundle.get("spectral_shape")
+    band_energy = bundle.get("band_energy")
+    onset = bundle.get("onset")
+    chroma = bundle.get("chroma")
+    stereo = bundle.get("stereo")
+    mid_side = bundle.get("mid_side")
 
     plot_paths: list[Path] = []
-    plot_paths.append(plot_waveform_rms(audio.y, audio.sr, rms, out / "01_waveform_rms.png", cfg))
-    plot_paths.append(plot_rms_timeline(rms, out / "02_rms_timeline.png", cfg))
-    plot_paths.append(plot_crest_factor_timeline(crest, out / "03_crest_factor_timeline.png"))
-    plot_paths.append(plot_log_spectrogram(spec, out / "04_log_spectrogram.png"))
-    plot_paths.append(plot_average_spectrum(avg, out / "05_average_spectrum.png", cfg))
-    plot_paths.append(plot_sample_histogram(audio.y, out / "06_sample_histogram.png", cfg))
-    plot_paths.append(plot_stereo_correlation(stereo, out / "07_stereo_correlation.png"))
-    plot_paths.append(plot_mid_side_energy(mid_side, out / "08_mid_side_energy.png", cfg))
-    plot_paths.append(plot_spectral_shape(spectral_shape, out / "09_spectral_shape.png"))
-    plot_paths.append(plot_band_energy_timeline(band_energy, out / "10_band_energy_timeline.png"))
-    plot_paths.append(plot_onset_density(onset, out / "11_onset_density.png"))
-    plot_paths.append(plot_chroma_cqt(chroma, out / "12_chroma_cqt.png"))
-    plot_paths.append(plot_short_term_lufs(short_term, out / "13_short_term_lufs.png"))
+    for graph in selected_graphs:
+        plot_paths.append(graph.render(bundle, out / graph.filename, cfg))
 
     summary: dict[str, Any] = {
         "schema_version": "0.1.0",
@@ -142,6 +107,12 @@ def analyze_file(
         "stereo_correlation": stereo.to_summary_dict(),
         "mid_side_energy": mid_side.to_summary_dict(),
         "plots": [p.name for p in plot_paths],
+        "graphs": {
+            "profile": graph_selection.profile,
+            "selected": [graph.key for graph in selected_graphs],
+            "available": [graph.key for graph in all_graphs()],
+            "selected_filenames": [graph.filename for graph in selected_graphs],
+        },
     }
 
     findings = generate_findings(summary).to_dict()

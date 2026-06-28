@@ -10,7 +10,12 @@ from audioatlas.analysis.levels import (
     compute_scalar_levels,
 )
 from audioatlas.config import AnalysisConfig
-from audioatlas.visualize.waveform import plot_crest_factor_timeline
+from audioatlas.visualize.waveform import (
+    plot_crest_factor_timeline,
+    plot_peak_timeline,
+    plot_peak_vs_rms,
+    plot_rms_histogram,
+)
 
 
 def test_sine_minus_6_dbfs_peak_and_rms(sine_minus_6_dbfs, sr):
@@ -168,3 +173,45 @@ def test_peak_timeline_finds_near_clipping_bursts(sr):
     assert result.near_clipping_time_ranges[1]["start"] == pytest.approx(700 / sr)
     assert result.near_clipping_time_ranges[1]["end"] == pytest.approx(800 / sr)
     assert result.near_clipping_time_ranges[1]["duration"] == pytest.approx(100 / sr)
+
+
+def test_peak_timeline_records_frame_peak_dbfs_for_minus_6_dbfs_sine(
+    sine_minus_6_dbfs, sr
+):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512, rms_frame_length=2048, db_floor=-100.0)
+
+    result = compute_peak_timeline(sine_minus_6_dbfs, sr, cfg)
+    summary = result.to_summary_dict()
+
+    assert len(result.frame_peak_linear) == len(result.times_seconds)
+    assert len(result.frame_peak_dbfs) == len(result.times_seconds)
+    assert float(np.max(result.frame_peak_dbfs)) == pytest.approx(-6.0, abs=0.25)
+    assert "frame_peak_linear" in summary
+    assert "frame_peak_dbfs" in summary
+    assert max(summary["frame_peak_dbfs"]) == pytest.approx(-6.0, abs=0.25)
+
+
+def test_peak_timeline_silence_clamps_frame_peak_dbfs_to_floor(sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512, rms_frame_length=2048, db_floor=-96.0)
+    silent = np.zeros((sr, 1), dtype=np.float32)
+
+    result = compute_peak_timeline(silent, sr, cfg)
+
+    assert np.all(result.frame_peak_linear == 0.0)
+    assert np.allclose(result.frame_peak_dbfs, cfg.db_floor)
+
+
+def test_new_peak_and_rms_distribution_plots_write_png(tmp_path, sine_minus_6_dbfs, sr):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512, rms_frame_length=2048)
+    peaks = compute_peak_timeline(sine_minus_6_dbfs, sr, cfg)
+    rms = compute_rms_envelope(sine_minus_6_dbfs, sr, cfg)
+
+    paths = [
+        plot_peak_timeline(peaks, tmp_path / "peak_timeline.png", cfg),
+        plot_peak_vs_rms(peaks, rms, tmp_path / "peak_vs_rms.png", cfg),
+        plot_rms_histogram(rms, tmp_path / "rms_histogram.png", cfg),
+    ]
+
+    for path in paths:
+        assert path.exists()
+        assert path.stat().st_size > 0

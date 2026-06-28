@@ -38,6 +38,205 @@ def test_cli_analyze_accepts_start_and_end_section(tmp_path):
     assert summary["levels"]["duration_seconds"] == 2.0
 
 
+def test_cli_analyze_graphs_profile_minimal_renders_subset(tmp_path):
+    path = tmp_path / "song.wav"
+    sr = 48_000
+    y = np.zeros((sr, 1), dtype=np.float32)
+    y[:, 0] = 0.2
+    sf.write(path, y, sr)
+    out_dir = tmp_path / "minimal_report"
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "analyze",
+            str(path),
+            "--out",
+            str(out_dir),
+            "--graphs-profile",
+            "minimal",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["plots"] == [
+        "waveform_rms.png",
+        "rms_timeline.png",
+        "log_spectrogram.png",
+        "sample_histogram.png",
+    ]
+    assert summary["graphs"]["profile"] == "minimal"
+    assert len(list(out_dir.glob("*.png"))) == 4
+    assert "chroma_cqt" in summary
+    assert "stereo_correlation" in summary
+
+
+def test_cli_analyze_default_standard_renders_fourteen_plots(tmp_path):
+    path = tmp_path / "song.wav"
+    sr = 48_000
+    y = np.zeros((sr, 1), dtype=np.float32)
+    y[:, 0] = 0.2
+    sf.write(path, y, sr)
+    out_dir = tmp_path / "standard_report"
+
+    result = CliRunner().invoke(main, ["analyze", str(path), "--out", str(out_dir)])
+
+    assert result.exit_code == 0, result.output
+    summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["graphs"]["profile"] == "standard"
+    assert len(summary["plots"]) == 14
+    assert summary["plots"][-1] == "peak_timeline.png"
+    assert len(list(out_dir.glob("*.png"))) == 14
+
+
+def test_cli_analyze_graphs_profile_full_renders_extension_pack(tmp_path):
+    path = tmp_path / "song.wav"
+    sr = 48_000
+    y = np.zeros((sr, 1), dtype=np.float32)
+    y[:, 0] = 0.2
+    sf.write(path, y, sr)
+    out_dir = tmp_path / "full_report"
+
+    result = CliRunner().invoke(
+        main,
+        ["analyze", str(path), "--out", str(out_dir), "--graphs-profile", "full"],
+    )
+
+    assert result.exit_code == 0, result.output
+    summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+    assert len(summary["plots"]) == 17
+    assert summary["plots"][-4:] == [
+        "peak_timeline.png",
+        "peak_vs_rms.png",
+        "rms_histogram.png",
+        "stereo_correlation_histogram.png",
+    ]
+    assert len(list(out_dir.glob("*.png"))) == 17
+
+
+def test_cli_analyze_minimal_can_enable_full_only_graph(tmp_path):
+    path = tmp_path / "song.wav"
+    sr = 48_000
+    y = np.zeros((sr, 1), dtype=np.float32)
+    y[:, 0] = 0.2
+    sf.write(path, y, sr)
+    out_dir = tmp_path / "minimal_peak_report"
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "analyze",
+            str(path),
+            "--out",
+            str(out_dir),
+            "--graphs-profile",
+            "minimal",
+            "--enable",
+            "peak_vs_rms",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+    assert len(summary["plots"]) == 5
+    assert summary["plots"][-1] == "peak_vs_rms.png"
+    assert "frame_peak_dbfs" in summary["peak_timeline"]
+    assert "rms_envelope" in summary
+
+
+def test_cli_analyze_graph_enable_and_disable(tmp_path):
+    path = tmp_path / "song.wav"
+    sr = 48_000
+    y = np.zeros((sr, 1), dtype=np.float32)
+    y[:, 0] = 0.2
+    sf.write(path, y, sr)
+    out_dir = tmp_path / "selected_report"
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "analyze",
+            str(path),
+            "--out",
+            str(out_dir),
+            "--graphs-profile",
+            "minimal",
+            "--enable",
+            "chroma_cqt,short_term_lufs",
+            "--disable",
+            "rms_timeline",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["graphs"]["selected"] == [
+        "waveform_rms",
+        "log_spectrogram",
+        "sample_histogram",
+        "chroma_cqt",
+        "short_term_lufs",
+    ]
+    assert summary["plots"] == [
+        "waveform_rms.png",
+        "log_spectrogram.png",
+        "sample_histogram.png",
+        "chroma_cqt.png",
+        "short_term_lufs.png",
+    ]
+
+
+def test_cli_analyze_graphs_config_file(tmp_path):
+    path = tmp_path / "song.wav"
+    sr = 48_000
+    y = np.zeros((sr, 1), dtype=np.float32)
+    y[:, 0] = 0.2
+    sf.write(path, y, sr)
+    config_path = tmp_path / "graphs.yaml"
+    config_path.write_text(
+        """\
+graphs:
+  profile: minimal
+  enable: [chroma_cqt]
+  disable: [rms_timeline]
+""",
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "config_report"
+
+    result = CliRunner().invoke(
+        main,
+        ["analyze", str(path), "--out", str(out_dir), "--graphs-config", str(config_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["graphs"]["selected"] == [
+        "waveform_rms",
+        "log_spectrogram",
+        "sample_histogram",
+        "chroma_cqt",
+    ]
+
+
+def test_cli_analyze_bad_graph_key_fails_before_analysis(tmp_path):
+    path = tmp_path / "song.wav"
+    sr = 48_000
+    y = np.zeros((sr, 1), dtype=np.float32)
+    sf.write(path, y, sr)
+    out_dir = tmp_path / "bad_key_report"
+
+    result = CliRunner().invoke(
+        main,
+        ["analyze", str(path), "--out", str(out_dir), "--enable", "missing_graph"],
+    )
+
+    assert result.exit_code != 0
+    assert "missing_graph" in result.output
+    assert not out_dir.exists()
+
+
 def test_cli_sections_writes_one_report_per_manual_section(tmp_path):
     path = tmp_path / "sections.wav"
     _write_sections_fixture(path)
@@ -76,6 +275,38 @@ def test_cli_sections_writes_one_report_per_manual_section(tmp_path):
     # different source ranges
     assert "0s-3s" in index or "0.000s-3s" in index
     assert "3s-6s" in index or "3.000s-6s" in index
+
+
+def test_cli_sections_graph_selection_applies_to_each_section(tmp_path):
+    path = tmp_path / "sections.wav"
+    _write_sections_fixture(path)
+    out_dir = tmp_path / "selected_sections"
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "sections",
+            str(path),
+            "--out",
+            str(out_dir),
+            "--section",
+            "intro:0:3",
+            "--section",
+            "louder:3:6",
+            "--graphs-profile",
+            "minimal",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    for summary_path in sorted(out_dir.glob("*/summary.json")):
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        assert len(summary["plots"]) == 4
+        assert "short_term_lufs" in summary
+        assert "stereo_correlation" in summary
+    index = (out_dir / "section_index.md").read_text(encoding="utf-8")
+    assert "Integrated LUFS" in index
+    assert "Median stereo corr." in index
 
 
 def test_cli_sections_accepts_yaml_config(tmp_path):

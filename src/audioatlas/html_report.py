@@ -6,8 +6,8 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from audioatlas.graphs.registry import graph_by_filename
 from audioatlas.report import (
-    PLOT_DISPLAY_NAMES,
     RELATIVE_DB_NOTE,
     SEVERITY_DISPLAY,
     _fmt_value,
@@ -20,59 +20,6 @@ from audioatlas.report import (
 )
 from audioatlas.theme import default_theme_name, theme_css_variables, validate_theme_name
 from audioatlas.utils import mmss
-
-WIDE_PLOTS = {
-    "04_log_spectrogram.png",
-    "05_average_spectrum.png",
-    "10_band_energy_timeline.png",
-    "11_onset_density.png",
-    "12_chroma_cqt.png",
-    "13_short_term_lufs.png",
-}
-
-PLOT_CAPTIONS: dict[str, str] = {
-    "01_waveform_rms.png": "What this shows: raw samples with the RMS envelope overlaid.",
-    "02_rms_timeline.png": "What this shows: frame-by-frame RMS energy over time.",
-    "03_crest_factor_timeline.png": (
-        "What this shows: per-frame peak-to-RMS contrast in dB. Higher values mean "
-        "more transient-like frames within this track; this is not punch or quality."
-    ),
-    "04_log_spectrogram.png": (
-        "What this shows: frequency content over time on a log-frequency axis. "
-        + RELATIVE_DB_NOTE
-    ),
-    "05_average_spectrum.png": (
-        "What this shows: the track's long-term Welch average spectrum. "
-        + RELATIVE_DB_NOTE
-    ),
-    "06_sample_histogram.png": (
-        "What this shows: sample-value distribution with clipping and near-clipping thresholds."
-    ),
-    "07_stereo_correlation.png": (
-        "What this shows: the measured left/right channel relationship over time."
-    ),
-    "08_mid_side_energy.png": (
-        "What this shows: mid and side RMS energy over time with the side-to-mid ratio."
-    ),
-    "09_spectral_shape.png": (
-        "What this shows: spectral centroid, rolloff, and bandwidth movement over time."
-    ),
-    "10_band_energy_timeline.png": (
-        "What this shows: broad frequency-band energy movement within the track. "
-        + RELATIVE_DB_NOTE
-    ),
-    "11_onset_density.png": (
-        "What this shows: attack/activity movement within this track, not punch or quality."
-    ),
-    "12_chroma_cqt.png": (
-        "What this shows: pitch-class energy over time within this track. "
-        "This is not key detection and values are not calibrated across unrelated songs."
-    ),
-    "13_short_term_lufs.png": (
-        "What this shows: K-weighted short-term loudness in 3 s windows over time. "
-        "This is distinct from the RMS timeline and from integrated LUFS."
-    ),
-}
 
 GLOSSARY: list[tuple[str, str]] = [
     (
@@ -446,12 +393,12 @@ def _plots_section(plot_files: list[str]) -> str:
         '<p class="section-intro">Visual maps generated from the analysis.</p>',
         '<div class="plots-grid">',
     ]
-    normal = [name for name in plot_files if name not in WIDE_PLOTS]
-    wide = [name for name in plot_files if name in WIDE_PLOTS]
+    normal = [name for name in plot_files if not _plot_is_wide(name)]
+    wide = [name for name in plot_files if _plot_is_wide(name)]
     for filename in [*normal, *wide]:
-        title = PLOT_DISPLAY_NAMES.get(filename, Path(filename).stem.replace("_", " ").title())
-        class_name = "plot-card plot-card-wide" if filename in WIDE_PLOTS else "plot-card"
-        caption = PLOT_CAPTIONS.get(filename, "What this shows: a visual map from the analysis.")
+        title = _plot_display_name(filename)
+        class_name = "plot-card plot-card-wide" if _plot_is_wide(filename) else "plot-card"
+        caption = _plot_caption(filename)
         lines.extend(
             [
                 f'<article class="{class_name}">',
@@ -467,6 +414,28 @@ def _plots_section(plot_files: list[str]) -> str:
     lines.append("</div>")
     lines.append("</section>")
     return "\n".join(lines)
+
+
+def _plot_display_name(filename: str) -> str:
+    try:
+        return graph_by_filename(filename).display_name
+    except KeyError:
+        return filename.rsplit(".", maxsplit=1)[0].replace("_", " ").title()
+
+
+def _plot_caption(filename: str) -> str:
+    try:
+        caption = graph_by_filename(filename).html_caption
+    except KeyError:
+        caption = None
+    return caption or "What this shows: a visual map from the analysis."
+
+
+def _plot_is_wide(filename: str) -> bool:
+    try:
+        return graph_by_filename(filename).wide
+    except KeyError:
+        return False
 
 
 def _glossary_section() -> str:

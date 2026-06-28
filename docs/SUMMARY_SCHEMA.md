@@ -7,6 +7,11 @@ is the canonical record of "what AudioAtlas measured on this file".
 
 Current schema version: **`0.1.0`**.
 
+AudioAtlas v0.2-alpha keeps `schema_version` at `0.1.0` because the
+current schema changes are additive only: `summary["graphs"]` graph-selection
+metadata and `peak_timeline.frame_peak_linear` / `peak_timeline.frame_peak_dbfs`.
+No existing summary fields were removed or renamed.
+
 ## Top-level shape
 
 ```jsonc
@@ -25,7 +30,8 @@ Current schema version: **`0.1.0`**.
   "short_term_lufs": { ... ShortTermLufsResult.to_summary_dict() ... },
   "stereo_correlation": { ... StereoCorrelationResult.to_summary_dict() ... },
   "mid_side_energy": { ... MidSideEnergyResult.to_summary_dict() ... },
-  "plots":           ["01_waveform_rms.png", ...]
+  "plots":           ["waveform_rms.png", ...],
+  "graphs":          { ... graph selection metadata ... }
 }
 ```
 
@@ -207,6 +213,8 @@ Frame-wise clipping and near-clipping sample counts. This reuses
 | `clipping_threshold` | float | Absolute sample threshold for clipped counts. |
 | `near_clipping_threshold` | float | Absolute sample threshold for near-clipping counts. |
 | `times_seconds` | list[float] | Frame start times. |
+| `frame_peak_linear` | list[float] | Per-frame maximum absolute sample value, using the same windows as the peak-count timeline. |
+| `frame_peak_dbfs` | list[float] | Per-frame sample peak in dBFS, clamped to `analysis_config.db_floor`. This is sample peak, not true peak. |
 | `clipped_counts` | list[int] | Frame-wise count of sample values at or above `clipping_threshold`. |
 | `near_clipping_counts` | list[int] | Frame-wise count of sample values at or above `near_clipping_threshold`. |
 | `clipped_samples_in_frames` | int | Sum of frame-wise clipped counts. Overlapping windows can count the same sample more than once. |
@@ -388,27 +396,50 @@ mono signal and side is zero by convention with a warning.
 
 ### `plots`
 
-Ordered list of plot filenames written to the same output directory. The
-order is fixed:
+Ordered list of selected plot filenames written to the same output directory.
+The list is driven by the graph registry and follows `GraphSpec.order`, not
+filename sorting. With the default `standard` profile, the current order is:
 
 ```
-01_waveform_rms.png
-02_rms_timeline.png
-03_crest_factor_timeline.png
-04_log_spectrogram.png
-05_average_spectrum.png
-06_sample_histogram.png
-07_stereo_correlation.png
-08_mid_side_energy.png
-09_spectral_shape.png
-10_band_energy_timeline.png
-11_onset_density.png
-12_chroma_cqt.png
-13_short_term_lufs.png
+waveform_rms.png
+rms_timeline.png
+crest_factor_timeline.png
+log_spectrogram.png
+average_spectrum.png
+sample_histogram.png
+stereo_correlation.png
+mid_side_energy.png
+spectral_shape.png
+band_energy_timeline.png
+onset_density.png
+chroma_cqt.png
+short_term_lufs.png
+peak_timeline.png
 ```
 
-New plots from future feature slices append numbered prefixes (`13_*`,
-`14_*`, ...) and are added to `plot_paths` in `pipeline.py`.
+Reduced graph selections change this list only; analysis blocks remain complete.
+The `full` profile additionally renders:
+
+```
+peak_vs_rms.png
+rms_histogram.png
+stereo_correlation_histogram.png
+```
+
+Future graph slices should update the graph registry and these documented lists
+together.
+
+### `graphs`
+
+Additive graph-selection metadata. This controls rendered plot files only and is
+separate from `analysis_config`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `profile` | string | Resolved profile name: `minimal`, `standard`, or `full`. |
+| `selected` | list[string] | Selected graph keys in render order. |
+| `available` | list[string] | All graph keys known to the registry in render order. |
+| `selected_filenames` | list[string] | Filenames for the selected graphs in render order. |
 
 ## findings.json blocks
 

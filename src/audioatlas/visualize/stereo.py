@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib
+import numpy as np
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -72,6 +73,31 @@ def plot_mid_side_energy(
     ax_ratio.set_ylabel("Side-to-mid ratio (dB)")
     ax_ratio.set_ylim(cfg.db_floor, 12)
     ax_ratio.grid(True, alpha=0.25)
+    fig.tight_layout()
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=150)
+    plt.close(fig)
+    return out
+
+
+def plot_stereo_correlation_histogram(
+    stereo: StereoCorrelationResult,
+    out_path: str | Path,
+    *,
+    title: str = "Stereo Correlation Distribution",
+) -> Path:
+    """Save a histogram of defined left/right correlation frames."""
+
+    finite = stereo.correlation[np.isfinite(stereo.correlation)]
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.hist(finite, bins=40, range=(-1.0, 1.0), alpha=0.85)
+    ax.axvline(0.0, linestyle="--", linewidth=0.8, alpha=0.5)
+    ax.set_title(title)
+    ax.set_xlabel("Pearson r (L/R)")
+    ax.set_ylabel("Frame count")
+    ax.set_xlim(-1.0, 1.0)
+    ax.grid(True, axis="y", alpha=0.25)
     fig.tight_layout()
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)

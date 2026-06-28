@@ -3,22 +3,48 @@
 All notable changes to AudioAtlas are recorded here. Format roughly
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## v0.2-alpha
+
+### Added
+- Added the first graph extension pack: `peak_timeline` in the `standard` and
+  `full` profiles, plus `peak_vs_rms`, `rms_histogram`, and
+  `stereo_correlation_histogram` in the `full` profile. The peak timeline
+  summary now includes additive `frame_peak_linear` and `frame_peak_dbfs`
+  arrays for per-frame sample peaks; existing summary fields are unchanged.
+
+### Changed
+- Introduced a behavior-preserving graph registry as the single source of
+  truth for the existing 13 report plots and their report metadata. This keeps
+  the same filenames, render order, and `summary["plots"]` output; graph
+  selection, stable-key filenames, and new graphs remain future slices.
+- Migrated plot output filenames from numbered names to stable graph-key names
+  while preserving render order and the 13-plot set. `summary["plots"]` now
+  lists stable filenames such as `waveform_rms.png` and
+  `short_term_lufs.png`; graph selection and new graphs remain future slices.
+- Added graph selection profiles and enable/disable controls for rendered plots
+  only, available through CLI flags and a top-level YAML `graphs:` block.
+  `summary["graphs"]` records the resolved selection while analysis blocks,
+  findings, catalog data, and section comparisons remain complete.
+- Kept `schema_version` at `0.1.0` because v0.2-alpha schema changes are
+  additive: `summary["graphs"]` and per-frame sample-peak arrays under
+  `peak_timeline`; no existing summary fields were removed or renamed.
+
 ## Unreleased
 
 ### Added
 - Short-term LUFS timeline: new `short_term_lufs` summary block,
-  `13_short_term_lufs.png` plot, and `compute_short_term_lufs` in
+  `short_term_lufs.png` plot, and `compute_short_term_lufs` in
   `src/audioatlas/analysis/loudness.py`. Uses pyloudnorm blockwise
   processing with 3 s K-weighted windows (high overlap) to provide a
   perceptually-weighted time-varying loudness view. Distinct from RMS.
   Empty result + warning for files < 3 s. Integrated reference included.
 - Chroma CQT pitch-class energy: `chroma_cqt` summary block and
-  `12_chroma_cqt.png` plot (12-bin chromagram over time from
+  `chroma_cqt.png` plot (12-bin chromagram over time from
   `librosa.feature.chroma_cqt` on a mono downmix). Descriptive only — not key
   detection.
 - Per-frame crest factor timeline: `crest_factor_timeline` summary block and
-  `03_crest_factor_timeline.png` plot (`20 * log10(frame_sample_peak / frame_rms)`
-  per frame, all channels). Later plots renumbered `04`–`11`.
+  `crest_factor_timeline.png` plot (`20 * log10(frame_sample_peak / frame_rms)`
+  per frame, all channels).
 - YAML section definitions: `audioatlas sections --config sections.yaml` loads
   a top-level `sections` list (`name`, `start`, optional `end`) and runs the same
   manual section pipeline as repeated `--section name:start:end` flags.
@@ -27,7 +53,7 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   one report folder per supplied section plus a `section_index.md`.
 - Section reports now show their original source range in `report.md` and
   `report.html`, so sliced reports are not mistaken for whole-song analyses.
-- Public v0.1-alpha release documentation: clearer README framing,
+- Public alpha release documentation: clearer README framing,
   `docs/ALPHA_LIMITATIONS.md`, `examples/README.md`, and roadmap notes.
 - Single-track reports now include generation timestamp, AudioAtlas version,
   git hash when available, and a public early-alpha release label.
@@ -53,15 +79,15 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   show counts, total duration, first/last range, longest range, and a
   capped preview while preserving full ranges in `findings.json`.
 - Onset-strength based transient density analysis with `onset_density`
-  summary output, `10_onset_density.png`, and factual relative-to-track
+  summary output, `onset_density.png`, and factual relative-to-track
   dynamics findings with suggested checks.
 - Finding prioritization and display capping with `findings_shown`,
   `all_findings`, and `findings_suppressed_count` in `findings.json`.
 - Time-varying frequency band energy analysis with
-  `band_energy_timeline` summary output, `09_band_energy_timeline.png`,
+  `band_energy_timeline` summary output, `band_energy_timeline.png`,
   and factual relative-to-track band findings.
 - Spectral shape timeline analysis with centroid, 85%/95% rolloff, and
-  bandwidth summaries, `08_spectral_shape.png`, and factual
+  bandwidth summaries, `spectral_shape.png`, and factual
   spectral-shape findings based on relative-to-track heuristics.
 - Time-ranged findings for near-clipping, low stereo correlation, and
   high side-to-mid ratio observations.
@@ -73,11 +99,11 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   from existing summary metrics, using factual evidence and suggested
   checks rather than mix scores or advice.
 - Stereo correlation timeline analysis with `stereo_correlation` summary
-  output, a Markdown report section, and `06_stereo_correlation.png`.
+  output, a Markdown report section, and `stereo_correlation.png`.
   Undefined zero-variance frames remain `NaN` internally and are excluded
   from summary statistics.
 - Mid/side RMS energy timeline analysis with `mid_side_energy` summary
-  output, a Markdown report section, and `07_mid_side_energy.png`.
+  output, a Markdown report section, and `mid_side_energy.png`.
 - `docs/AGENT_START_PROMPT.md` with a ready-to-paste first prompt for
   Codex/Grok Build, defaulting to the stereo-correlation feature slice.
 - `true_peak_linear_per_channel` and `true_peak_dbtp_per_channel` fields
@@ -173,9 +199,9 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `compute_rms_envelope` (RMS dBFS timeline).
 - `compute_log_spectrogram` (STFT magnitude in dB, log freq axis).
 - `compute_average_spectrum` (Welch).
-- Plots: `01_waveform_rms.png`, `02_rms_timeline.png`,
-  `03_log_spectrogram.png`, `04_average_spectrum.png`,
-  `05_sample_histogram.png`.
+- Initial plot set covered waveform/RMS, RMS timeline, log spectrogram,
+  average spectrum, and sample histogram. Current v0.2-alpha output uses
+  stable graph-key filenames documented in `docs/SUMMARY_SCHEMA.md`.
 - `summary.json` (with `schema_version`) and `report.md`.
 - 39 tests including a golden-fixture end-to-end snapshot.
 - Documentation: `AGENT_BRIEF.md`, `docs/ARCHITECTURE.md`,

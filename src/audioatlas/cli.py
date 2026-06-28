@@ -16,6 +16,8 @@ import yaml
 from audioatlas import __version__
 from audioatlas.batch import analyze_folder
 from audioatlas.config import AnalysisConfig
+from audioatlas.graphs import all_graphs
+from audioatlas.graphs.selection import VALID_PROFILES, GraphSelection, GraphSelectionError
 from audioatlas.pipeline import AnalysisRunResult, analyze_file
 from audioatlas.theme import theme_listing_text, validate_theme_name
 
@@ -61,6 +63,31 @@ def main() -> None:
          "Set to 1 to disable oversampling and use sample peak.",
 )
 @click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
+@click.option(
+    "--graphs-profile",
+    type=click.Choice(VALID_PROFILES),
+    default=None,
+    help="Graph render profile. Defaults to standard unless --graphs-config sets it.",
+)
+@click.option(
+    "--enable",
+    "graph_enable",
+    multiple=True,
+    help="Comma-separated graph keys to add to the selected profile. May be repeated.",
+)
+@click.option(
+    "--disable",
+    "graph_disable",
+    multiple=True,
+    help="Comma-separated graph keys to remove from the selected profile. May be repeated.",
+)
+@click.option(
+    "--graphs-config",
+    "graphs_config",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="YAML file with an optional top-level graphs block.",
+)
 def analyze(
     input_path: Path,
     out_dir: Path,
@@ -73,11 +100,16 @@ def analyze(
     db_floor: float,
     true_peak_oversample: int,
     theme: str | None,
+    graphs_profile: str | None,
+    graph_enable: tuple[str, ...],
+    graph_disable: tuple[str, ...],
+    graphs_config: Path | None,
 ) -> None:
     """Analyze one audio file and write a report folder."""
 
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
+    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
     try:
         result = analyze_file(
             input_path,
@@ -87,6 +119,7 @@ def analyze(
             start_seconds=start_seconds,
             end_seconds=end_seconds,
             theme_name=selected_theme,
+            selection=selection,
         )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -131,6 +164,31 @@ def analyze(
     "Set to 1 to disable oversampling and use sample peak.",
 )
 @click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
+@click.option(
+    "--graphs-profile",
+    type=click.Choice(VALID_PROFILES),
+    default=None,
+    help="Graph render profile. Defaults to standard unless --graphs-config sets it.",
+)
+@click.option(
+    "--enable",
+    "graph_enable",
+    multiple=True,
+    help="Comma-separated graph keys to add to the selected profile. May be repeated.",
+)
+@click.option(
+    "--disable",
+    "graph_disable",
+    multiple=True,
+    help="Comma-separated graph keys to remove from the selected profile. May be repeated.",
+)
+@click.option(
+    "--graphs-config",
+    "graphs_config",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="YAML file with an optional top-level graphs block.",
+)
 def batch(
     input_folder: Path,
     out_dir: Path,
@@ -141,17 +199,23 @@ def batch(
     db_floor: float,
     true_peak_oversample: int,
     theme: str | None,
+    graphs_profile: str | None,
+    graph_enable: tuple[str, ...],
+    graph_disable: tuple[str, ...],
+    graphs_config: Path | None,
 ) -> None:
     """Analyze a folder of audio files and write a neutral catalog."""
 
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
+    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
     result = analyze_folder(
         input_folder,
         out_dir,
         config=cfg,
         max_duration_seconds=max_duration,
         theme_name=selected_theme,
+        selection=selection,
     )
     click.echo(f"AudioAtlas catalog written to: {result.out_dir}")
     click.echo(f"Catalog summary: {result.catalog_summary_path}")
@@ -208,6 +272,31 @@ def batch(
     "Set to 1 to disable oversampling and use sample peak.",
 )
 @click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
+@click.option(
+    "--graphs-profile",
+    type=click.Choice(VALID_PROFILES),
+    default=None,
+    help="Graph render profile. Defaults to standard unless --graphs-config sets it.",
+)
+@click.option(
+    "--enable",
+    "graph_enable",
+    multiple=True,
+    help="Comma-separated graph keys to add to the selected profile. May be repeated.",
+)
+@click.option(
+    "--disable",
+    "graph_disable",
+    multiple=True,
+    help="Comma-separated graph keys to remove from the selected profile. May be repeated.",
+)
+@click.option(
+    "--graphs-config",
+    "graphs_config",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="YAML file with an optional top-level graphs block.",
+)
 def sections(
     input_path: Path,
     out_dir: Path,
@@ -219,6 +308,10 @@ def sections(
     db_floor: float,
     true_peak_oversample: int,
     theme: str | None,
+    graphs_profile: str | None,
+    graph_enable: tuple[str, ...],
+    graph_disable: tuple[str, ...],
+    graphs_config: Path | None,
 ) -> None:
     """Analyze manually supplied sections from one audio file.
 
@@ -228,6 +321,7 @@ def sections(
 
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
+    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
     parsed_sections = _collect_section_definitions(section_specs, config_path)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -242,6 +336,7 @@ def sections(
                 start_seconds=start_seconds,
                 end_seconds=end_seconds,
                 theme_name=selected_theme,
+                selection=selection,
             )
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc
@@ -277,6 +372,81 @@ def _validate_theme_for_cli(theme: str | None) -> str:
         return validate_theme_name(theme)
     except ValueError as exc:
         raise click.BadParameter(str(exc), param_hint="--theme") from exc
+
+
+def _make_selection(
+    cli_profile: str | None,
+    cli_enable: tuple[str, ...],
+    cli_disable: tuple[str, ...],
+    graphs_config: Path | None,
+) -> GraphSelection:
+    file_selection = _parse_graphs_config(graphs_config) if graphs_config is not None else {}
+    profile = cli_profile or str(file_selection.get("profile", "standard"))
+    enable = _merge_graph_key_lists(
+        tuple(file_selection.get("enable", ())),
+        _parse_graph_key_options(cli_enable),
+    )
+    disable = _merge_graph_key_lists(
+        tuple(file_selection.get("disable", ())),
+        _parse_graph_key_options(cli_disable),
+    )
+    selection = GraphSelection(profile=profile, enable=enable, disable=disable)
+    try:
+        selection.resolve(all_graphs())
+    except GraphSelectionError as exc:
+        raise click.BadParameter(str(exc), param_hint="--graphs-profile/--enable/--disable") from exc
+    return selection
+
+
+def _parse_graph_key_options(values: tuple[str, ...]) -> tuple[str, ...]:
+    keys: list[str] = []
+    for value in values:
+        keys.extend(key.strip() for key in value.split(",") if key.strip())
+    return tuple(dict.fromkeys(keys))
+
+
+def _merge_graph_key_lists(*lists: tuple[str, ...]) -> tuple[str, ...]:
+    merged: list[str] = []
+    for values in lists:
+        merged.extend(values)
+    return tuple(dict.fromkeys(merged))
+
+
+def _parse_graphs_config(path: Path) -> dict[str, Any]:
+    try:
+        loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise click.BadParameter(f"Invalid YAML in {path}: {exc}") from exc
+
+    if loaded is None:
+        loaded = {}
+    if not isinstance(loaded, dict):
+        raise click.BadParameter(f"Graphs config {path} must be a YAML mapping.")
+    graphs = loaded.get("graphs", {})
+    if graphs is None:
+        graphs = {}
+    if not isinstance(graphs, dict):
+        raise click.BadParameter(f"Graphs config {path} must contain a graphs mapping.")
+
+    out: dict[str, Any] = {}
+    if "profile" in graphs:
+        profile = graphs["profile"]
+        if not isinstance(profile, str):
+            raise click.BadParameter(f"graphs.profile in {path} must be a string.")
+        out["profile"] = profile
+    if "enable" in graphs:
+        out["enable"] = _string_list(graphs["enable"], source=f"graphs.enable in {path}")
+    if "disable" in graphs:
+        out["disable"] = _string_list(graphs["disable"], source=f"graphs.disable in {path}")
+    return out
+
+
+def _string_list(value: Any, *, source: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise click.BadParameter(f"{source} must be a list of strings.")
+    return tuple(dict.fromkeys(item.strip() for item in value if item.strip()))
 
 
 def _collect_section_definitions(

@@ -16,6 +16,7 @@ reports/
 output_reports/
 catalog_reports/
 calibration_reports/
+outputs/
 
 # Audio dropped into the repo by accident
 *.wav
@@ -32,6 +33,10 @@ calibration_audio/
 calibration*/
 model_review_package*/
 *_review_package*/
+DESIGN_v0.2_*.md
+6_23_GROK*.md
+docs/agent_notes/
+docs/CODEX_*_REVIEW_PACKAGE.md
 
 # Archives generated for review/export
 *.zip

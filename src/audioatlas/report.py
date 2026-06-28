@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from audioatlas import __version__
+from audioatlas.graphs.registry import RELATIVE_DB_NOTE, graph_by_filename
 from audioatlas.utils import mmss
 
 # Human-friendly labels and units for the level-metrics block of report.md.
@@ -55,36 +56,6 @@ PER_CHANNEL_METRIC_DISPLAY: list[tuple[str, str, str]] = [
     ("rms_dbfs_per_channel",       "RMS",                  "dBFS"),
     ("dc_offset_per_channel",      "DC offset",            ""),
 ]
-
-PLOT_DISPLAY_NAMES: dict[str, str] = {
-    "01_waveform_rms.png": "Waveform + RMS Envelope",
-    "02_rms_timeline.png": "Frame RMS Timeline",
-    "03_crest_factor_timeline.png": "Frame Crest Factor Timeline",
-    "04_log_spectrogram.png": "Log-Frequency Spectrogram",
-    "05_average_spectrum.png": "Welch Average Spectrum",
-    "06_sample_histogram.png": "Sample Histogram",
-    "07_stereo_correlation.png": "Stereo Correlation Timeline",
-    "08_mid_side_energy.png": "Mid/Side Energy Timeline",
-    "09_spectral_shape.png": "Spectral Shape Timeline",
-    "10_band_energy_timeline.png": "Frequency Band Energy Timeline",
-    "11_onset_density.png": "Onset / Transient Density Timeline",
-    "12_chroma_cqt.png": "Chroma CQT (Pitch-Class Energy)",
-    "13_short_term_lufs.png": "Short-term LUFS Timeline",
-}
-
-RELATIVE_DB_NOTE = (
-    "Relative dB values use this track's strongest measured content as 0 dB. "
-    "They show shape within this song and are not calibrated dBFS."
-)
-
-PLOT_NOTES: dict[str, str] = {
-    "05_average_spectrum.png": RELATIVE_DB_NOTE,
-    "10_band_energy_timeline.png": RELATIVE_DB_NOTE,
-    "13_short_term_lufs.png": (
-        "Short-term LUFS uses 3 s K-weighted blocks (distinct from the RMS timeline). "
-        "The dashed reference line (when present) is the track integrated LUFS."
-    ),
-}
 
 SEVERITY_DISPLAY: dict[str, str] = {
     "issue": "check before delivery",
@@ -615,9 +586,14 @@ def write_report_md(
 
     lines.append("## Plots\n")
     for filename in plot_files:
-        title = PLOT_DISPLAY_NAMES.get(filename, Path(filename).stem.replace("_", " ").title())
+        try:
+            graph = graph_by_filename(filename)
+            title = graph.display_name
+            note = graph.report_note
+        except KeyError:
+            title = Path(filename).stem.replace("_", " ").title()
+            note = None
         lines.append(f"### {title}\n")
-        note = PLOT_NOTES.get(filename)
         if note is not None:
             lines.append(f"{note}\n")
         lines.append(f"![{title}]({filename})\n")

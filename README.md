@@ -6,9 +6,9 @@ measurement-based reports: level metrics, stereo context, spectral shape,
 activity maps, PNG plots, `summary.json`, `findings.json`, `report.md`, and a
 static offline `report.html`.
 
-## Status: v0.1-alpha
+## Status: v0.2-alpha
 
-This is a public early-alpha release. The core reports are usable, but findings
+This is a public early-alpha release target. The core reports are usable, but findings
 are heuristic, wording and thresholds may change, and the project is not a
 mastering system. Treat reports as structured listening prompts and technical
 context, not final decisions.
@@ -33,6 +33,25 @@ context, not final decisions.
 - No source separation, instrument detection, or section segmentation.
 - No real-time playback cursor or DAW integration.
 - No claim that a finding is audible, bad, or musically wrong.
+
+## What the Reports Look Like
+
+AudioAtlas writes local static HTML/Markdown reports plus JSON summaries and PNG
+plots. The generated files can be opened directly from disk; they do not require
+a server or hosted dashboard.
+
+![AudioAtlas report overview](docs/assets/readme/report_overview.png)
+
+Graph depth is selectable: minimal renders 4 plots for a quick pass, standard
+renders the default 14-plot report, and full renders 17 plots with additional
+distribution/detail views.
+
+![Representative AudioAtlas graph examples](docs/assets/readme/graph_examples.png)
+
+Sections are optional named time ranges. They can be used to compare regions of
+one track with the same summary metrics.
+
+![AudioAtlas section comparison table](docs/assets/readme/sections_comparison.png)
 
 ## Install
 
@@ -103,6 +122,25 @@ CLI flags:
 | `--db-floor FLOAT` | -100 | Floor for displayed dBFS / dBTP / dB metrics. |
 | `--true-peak-oversample INT` | 4 | Polyphase factor; 1 disables oversampling. |
 | `--theme THEME` | `default` | Built-in static HTML theme. |
+| `--graphs-profile minimal\|standard\|full` | `standard` | Select which graph set to render. `standard` renders the current 13 core graphs plus `peak_timeline`; `full` renders all 17 registered graphs; `minimal` renders the first-read subset. |
+| `--enable KEYS` | none | Comma-separated graph keys to add to the selected profile. May be repeated. |
+| `--disable KEYS` | none | Comma-separated graph keys to remove from the selected profile. May be repeated. |
+| `--graphs-config PATH` | none | YAML file with a top-level `graphs:` block. |
+
+Graph selection controls rendered PNGs only. `summary.json`, findings, catalog
+summaries, and section comparisons still include the full analysis data. The
+minimal profile renders `waveform_rms`, `rms_timeline`, `log_spectrogram`, and
+`sample_histogram`; `full` also includes `peak_vs_rms`, `rms_histogram`, and
+`stereo_correlation_histogram`.
+
+Example graph-selection YAML:
+
+```yaml
+graphs:
+  profile: minimal
+  enable: [chroma_cqt]
+  disable: []
+```
 
 ## Example Output
 
@@ -114,12 +152,20 @@ reports/song/
 ├── findings.json
 ├── report.md
 ├── report.html
-├── 01_waveform_rms.png
-├── 02_rms_timeline.png
-├── 03_log_spectrogram.png
-├── 04_average_spectrum.png
-├── 05_sample_histogram.png
-└── ...
+├── waveform_rms.png
+├── rms_timeline.png
+├── crest_factor_timeline.png
+├── log_spectrogram.png
+├── average_spectrum.png
+├── sample_histogram.png
+├── stereo_correlation.png
+├── mid_side_energy.png
+├── spectral_shape.png
+├── band_energy_timeline.png
+├── onset_density.png
+├── chroma_cqt.png
+├── short_term_lufs.png
+└── peak_timeline.png
 ```
 
 Open `report.html` in a browser. Start with the short workflow near the top,

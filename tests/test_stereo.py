@@ -5,7 +5,11 @@ import pytest
 
 from audioatlas.analysis.stereo import compute_mid_side_energy, compute_stereo_correlation
 from audioatlas.config import AnalysisConfig
-from audioatlas.visualize.stereo import plot_mid_side_energy, plot_stereo_correlation
+from audioatlas.visualize.stereo import (
+    plot_mid_side_energy,
+    plot_stereo_correlation,
+    plot_stereo_correlation_histogram,
+)
 
 
 def _cfg() -> AnalysisConfig:
@@ -98,6 +102,16 @@ def test_one_silent_channel_reports_undefined_correlation(sr):
 def test_plot_stereo_correlation_writes_png(tmp_path, stereo_correlated, sr):
     result = compute_stereo_correlation(stereo_correlated, sr, _cfg())
     path = plot_stereo_correlation(result, tmp_path / "stereo.png")
+
+    assert path.exists()
+    assert path.stat().st_size > 0
+
+
+def test_plot_stereo_correlation_histogram_writes_png(tmp_path, stereo_correlated, sr):
+    result = compute_stereo_correlation(stereo_correlated, sr, _cfg())
+    path = plot_stereo_correlation_histogram(
+        result, tmp_path / "stereo_correlation_histogram.png"
+    )
 
     assert path.exists()
     assert path.stat().st_size > 0

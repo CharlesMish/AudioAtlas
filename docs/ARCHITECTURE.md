@@ -37,7 +37,7 @@ There is no statefulness, no plugin system, and no implicit configuration.
                        ├── findings.json
                        ├── report.md
                        ├── report.html
-                       └── 0N_*.png
+                       └── <graph_key>.png
 ```
 
 ### Layer rules (enforced by code review, not by tests)
@@ -59,7 +59,7 @@ That code goes in `visualize/` or in a scratch notebook outside the package.
 
 ## The shape of a "feature slice"
 
-Adding a new measurement (e.g. spectral centroid) is exactly seven steps:
+Adding a new measurement (e.g. spectral centroid) follows this shape:
 
 1. **Dataclass.** Add a `frozen=True` result dataclass in
    `analysis/<topic>.py`. Include `sample_rate: int` if you have a time
@@ -79,15 +79,15 @@ Adding a new measurement (e.g. spectral centroid) is exactly seven steps:
    dataclass carries it.
 5. **Summary entry.** Add a key in the summary dict in `pipeline.py`,
    sourced from `result.to_summary_dict()`.
-6. **Report entry.** Update `report.py` so the Markdown report includes
-   the new metric. If you added a plot, the existing `## Plots` loop
-   will pick it up automatically as long as you appended its path to
-   `plot_paths` in `pipeline.py`.
-7. **Pipeline wiring.** In `pipeline.py`:
-   - Import the compute function and the plot function.
-   - Add one line that calls compute on `audio.y, audio.sr, cfg`.
-   - Add one line appending the plot path to `plot_paths`.
-   - Add one entry to the `summary` dict.
+6. **Graph registry entry** (if there is a plot). Add a `GraphSpec` with
+   stable key, stable filename, render order, profile membership, required
+   analysis blocks, report note/caption, and render adapter.
+7. **Report entry.** Update `report.py` only for new textual summary
+   sections or metrics. Plot titles, filenames, and captions come from the
+   graph registry.
+8. **Pipeline wiring.** Keep `pipeline.py` as orchestration: compute the full
+   analysis bundle, render selected graph specs, and serialize complete
+   summaries.
 
 This is the *only* shape AudioAtlas supports. If your idea doesn't fit
 this shape, propose a separate module rather than bending the layering.
@@ -138,14 +138,13 @@ There's a test for this in `tests/test_levels.py`.
 ## Naming honesty
 
 Names must reflect what the numbers actually measure. The historical case
-in this repo: the v0.1 timeline plot is `02_rms_timeline.png` and not
-`02_loudness_timeline.png`, because it's RMS dBFS, not K-weighted
-short-term LUFS. If you add a real short-term-LUFS timeline later, give
-it its own filename - don't repurpose `rms_timeline`.
+in this repo: the RMS timeline plot is `rms_timeline.png` and not a generic
+`loudness_timeline.png`, because it is RMS dBFS, not K-weighted short-term
+LUFS. Short-term LUFS has its own graph key and filename.
 
 ## Summary schema and stability
 
-`summary.json` carries a `schema_version` field. v0.1.x stays at
-`"0.1.0"`. If you change the shape of the summary (rename or remove a
-field, change a type), bump it and update `docs/SUMMARY_SCHEMA.md` in
-the same commit.
+`summary.json` carries a `schema_version` field. v0.2-alpha still uses
+`"0.1.0"` because its summary changes are additive only. If you rename or
+remove a field, or change an existing field type, bump it and update
+`docs/SUMMARY_SCHEMA.md` in the same commit.
