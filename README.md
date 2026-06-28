@@ -40,7 +40,7 @@ AudioAtlas writes local static HTML/Markdown reports plus JSON summaries and PNG
 plots. The generated files can be opened directly from disk; they do not require
 a server or hosted dashboard.
 
-![AudioAtlas report overview](docs/assets/readme/report_overview.png)
+![AudioAtlas multi-graph report cards](docs/assets/readme/report_overview.png)
 
 Graph depth is selectable: minimal renders 4 plots for a quick pass, standard
 renders the default 14-plot report, and full renders 17 plots with additional
