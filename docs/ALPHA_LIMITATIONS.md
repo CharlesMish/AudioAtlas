@@ -1,6 +1,6 @@
 # AudioAtlas alpha limitations
 
-AudioAtlas `0.2.0a3` is a measurement and report-generation tool for structured
+AudioAtlas `0.2.0a4` is a measurement and report-generation tool for structured
 listening. It is not a mastering assistant or quality judge.
 
 ## Current limitations
@@ -25,14 +25,34 @@ listening. It is not a mastering assistant or quality judge.
 - A fresh environment can have a noticeable first-analysis initialization
   delay from the scientific Python stack. Lightweight discovery commands avoid
   importing that stack, but report generation still requires it.
+- The `0.2.0a4` dependency contract temporarily constrains Numba to
+  `>=0.65.1,<0.66`. A clean Python 3.13 smoke with Numba 0.66.0 /
+  llvmlite 0.48.0 stalled in LLVM code generation; the same workflow
+  completed with Numba 0.65.1 / llvmlite 0.47.0. This ceiling should be
+  revisited only after a clean report smoke on the newer line.
 - The HTML note fields are temporary browser fields and are not saved.
 - Full analysis runs for every graph profile; `minimal` only publishes fewer
   plots.
+- Same-track identity is a user assertion. Matching hashed `--track-id` tokens
+  do not recognize audio or prove that two files contain the same composition.
+  Hashing omits plaintext from the artifact but does not protect a short token
+  from guessing or prevent reused tokens from linking separate reports.
+- Revision deltas are only as comparable as their recorded configuration, code,
+  dependency, decoder, and environment fingerprints. Even an exact recorded
+  signature is not a guarantee of bit-identical floating-point output.
+- `--allow-incomparable` exists for forensic inspection, not routine comparison;
+  its output remains explicitly caveated.
+- Prompt appearance/disappearance in a revision diff is source-attributable only
+  when the recorded finding-rule implementation and ruleset version also match.
+- Calibration replay runs current finding logic over saved summaries. It does
+  not reopen audio, test changed measurement code, or replace human listening.
+- Measured plot alt text is a concise summary, not a substitute for the complete
+  image, technical table, or listening check.
 
 ## Deliberately out of scope
 
 - Scores, grades, automatic pass/fail, or mastering advice.
-- Reference matching.
+- Cross-track reference matching, ranking, or preferred-revision selection.
 - Source, genre, instrument, or automatic section inference.
 - Source separation.
 - Cloud processing, accounts, telemetry, or hosted dashboards.
@@ -42,6 +62,7 @@ listening. It is not a mastering assistant or quality judge.
 
 - Deterministic edge fixtures and a documented rule ledger.
 - Human calibration across authorized varied musical material.
+- Frozen-ledger rule replay and adjudication for any candidate finding change.
 - Continued installed-wheel and multi-platform CI evidence across supported
   dependency releases.
 - Native launcher rehearsal before stronger ease-of-use claims.

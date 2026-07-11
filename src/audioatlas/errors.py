@@ -30,3 +30,7 @@ def _safe_reason(path: Path, value: str) -> str:
     for candidate in sorted((item for item in candidates if item), key=len, reverse=True):
         text = text.replace(candidate, path.name)
     return text or "the decoder did not provide a reason"
+
+
+class RevisionDiffError(AudioAtlasError):
+    """Raised when two reports cannot be compared under the requested guardrails."""

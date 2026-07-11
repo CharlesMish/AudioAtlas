@@ -20,13 +20,14 @@ from audioatlas.graphs.selection import GraphSelection
 from audioatlas.html_report import write_report_html
 from audioatlas.io import load_audio
 from audioatlas.output import (
-    CATALOG_FILENAMES,
+    ALL_GENERATED_FILENAMES,
     OUTPUT_MARKER_FILENAME,
     SINGLE_REPORT_FILENAMES,
     publish_staged_output,
     staged_output_directory,
     write_output_manifest,
 )
+from audioatlas.provenance import build_analysis_provenance, track_identity_block
 from audioatlas.release import SUMMARY_SCHEMA_VERSION
 from audioatlas.report import write_findings_json, write_report_md, write_summary_json
 
@@ -60,6 +61,7 @@ def analyze_file(
     theme_name: str | None = None,
     selection: GraphSelection | None = None,
     include_local_paths: bool = False,
+    track_id: str | None = None,
 ) -> AnalysisRunResult:
     """Analyze one file, publish its report, and release renderer cycles.
 
@@ -80,6 +82,7 @@ def analyze_file(
             theme_name=theme_name,
             selection=selection,
             include_local_paths=include_local_paths,
+            track_id=track_id,
         )
     finally:
         gc.collect()
@@ -96,6 +99,7 @@ def _analyze_file_impl(
     theme_name: str | None = None,
     selection: GraphSelection | None = None,
     include_local_paths: bool = False,
+    track_id: str | None = None,
 ) -> AnalysisRunResult:
     """Implement one analysis run inside a collectable lifecycle frame.
 
@@ -139,7 +143,9 @@ def _analyze_file_impl(
     summary: dict[str, Any] = {
         "schema_version": SUMMARY_SCHEMA_VERSION,
         "metadata": audio.metadata.to_dict(),
+        "source_identity": track_identity_block(track_id),
         "analysis_config": asdict(cfg),
+        "analysis_provenance": build_analysis_provenance(cfg),
         "levels": levels.to_dict(),
         "rms_envelope": rms.to_summary_dict(),
         "crest_factor_timeline": crest.to_summary_dict(),
@@ -164,11 +170,10 @@ def _analyze_file_impl(
     }
     findings = generate_findings(summary).to_dict()
 
-    # A destination may legitimately be reused for either report kind. Treat
-    # every predictable root artifact as AudioAtlas-owned so switching between
-    # a single report and a catalog cannot leave a misleading mixed folder.
-    owned_names = set(SINGLE_REPORT_FILENAMES | CATALOG_FILENAMES)
-    owned_names.update(graph.filename for graph in graph_specs)
+    # A destination may legitimately be reused for any generated artifact kind.
+    # Treat every predictable root artifact as AudioAtlas-owned so switching
+    # among reports, catalogs, and revision diffs cannot leave a mixed folder.
+    owned_names = set(ALL_GENERATED_FILENAMES)
     with staged_output_directory(out) as staging:
         for graph in selected_graphs:
             graph.render(bundle, staging / graph.filename, cfg)

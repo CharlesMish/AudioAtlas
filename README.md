@@ -9,15 +9,16 @@ bundle of HTML, Markdown, JSON, PNG plots, and an ownership manifest. The report
 helps you decide **where to listen more carefully**; it does not decide whether
 the music is good.
 
-## Status: `0.2.0a3` — calibration readiness and workflow polish
+## Status: `0.2.0a4` — comparable revisions and durable calibration
 
 AudioAtlas is a public alpha. The report pipeline, graph registry, sections, and
 catalog workflows are usable, but finding thresholds remain in calibration.
 Treat findings as review prompts—not diagnoses, scores, or mastering decisions.
 See [the project charter](PROJECT_CHARTER.md) for the product boundary and
 [the finding-rule ledger](docs/FINDING_RULES.md) for exact trigger semantics.
-This release keeps the `0.2.0a2` finding ruleset unchanged while improving
-calibration, review, compatibility, launcher, and CLI workflows.
+This release keeps the `0.2.0a2` finding ruleset unchanged while adding
+explicit analysis provenance, guarded same-track revision deltas, calibration
+replay, measured plot alt text, and stronger invariant/error-boundary tests.
 
 ![AudioAtlas report overview](docs/assets/readme/report_overview.png)
 
@@ -32,6 +33,11 @@ calibration, review, compatibility, launcher, and CLI workflows.
   network dependency.
 - Records bounded review prompts with stable rule IDs, typed evidence, and
   associated graph keys for audit and future linking.
+- Records path-safe analysis provenance: configuration, measurement-code,
+  dependency, decoder, and environment fingerprints.
+- Compares two revisions of the **same track** through descriptive B-minus-A
+  deltas and finding churn, with no ranking or preference language.
+- Gives plot images measured-value alt text in both HTML and Markdown reports.
 - Supports user-defined time sections and descriptive folder catalogs.
 - Excludes machine-local absolute paths from report data by default.
 - Renders into a staging folder and rolls back a failed publication so an
@@ -45,7 +51,7 @@ calibration, review, compatibility, launcher, and CLI workflows.
 
 - No mix, loudness, mastering, or quality score.
 - No automated EQ, compression, or mastering prescription.
-- No reference-track ranking.
+- No reference-track ranking or cross-track winner comparison.
 - No genre, instrument, source, key, or automatic section detection.
 - No source separation, cloud dashboard, playback engine, or DAW integration.
 - No claim that a threshold crossing is audible, bad, or musically wrong.
@@ -92,6 +98,9 @@ Open `reports/song/report.html` directly in a browser. The first analysis in
 a fresh environment can take longer while scientific libraries initialize;
 AudioAtlas prints a preparation message immediately, and lightweight commands
 such as `--version`, `--help`, and `themes` avoid loading the analysis stack.
+The `0.2.0a4` package also constrains Numba to the clean-smoked `0.65.x`
+line; see [compatibility policy](docs/COMPATIBILITY.md) for the observed
+Numba 0.66.0 / llvmlite 0.48.0 failure boundary.
 
 Common variants:
 
@@ -110,7 +119,38 @@ uv run audioatlas analyze song.wav --out reports/dark --theme midnight_studio
 
 # Explicitly include absolute local paths (off by default)
 uv run audioatlas analyze song.wav --out reports/local --include-local-paths
+
+# Give related exports the same opaque revision token; only its SHA-256 is stored
+uv run audioatlas analyze mix-v3.wav --out reports/mix-v3 --track-id "private-song-token"
 ```
+
+## Compare revisions of the same track
+
+Analyze both exports with the same `--track-id` token, then compare their
+completed report folders:
+
+```bash
+uv run audioatlas analyze mix-v3.wav --out reports/mix-v3 --track-id "private-song-token"
+uv run audioatlas analyze mix-v4.wav --out reports/mix-v4 --track-id "private-song-token"
+uv run audioatlas diff reports/mix-v3 reports/mix-v4 --out reports/mix-v3-to-v4
+```
+
+The raw token is not serialized; each report stores only its SHA-256 digest.
+Hashing prevents casual plaintext disclosure, but it does not make a short or
+reused token secret: a guessed token can be hashed again, and reuse can link
+separate reports. Use a unique, high-entropy token per track. The command
+argument may also remain in shell history. Matching digests establish only that
+the same token was supplied—not that AudioAtlas independently recognized the
+music. Conflicting digests are never overridden.
+
+The diff output directory must be separate from both source report folders.
+It emits `revision_diff.json`, `revision_diff.md`, and `revision_diff.html`.
+It reports B-minus-A changes in scalar measurements, broad-band medians, and
+finding appearance, disappearance, or changed prompt fields. It does not
+name a preferred revision. Reports with missing identity require the explicit
+`--confirm-same-track` assertion. Reports with incompatible or missing analysis
+provenance are refused unless `--allow-incomparable` is deliberately supplied;
+the resulting artifact remains prominently caveated.
 
 ### Graph profiles
 
@@ -231,6 +271,11 @@ reports/song/
 └── peak_timeline.png
 ```
 
+`summary.json` also records `source_identity` and `analysis_provenance`. The
+identity block contains no raw token. The provenance block separates a
+cross-environment compatible-analysis signature from a stricter exact-environment
+signature so downstream comparisons can state what matched.
+
 The historical filename `band_energy_timeline.png` remains stable for existing
 links and graph configurations. Its current title and schema define the actual
 measurement: **relative mean spectral power per included FFT bin**, not total
@@ -285,6 +330,20 @@ uv run python scripts/prepare_calibration_review.py private_reports \
   --out finding_review.csv \
   --private-map private_asset_map.csv
 ```
+
+After the ledger is frozen and reviewed, replay the current finding rules over
+the saved summaries without opening the audio:
+
+```bash
+uv run python scripts/replay_calibration_rules.py private_reports \
+  --asset-map private_asset_map.csv \
+  --review-ledger finding_review.csv \
+  --out rule_replay.json
+```
+
+The replay first verifies that each report still matches the evidence hash in
+the human-review ledger, then records anonymous appeared/disappeared/changed
+prompt rows. It does not replace listening judgments or re-run measurements.
 
 The private musical-corpus gate is documented in
 [`docs/calibration/README.md`](docs/calibration/README.md) and the concrete

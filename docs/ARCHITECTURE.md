@@ -9,8 +9,9 @@ There is no server, plugin system, hidden state, or cloud dependency.
 
 ```text
 cli.py
-  ├── pipeline.py ── one-track/section orchestration
-  └── batch.py    ── folder orchestration
+  ├── pipeline.py      ── one-track/section orchestration
+  ├── batch.py         ── folder orchestration
+  └── revision_diff.py ── guarded same-track report deltas
          ↓
 io.py ── decoded audio + portable metadata
          ↓
@@ -20,9 +21,14 @@ graphs/registry.py + graphs/adapters.py
          ↓
 visualize/*.py ── result dataclass → PNG
          ↓
-report.py / html_report.py / catalog_report.py
+provenance.py ── path-safe configuration/code/environment fingerprints
+         ↓
+report.py / html_report.py / catalog_report.py / alt_text.py
          ↓
 output.py ── staged publication + ownership manifest
+
+scripts/prepare_calibration_review.py
+  └── scripts/replay_calibration_rules.py ── frozen-summary finding churn
 ```
 
 ## Layer rules
@@ -35,8 +41,12 @@ output.py ── staged publication + ownership manifest
 | `visualize/*` | rendering supplied results | decoding or analysis |
 | `pipeline.py` | one coherent run and summary assembly | DSP math |
 | `batch.py` | per-file isolation and catalog assembly | DSP math or ranking |
+| `provenance.py` | canonical hashes, dependency/decoder/environment metadata, opaque identity digest | source paths, audio recognition, quality inference |
+| `revision_diff.py` | same-track guard, comparability assessment, descriptive B-minus-A artifacts | audio analysis, cross-track ranking, preferred-version claims |
+| `alt_text.py` | measured descriptions from existing summary values | analysis recomputation or musical inference |
 | report writers | static presentation | new measurements or causal claims |
 | `output.py` | staged publication and owned-artifact cleanup | analysis or interpretation |
+| calibration scripts | anonymous review/replay evidence and hash verification | opening audio or replacing human listening |
 | `cli.py` | arguments, lightweight discovery, and friendly user errors | business logic |
 
 ## CLI loading boundary
@@ -94,6 +104,53 @@ result or exception leaves that frame, `pipeline.py` explicitly collects
 renderer/artist reference cycles. This prevents repeated in-process catalog
 runs from retaining completed Matplotlib graphs and their analysis bundles.
 
+
+## Scientific dependency boundary
+
+Librosa uses Numba/llvmlite in analysis paths, so those transitive packages are
+part of the executable measurement environment rather than incidental build
+tools. AudioAtlas `0.2.0a4` promotes Numba into the direct dependency contract
+and constrains it to `>=0.65.1,<0.66` after a clean Python 3.13 report stalled
+and crashed with Numba 0.66.0 / llvmlite 0.48.0 but completed with Numba 0.65.1
+/ llvmlite 0.47.0. Dependency versions are recorded in provenance; widening
+this band requires a clean installed-wheel analysis smoke.
+
+## Provenance and comparison boundary
+
+Each one-track summary records a canonical analysis-config hash, measurement
+code hash, finding-rule code hash, dependency/decoder versions, named method
+details, and an environment block. `compatible_analysis_sha256` excludes the
+platform block; `exact_environment_sha256` includes it. This lets comparison
+code distinguish exact recorded environments from compatible measurement
+implementations without claiming bit-identical numerics.
+
+`--track-id` is normalized and hashed before serialization. The digest omits
+plaintext but is not presented as a secret or an audio fingerprint. `revision_diff.py`
+accepts matching non-null digests automatically, requires an explicit
+`--confirm-same-track` assertion when identity is absent, and refuses conflicting
+digests. It then refuses missing/different compatible provenance unless
+`--allow-incomparable` is used. The resulting JSON, Markdown, and HTML preserve
+that override and the reasons. Finding-rule code/ruleset identity is assessed
+separately: scalar comparability may remain intact while prompt churn is labeled
+as potentially caused by source and/or rule changes. No diff path opens audio or
+produces a score.
+
+## Calibration replay boundary
+
+The human-review worksheet freezes a digest of `summary.json`, `findings.json`,
+and the output manifest. Replay requires that ledger and the private anonymous
+asset map, verifies every digest, and invokes the current finding rules on the
+saved summary only. It records appeared/disappeared/changed/unchanged prompts.
+Because measurements are not rerun, replay isolates finding-rule churn from DSP
+or decoder changes; it does not validate the music or replace reviewer labels.
+
+## Accessible plot descriptions
+
+`alt_text.py` reads already-serialized summary values and emits bounded,
+nonjudgmental plot descriptions such as a measured RMS or LUFS range. HTML and
+Markdown use the same helper, and the HTML lightbox inherits the selected
+image's alt text. The helper never imports analysis or plotting code.
+
 ## Adding a measurement slice
 
 1. Add a frozen result dataclass and pure `compute_*` function.
@@ -116,6 +173,8 @@ changing a field type requires a schema decision and migration note.
 ## Product boundary
 
 The architecture is intentionally optimized for static, inspectable reports.
-Scores, automated mastering advice, classifiers, reference ranking, hosted
-services, playback/DAW state, and a plugin platform are not incremental feature
-slices; they would be product redesigns governed by `PROJECT_CHARTER.md`.
+Scores, automated mastering advice, classifiers, cross-track reference
+ranking, hosted services, playback/DAW state, and a plugin platform are not
+incremental feature slices; they would be product redesigns governed by
+`PROJECT_CHARTER.md`. Guarded descriptive comparison between user-asserted
+revisions of one track is the narrow exception documented above.

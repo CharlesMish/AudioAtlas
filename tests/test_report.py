@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from audioatlas import __version__
+from audioatlas.alt_text import plot_alt_text
 from audioatlas.graphs import all_graphs
 from audioatlas.html_report import write_report_html
 from audioatlas.release import RELEASE_LABEL, SUMMARY_SCHEMA_VERSION
@@ -826,12 +827,13 @@ def test_write_report_html_renders_relative_plot_links_and_curated_names(
     path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
     text = path.read_text(encoding="utf-8")
 
-    assert '<img src="log_spectrogram.png" alt="Log-Frequency Spectrogram">' in text
-    assert '<img src="average_spectrum.png" alt="Welch Average Spectrum">' in text
-    assert (
-        '<img src="band_energy_timeline.png" alt="Relative Mean Band Power Timeline">'
-        in text
-    )
+    for filename in (
+        "log_spectrogram.png",
+        "average_spectrum.png",
+        "band_energy_timeline.png",
+    ):
+        expected_alt = plot_alt_text(filename, summary)
+        assert f'<img src="{filename}" alt="{expected_alt}">' in text
     assert "plot-card plot-card-wide" in text
     assert "What this shows:" in text
 

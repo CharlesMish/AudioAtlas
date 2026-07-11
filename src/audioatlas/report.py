@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from audioatlas import __version__
+from audioatlas.alt_text import plot_alt_text
 from audioatlas.graphs.registry import RELATIVE_DB_NOTE, graph_by_filename
 from audioatlas.release import RELEASE_LABEL
 from audioatlas.utils import mmss
@@ -361,7 +362,19 @@ def write_report_md(
     lines.append(f"- AudioAtlas: {build_metadata['audioatlas_version']}")
     if "git_hash" in build_metadata:
         lines.append(f"- Git: {build_metadata['git_hash']}")
-    lines.append(f"- Release label: {RELEASE_LABEL}\n")
+    lines.append(f"- Release label: {RELEASE_LABEL}")
+    provenance = (
+        summary.get("analysis_provenance")
+        if isinstance(summary.get("analysis_provenance"), dict)
+        else {}
+    )
+    config_hash = provenance.get("analysis_config_sha256")
+    compatible_hash = provenance.get("compatible_analysis_sha256")
+    if isinstance(config_hash, str):
+        lines.append(f"- Analysis config SHA-256: `{config_hash}`")
+    if isinstance(compatible_hash, str):
+        lines.append(f"- Comparable-analysis SHA-256: `{compatible_hash}`")
+    lines.append("")
 
     lines.append("## Level metrics\n")
     lines.append("| Metric | Value | Unit |")
@@ -654,7 +667,8 @@ def write_report_md(
         lines.append(f"### {title}\n")
         if note is not None:
             lines.append(f"{note}\n")
-        lines.append(f"![{title}]({filename})\n")
+        alt_text = plot_alt_text(filename, summary)
+        lines.append(f"![{alt_text}]({filename})\n")
 
     lines.append("## Human notes\n")
     lines.append("- Observations:")

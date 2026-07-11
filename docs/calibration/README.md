@@ -30,6 +30,8 @@ Use fixtures to establish:
 - path safety, decoder failure behavior, and report stability;
 - counterexamples that prevent unrelated musical claims.
 
+The committed malformed-header fixtures under `tests/fixtures/malformed/` also
+lock the user-facing error boundary for truncated WAV and FLAC-like inputs.
 Fixture success does not establish usefulness on music.
 
 ### Private authorized musical corpus
@@ -39,8 +41,8 @@ sparse/dense, acoustic/electronic, bright/dark/bandwidth-limited, mono/wide,
 clean/distorted, rough/final, lossless/lossy, and varied sample-rate material.
 
 Do not commit copyrighted/private audio, generated private reports, source
-filenames, or local paths. Version-control only anonymous coverage/outcome
-records when appropriate.
+filenames, local paths, or the private asset map. Version-control only anonymous
+coverage/outcome records when appropriate.
 
 ## Preparing the human review sheet
 
@@ -56,12 +58,46 @@ uv run python scripts/prepare_calibration_review.py \
 
 The main worksheet uses anonymous `asset-###` IDs and includes package, schema,
 ruleset, report/finding hashes, trigger visibility, exact prompt wording,
-non-claim boundaries, checks, metrics, thresholds, and graph fields. It does not
-include filenames or report paths. The optional private map connects asset IDs
-to basenames and relative report folders; keep it out of version control.
+non-claim boundaries, checks, metrics, thresholds, graph fields, and the report's
+analysis-configuration and comparability signatures. It does not include
+filenames or report paths. The optional private map connects asset IDs to
+basenames and relative report folders; keep it out of version control.
 
 The script preflights both outputs and refuses to overwrite existing labels
 unless `--force` is supplied.
+
+## Replaying a candidate ruleset
+
+After the first human review has been frozen, run the candidate checkout's
+finding logic against the saved summaries:
+
+```bash
+uv run python scripts/replay_calibration_rules.py \
+  private_calibration/reports \
+  --asset-map private_calibration/private_asset_map.csv \
+  --review-ledger private_calibration/finding_review.csv \
+  --out private_calibration/rule_replay.json \
+  --csv private_calibration/rule_replay.csv
+```
+
+The replay tool:
+
+- verifies each report's current `summary.json`, `findings.json`, and output
+  manifest against the frozen `report_evidence_sha256` in the review ledger;
+- refuses a changed or missing evidence set instead of silently comparing a new
+  analysis with old human labels;
+- reruns the current finding rules on the saved summary, without opening or
+  copying audio;
+- reports anonymous per-rule `appeared`, `disappeared`, `changed`, and
+  `unchanged` outcomes, including payload hashes and changed fields;
+- includes baseline/candidate finding-rule implementation hashes, the
+  candidate ruleset, and report comparability signatures, but no source
+  filenames or report paths in the public replay outputs.
+
+Replay isolates **finding-rule churn**. It does not rerun DSP measurements, prove
+that a changed prompt is useful, replace listening, or justify comparing reports
+with incompatible analysis provenance. A change to measurement code or analysis
+configuration requires fresh reports and a new human-review record.
 
 ## Prompt review labels
 
@@ -100,12 +136,12 @@ it in summaries/plots when technically useful.
 - `MANUAL_CALIBRATION_WORKSHEET.csv` — aggregate per-rule decision ledger.
 
 Calibration records should identify package, schema, and ruleset versions,
-reviewer/date, anonymous asset ID, report evidence hash, and finding-payload
-hash.
+reviewer/date, anonymous asset ID, report evidence hash, finding-payload hash,
+and analysis provenance signatures.
 
 ## What this package does not claim
 
-The repository includes the harness, public fixtures, runbook, and templates. It
-does **not** claim that private musical calibration is complete. That requires
-human listening, authorized material, a frozen record, and rule-level
-adjudication.
+The repository includes the harness, public fixtures, invariant tests, runbook,
+review preparation, and ruleset replay. It does **not** claim that private
+musical calibration is complete. That requires human listening, authorized
+material, a frozen record, and rule-level adjudication.

@@ -6,6 +6,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from audioatlas.alt_text import plot_alt_text
 from audioatlas.graphs.registry import graph_by_filename
 from audioatlas.release import RELEASE_LABEL
 from audioatlas.report import (
@@ -126,6 +127,7 @@ TECHNICAL_BLOCKS: list[tuple[str, str]] = [
     ("Chroma CQT", "chroma_cqt"),
     ("Short-term LUFS", "short_term_lufs"),
     ("Analysis config", "analysis_config"),
+    ("Analysis provenance", "analysis_provenance"),
 ]
 
 
@@ -226,7 +228,7 @@ def write_report_html(
         _delivery_context_html(levels),
         "</section>",
         _findings_section(findings, report_max_time_ranges),
-        _plots_section(plot_files),
+        _plots_section(plot_files, summary),
         _glossary_section(),
         _technical_section(summary),
         _notes_section(),
@@ -399,7 +401,7 @@ def _html_time_ranges(time_ranges: list[Any], max_display: int) -> list[str]:
     return lines
 
 
-def _plots_section(plot_files: list[str]) -> str:
+def _plots_section(plot_files: list[str], summary: dict[str, Any]) -> str:
     lines = [
         '<section id="plots">',
         "<h2>Plots</h2>",
@@ -412,12 +414,13 @@ def _plots_section(plot_files: list[str]) -> str:
         title = _plot_display_name(filename)
         class_name = "plot-card plot-card-wide" if _plot_is_wide(filename) else "plot-card"
         caption = _plot_caption(filename)
+        alt_text = plot_alt_text(filename, summary)
         lines.extend(
             [
                 f'<article class="{class_name}">',
                 f"<h3>{_h(title)}</h3>",
                 f'<div class="plot-image-wrapper" data-title="{_h(title)}" data-filename="{_h(filename)}">',
-                f'<img src="{_h(filename)}" alt="{_h(title)}">',
+                f'<img src="{_h(filename)}" alt="{_h(alt_text)}">',
                 "</div>",
                 f'<div class="plot-filename">{_h(filename)}</div>',
                 f'<p class="plot-desc">{_h(caption)}</p>',
@@ -832,12 +835,13 @@ def _lightbox_overlay() -> str:
         'items.push({'
         'title:w.getAttribute("data-title")||"Plot",'
         'filename:w.getAttribute("data-filename")||"",'
-        'src:img.getAttribute("src")||""'
+        'src:img.getAttribute("src")||"",'
+        'alt:img.getAttribute("alt")||"Enlarged plot image"'
         '});'
         '}'
         '}'
         'function updateCounter(){if(!items.length)return;lbCounter.textContent=(currentIndex+1)+" / "+items.length;}'
-        'function showItem(idx){if(!items.length)return;currentIndex=((idx%items.length)+items.length)%items.length;var it=items[currentIndex];lbImg.src=it.src;lbTitle.textContent=it.title;lbFilename.textContent=it.filename;updateCounter();}'
+        'function showItem(idx){if(!items.length)return;currentIndex=((idx%items.length)+items.length)%items.length;var it=items[currentIndex];lbImg.src=it.src;lbImg.alt=it.alt;lbTitle.textContent=it.title;lbFilename.textContent=it.filename;updateCounter();}'
         'function openLightbox(startIndex){if(!items.length)collectItems();if(!items.length)return;currentIndex=startIndex||0;showItem(currentIndex);lb.classList.add("open");lb.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";isOpen=true;setTimeout(function(){btnClose&&btnClose.focus();},30);}'
         'function closeLightbox(){lb.classList.remove("open");lb.setAttribute("aria-hidden","true");document.body.style.overflow="";isOpen=false;}'
         'function goPrev(){if(!items.length)return;showItem(currentIndex-1);}'

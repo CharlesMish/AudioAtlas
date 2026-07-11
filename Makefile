@@ -8,8 +8,9 @@ GOLDEN_WAV := tests/fixtures/sine_1k_-6dbfs_2s.wav
 CALIBRATION_REPORTS ?= private_calibration/reports
 CALIBRATION_REVIEW ?= private_calibration/finding_review.csv
 CALIBRATION_MAP ?= private_calibration/private_asset_map.csv
+CALIBRATION_REPLAY ?= private_calibration/rule_replay.json
 
-.PHONY: help venv install test lint check demo golden calibration-fixtures calibration-review clean
+.PHONY: help venv install test lint check demo golden calibration-fixtures calibration-review calibration-replay clean
 
 help:  ## Show this help.
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) \
@@ -45,6 +46,11 @@ calibration-fixtures:  ## Generate rights-safe deterministic calibration audio.
 calibration-review:  ## Seed an anonymous review CSV from $(CALIBRATION_REPORTS).
 	$(PY) scripts/prepare_calibration_review.py $(CALIBRATION_REPORTS) \
 		--out $(CALIBRATION_REVIEW) --private-map $(CALIBRATION_MAP)
+
+calibration-replay:  ## Replay current finding rules over the frozen reviewed summaries.
+	$(PY) scripts/replay_calibration_rules.py $(CALIBRATION_REPORTS) \
+		--asset-map $(CALIBRATION_MAP) --review-ledger $(CALIBRATION_REVIEW) \
+		--out $(CALIBRATION_REPLAY)
 
 clean:  ## Remove caches, builds, demo outputs.
 	rm -rf .pytest_cache .ruff_cache .mypy_cache

@@ -1,7 +1,7 @@
 # AudioAtlas Project Charter
 
 **Current phase:** convergence and public-alpha hardening
-**Current release line:** `0.2.0a3`
+**Current release line:** `0.2.0a4`
 **Authoritative for:** product identity, scope, interpretation rules, and release direction
 
 ## North star
@@ -30,7 +30,8 @@ while staying honest about installation and platform requirements.
 AudioAtlas should remain:
 
 - local-first, offline, and private by default;
-- one-track-first, with optional manual sections and descriptive catalogs;
+- one-track-first, with optional manual sections, descriptive catalogs, and
+  guarded deltas between user-asserted revisions of that same track;
 - measurement-based and inspectable;
 - static and portable rather than tied to a hosted dashboard;
 - restrained about interpretation;
@@ -41,7 +42,7 @@ AudioAtlas should not become:
 - a mix, mastering, or quality score;
 - an automated mastering adviser;
 - a genre, instrument, source, key, or section classifier;
-- a reference-track ranking system;
+- a reference-track ranking system or cross-track winner comparison;
 - a cloud account, telemetry product, DAW, or real-time playback engine;
 - a plugin platform before a concrete need justifies that complexity.
 
@@ -63,6 +64,17 @@ new product decision, not an incidental pull request.
 6. **Compatibility should be deliberate.** When a misleading name is repaired,
    prefer a precise new field plus a documented temporary alias rather than a
    silent semantic change.
+7. **Comparison requires provenance.** Revision deltas state whether analysis
+   configuration, measurement code, dependencies, decoder, and environment
+   fingerprints match; finding-rule identity is assessed separately, and
+   incompatible measurement reports are refused by default.
+8. **A revision token is an assertion, not recognition.** Matching hashed tokens
+   mean the user supplied the same identity token. They do not prove that the
+   underlying files contain the same composition. Conflicting tokens cannot be
+   overridden.
+9. **Deltas remain descriptive.** Same-track revision comparison may report
+   B-minus-A measurements and prompt churn, never a winner, score, or preferred
+   version.
 
 ## Project vocabulary
 
@@ -75,6 +87,9 @@ new product decision, not an incidental pull request.
 | Section | A user-supplied source time range | Automatically detected song structure |
 | Graph profile | A rendered-plot selection | A cheaper or incomplete analysis mode |
 | Catalog pattern | A trait shared by many files in a folder | A ranking or recommendation |
+| Revision identity | SHA-256 of a user-supplied token shared by exports of one track | Automatic audio recognition |
+| Revision delta | B-minus-A measurements for two asserted revisions of one track | A reference-track verdict or preference |
+| Compatible analysis signature | Hash of configuration, measurement code, methods, and dependency/decoder versions | Proof of bit-identical results on every machine |
 
 ## Evidence hierarchy
 
@@ -85,18 +100,21 @@ new product decision, not an incidental pull request.
 | Does a finding help? | Representative synthetic counterexamples and musical calibration review | One attractive example |
 | Did a workflow run? | Executed command and inspected output | README claim or supplied log alone |
 | Is a report portable? | Shared-folder inspection and path-leak test | Intention or UI copy |
+| Are two reports comparable? | Matching recorded provenance signatures plus explicit scope checks | Similar filenames or matching package labels alone |
 | Is a launcher nontechnical? | Native platform rehearsal from a clean machine | Presence of a double-click script |
 
 ## Current release priorities
 
-The `0.2.0a3` line prioritizes:
+The `0.2.0a4` line prioritizes:
 
 1. interpretation integrity and stable finding rules;
 2. safe errors, path privacy, and partial batch success;
 3. coherent output publication without stale artifacts;
 4. release/documentation and compatibility truth;
-5. a runnable musical-calibration handoff and cross-platform launcher evidence;
-6. lightweight command discovery without weakening the analysis stack.
+5. a frozen-evidence calibration replay workflow and cross-platform launcher evidence;
+6. guarded same-track revision deltas backed by explicit provenance;
+7. accessibility through measured-value plot descriptions;
+8. mechanism-level invariant and malformed-input regression coverage.
 
 New generic metrics, themes, dashboards, and major interaction systems are below
 those priorities.
@@ -109,6 +127,8 @@ A public beta should require more than a passing unit suite. At minimum:
 - supported Python/platform claims are represented in CI or explicitly narrowed;
 - deterministic counterexample fixtures cover the finding rules;
 - a private, authorized musical corpus has been reviewed and the outcome logged;
+- candidate finding-rule changes have been replayed against the frozen reviewed
+  summaries and any prompt churn adjudicated;
 - no known default finding makes a factual or context-blind musical claim;
 - default reports and catalogs contain no machine-local absolute paths;
 - native launcher wording matches what has actually been rehearsed.

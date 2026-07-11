@@ -7,6 +7,56 @@ tracked separately in `src/audioatlas/release.py`.
 
 No entries yet.
 
+## `0.2.0a4` — 2026-07-11
+
+### Comparable same-track revisions
+
+- Added a guarded `audioatlas diff` workflow for two revisions of the same
+  track. It emits static JSON, Markdown, and HTML containing descriptive
+  `B - A` measurement deltas, broad-band median shifts, and finding-rule churn.
+- Added optional `--track-id` support for single-track and manual-section
+  reports. AudioAtlas stores only the token's SHA-256 digest; conflicting
+  identities are a hard error, while missing identities require an explicit
+  `--confirm-same-track` assertion.
+- Added strict comparability checks. Exact-environment and compatible-analysis
+  signatures are distinguished, materially different analysis signatures are
+  refused by default, and an explicit override remains visibly caveated.
+- Refused diff output paths that would overwrite either source report folder.
+- Kept cross-track ranking, reference matching, preference language, and
+  better/worse judgments outside the product contract.
+
+### Provenance, calibration durability, and inspectability
+
+- Added an `analysis_provenance` block to `summary.json`, including canonical
+  analysis-configuration, measurement-code, dependency/decoder, compatible
+  analysis, and exact-environment hashes. Summary schema is now `0.2.1`.
+- Added a calibration ruleset replay tool that verifies a frozen anonymous
+  review ledger against report evidence hashes, reruns the candidate finding
+  rules on saved summaries, and reports appeared/disappeared/changed/unchanged
+  prompt churn without opening or copying audio.
+- Prevented replay output paths from replacing the frozen asset map or review
+  ledger, even under `--force`.
+- Extended calibration worksheets with provenance signatures so mixed analysis
+  conditions cannot be merged silently.
+- Added measured-value plot alt text to both HTML and Markdown reports and kept
+  lightbox alternatives synchronized with the selected image.
+
+### Regression and error-boundary hardening
+
+- Added deterministic property-based invariants for gain/PLR behavior, channel
+  swap symmetry, silence/sub-second degradation, and DC offset behavior.
+- Added committed malformed WAV and FLAC fixtures plus CLI, loader, and mixed
+  batch tests that assert path-safe domain errors at the decoder boundary.
+- Added an explicit `numba>=0.65.1,<0.66` runtime compatibility band after
+  a clean Python 3.13 installation selected Numba 0.66.0 / llvmlite 0.48.0
+  and stalled inside LLVM code generation; the same wheel completed its report
+  smoke after resolving Numba 0.65.1 / llvmlite 0.47.0.
+- Extended output ownership to revision-diff artifacts while keeping unrelated
+  human files protected during report-kind switches.
+- Archived the independent Fable `0.2.0a3` review that motivated this bounded
+  pass. The finding ruleset remains `0.2.0a2`; no default trigger semantics or
+  interpretive thresholds changed.
+
 ## `0.2.0a3` — 2026-07-11
 
 ### Calibration and review readiness

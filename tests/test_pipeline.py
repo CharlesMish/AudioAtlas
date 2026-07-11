@@ -63,6 +63,14 @@ def test_pipeline_writes_expected_outputs(tmp_path: Path, sr: int):
     assert summary["metadata"]["path"] == "song.wav"
     assert summary["metadata"]["path_kind"] == "basename"
     assert summary["metadata"]["local_paths_included"] is False
+    assert summary["source_identity"] == {"kind": "none", "track_id_sha256": None}
+    provenance = summary["analysis_provenance"]
+    assert provenance["audioatlas_version"] == "0.2.0a4"
+    assert provenance["summary_schema_version"] == SUMMARY_SCHEMA_VERSION
+    assert len(provenance["analysis_config_sha256"]) == 64
+    assert len(provenance["measurement_code_sha256"]) == 64
+    assert len(provenance["compatible_analysis_sha256"]) == 64
+    assert len(provenance["exact_environment_sha256"]) == 64
     assert str(tmp_path) not in json.dumps(summary)
     assert "levels" in summary
     assert "peak_timeline" in summary
@@ -110,6 +118,33 @@ def test_pipeline_writes_expected_outputs(tmp_path: Path, sr: int):
         assert "://" not in src
         assert not src.startswith(("/", "\\"))
         assert (result.out_dir / src).exists()
+
+
+def test_pipeline_track_id_is_hashed_and_never_serializes_the_raw_token(
+    tmp_path: Path, sr: int
+):
+    path = tmp_path / "revision.wav"
+    _write_short_sine(path, sr)
+    token = "high-entropy-private-revision-token"
+
+    result = analyze_file(
+        path,
+        tmp_path / "report",
+        config=_small_config(),
+        selection=GraphSelection(profile="minimal"),
+        track_id=token,
+    )
+
+    summary_text = result.summary_path.read_text(encoding="utf-8")
+    markdown = result.report_path.read_text(encoding="utf-8")
+    html = result.html_report_path.read_text(encoding="utf-8")
+    identity = result.summary["source_identity"]
+    assert identity["kind"] == "user-supplied-sha256"
+    assert isinstance(identity["track_id_sha256"], str)
+    assert len(identity["track_id_sha256"]) == 64
+    assert token not in summary_text
+    assert token not in markdown
+    assert token not in html
 
 
 def test_pipeline_reduced_graph_selection_keeps_summary_complete_and_supports_path_opt_in(
@@ -227,6 +262,30 @@ def test_rerun_removes_stale_owned_plot_preserves_human_files_and_survives_bad_i
     }
     assert after == before
     assert not list(tmp_path.glob(".report.audioatlas-*"))
+
+
+
+def test_pipeline_hashes_optional_track_identity_without_storing_the_token(
+    tmp_path: Path, sr: int
+):
+    path = tmp_path / "song.wav"
+    _write_short_sine(path, sr)
+    token = "private revision family token"
+
+    result = analyze_file(
+        path,
+        tmp_path / "report",
+        config=_small_config(),
+        selection=GraphSelection(profile="minimal"),
+        track_id=token,
+    )
+
+    identity = result.summary["source_identity"]
+    assert identity["kind"] == "user-supplied-sha256"
+    assert isinstance(identity["track_id_sha256"], str)
+    assert len(identity["track_id_sha256"]) == 64
+    serialized = result.summary_path.read_text(encoding="utf-8")
+    assert token not in serialized
 
 
 def test_analyze_file_collects_renderer_cycles_after_success(

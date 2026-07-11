@@ -88,11 +88,18 @@ jobs:
           /tmp/audioatlas-wheel-smoke/bin/audioatlas analyze \
             tests/fixtures/sine_1k_-6dbfs_2s.wav \
             --out /tmp/audioatlas-wheel-report \
-            --graphs-profile minimal
+            --graphs-profile minimal \
+            --track-id ci-golden
+          /tmp/audioatlas-wheel-smoke/bin/audioatlas diff \
+            /tmp/audioatlas-wheel-report \
+            /tmp/audioatlas-wheel-report \
+            --out /tmp/audioatlas-wheel-diff
           /tmp/audioatlas-wheel-smoke/bin/python - <<'PY'
           import json
+          from importlib.metadata import version
           from pathlib import Path
 
+          assert version('numba').startswith('0.65.')
           out = Path('/tmp/audioatlas-wheel-report')
           required = {
               '.audioatlas-output.json',
@@ -104,8 +111,19 @@ jobs:
           assert required <= {path.name for path in out.iterdir()}
           assert len(list(out.glob('*.png'))) == 4
           summary = json.loads((out / 'summary.json').read_text(encoding='utf-8'))
-          assert summary['schema_version'] == '0.2.0'
+          assert summary['schema_version'] == '0.2.1'
           assert summary['metadata']['path_kind'] == 'basename'
+          assert len(summary['analysis_provenance']['compatible_analysis_sha256']) == 64
+          assert len(summary['source_identity']['track_id_sha256']) == 64
+          diff = Path('/tmp/audioatlas-wheel-diff')
+          assert {'revision_diff.json', 'revision_diff.md', 'revision_diff.html'} <= {
+              path.name for path in diff.iterdir()
+          }
+          diff_payload = json.loads(
+              (diff / 'revision_diff.json').read_text(encoding='utf-8')
+          )
+          assert diff_payload['schema_version'] == '0.1.0'
+          assert diff_payload['comparability']['status'] == 'exact'
           PY
 
   platform-smoke:
@@ -134,7 +152,8 @@ jobs:
         run: |
           audioatlas --version
           audioatlas themes
-          audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav --out aa_platform_report --graphs-profile minimal
+          audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav --out aa_platform_report --graphs-profile minimal --track-id platform-golden
+          audioatlas diff aa_platform_report aa_platform_report --out aa_platform_diff
 
       - name: Verify generated contract
         shell: python
@@ -155,3 +174,10 @@ jobs:
           assert len(list(out.glob('*.png'))) == 4
           summary = json.loads((out / 'summary.json').read_text(encoding='utf-8'))
           assert summary['metadata']['path_kind'] == 'basename'
+          assert summary['schema_version'] == '0.2.1'
+          assert len(summary['analysis_provenance']['compatible_analysis_sha256']) == 64
+          diff = Path('aa_platform_diff')
+          assert (diff / 'revision_diff.json').is_file()
+          payload = json.loads((diff / 'revision_diff.json').read_text(encoding='utf-8'))
+          assert payload['schema_version'] == '0.1.0'
+          assert payload['comparability']['status'] == 'exact'

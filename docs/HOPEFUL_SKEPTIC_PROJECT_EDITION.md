@@ -1,7 +1,7 @@
 # Hopeful Skeptic Project Edition — AudioAtlas
 
 **Derived from:** Hopeful Skeptic Core v0.4.1
-**Project Edition version:** `0.1.0`
+**Project Edition version:** `0.1.1`
 **Project Edition status:** Calibrating
 **Compatible project artifacts:** AudioAtlas `0.2.x` public-alpha line
 **Local overrides:** None. This edition narrows and operationalizes the Core; it does not weaken it.
@@ -31,7 +31,7 @@ Musicians, producers, engineers, researchers, and careful listeners who want tra
 AudioAtlas should remain:
 
 - local-first, offline, and private by default;
-- one-track-first, with manual sections and descriptive catalogs as supporting modes;
+- one-track-first, with manual sections, descriptive catalogs, and guarded same-track revision deltas as supporting modes;
 - inspectable and measurement-based;
 - static and portable rather than tied to a hosted dashboard;
 - restrained about musical, causal, and delivery interpretation;
@@ -42,7 +42,7 @@ AudioAtlas should not become:
 - a mix, mastering, loudness, or quality score;
 - an automated EQ/compression/mastering adviser;
 - a genre, source, instrument, key, or automatic section classifier;
-- a reference-track ranking system;
+- a reference-track ranking system or cross-track winner/loser comparison;
 - a cloud service, account system, telemetry product, DAW, or playback engine;
 - a plugin platform or GUI merely because either would look more complete.
 
@@ -52,8 +52,8 @@ A proposal that crosses this ceiling is a product-direction decision requiring e
 
 **Phase:** convergence, calibration readiness, and public-alpha hardening.
 **Current decision:** whether the existing report can earn more trust and become easier to validate without expanding its interpretive authority.
-**Still fluid:** finding eligibility and wording, calibration records, launcher evidence, compatibility timing, onboarding polish, typed boundaries.
-**Expensive to change:** serialized field meanings, public rule IDs, output ownership semantics, report portability, privacy defaults.
+**Still fluid:** finding eligibility and wording, calibration records, launcher evidence, revision-comparison ergonomics, compatibility timing, onboarding polish, typed boundaries.
+**Expensive to change:** serialized field meanings, public rule IDs, comparison signatures, output ownership semantics, report portability, privacy defaults.
 **Frozen unless a material defect appears:** no-score identity, original-level preservation, local static reports, one-track-first product center, analysis/graph/report separation.
 **Expected evidence now:** deterministic tests, inspected outputs, clean builds, failure challenges, schema traceability, real-music human review, and native-platform rehearsal.
 **Premature criticism:** demanding a native application, content classifier, mastering recommendation system, or broad plugin API.
@@ -73,6 +73,10 @@ A proposal that crosses this ceiling is a product-direction decision requiring e
 | Catalog pattern | A descriptive trait shared by files in a folder | Ranking, recommendation, or statistical norm |
 | Output manifest | Record of files/directories AudioAtlas owns in a report folder | Permission to delete arbitrary neighboring content |
 | Calibrating rule | Deterministic semantics exist; musical usefulness is not yet frozen | A validated diagnostic rule |
+| Same-track revision diff | Descriptive `B - A` deltas between user-asserted revisions of one track | Reference matching, preference, or proof of improvement |
+| Track identity digest | SHA-256 of a user-supplied token used to bind revisions | A cryptographic proof that two audio files are the same composition |
+| Compatible analysis signature | Same config, measurement code, methods, decoder, and key dependency versions | Guaranteed bit-identical output across every machine |
+| Calibration replay | Candidate finding rules rerun on frozen saved summaries after evidence-hash checks | Fresh DSP analysis or a substitute for listening |
 
 ## Sources of truth and precedence
 
@@ -86,6 +90,8 @@ A proposal that crosses this ceiling is a product-direction decision requiring e
 | What JSON fields mean | `docs/SUMMARY_SCHEMA.md` + serializers | examples | historical review |
 | What files AudioAtlas may replace | `output.py` + ownership tests | architecture document | folder name |
 | Whether a launcher is easy | clean native-platform rehearsal | CI CLI smoke | existence of a script |
+| Whether two reports are comparable | provenance signatures + scope fields + explicit same-track identity | package labels | similar filenames or visual resemblance |
+| Whether a ruleset changed safely | hash-verified calibration replay + affected human re-review | unit tests | changed prose alone |
 | Whether a release is ready | executed gates + inspected artifacts | artifact-reported ledger | version label |
 
 Runtime behavior and current tests outrank stale prose. Current charter, rule ledger, schema guide, and compatibility policy outrank archived reviews. A human owner decision may change direction, but it should be recorded before a reviewer treats it as project truth.
@@ -164,15 +170,19 @@ Review questions:
 12. **Sleekness scope drift.** Themes, dashboards, playback, animation, AI interpretation, or GUI work outruns calibration, portability, and trust.
 13. **Cold-start misdiagnosis.** Scientific dependencies are weakened or removed to chase seconds when the better first repair is lightweight discovery commands, honest feedback, and measured profiling.
 14. **Historical fossilization.** An earlier review, task board, or Project Edition continues to govern after the product contract changes.
+15. **Comparison laundering.** A same-track delta is presented as evidence that one revision is better, or the command is used across unrelated tracks.
+16. **Provenance theater.** A version string or matching filename is treated as sufficient comparability while config, implementation, decoder, or environment differ.
+17. **Identity overclaim.** A matching user-token digest is treated as proof of composition identity rather than an explicit workflow assertion.
+18. **Replay overclaim.** Finding-rule replay on saved summaries is presented as new DSP execution or as musical validation.
 
 ## Tailored review workflow
 
 1. **Establish the Run Contract.** Name artifact/version, decision, review or implementation mode, access, platform, and edit authority.
 2. **Inventory active truth.** Read the charter, README, limitations, finding rules, schema, compatibility policy, changelog, source, tests, and generated artifact manifest. Treat archive material as history.
 3. **Map decision objects.** Prioritize default report sentences, serialized meanings, destructive paths, failure behavior, release claims, and current gate criteria.
-4. **Run the contradiction sweep.** Compare package/release/ruleset/schema versions; canonical/alias fields; code/docs/report wording; default/strict behavior; CLI/launcher claims; and prior/current artifacts.
+4. **Run the contradiction sweep.** Compare package/release/ruleset/schema versions; canonical/alias fields; provenance signatures; identity/scope assertions; code/docs/report wording; default/strict behavior; CLI/launcher claims; and prior/current artifacts.
 5. **Audit interpretation before style.** For each material prompt, write the narrow supported claim and at least one realistic counterexample. Remove or narrow prose that cannot survive this check.
-6. **Challenge user-critical paths.** At minimum: valid single file, corrupt file, mixed batch, reused output folder, local-path scan, compact/full profile switch, wheel invocation, and one clean-platform smoke when available.
+6. **Challenge user-critical paths.** At minimum: valid single file, corrupt file, mixed batch, reused output folder, local-path scan, compact/full profile switch, guarded same-track diff (matching, missing, and conflicting identity), wheel invocation with freshly resolved runtime dependencies, and one clean-platform smoke when available. Verify any scientific-dependency ceiling against an actual generated report rather than metadata alone.
 7. **Separate evidence states.** Distinguish static inspection, execution, tests, clean installation, native rehearsal, and human musical calibration.
 8. **Reconcile reviews by object.** Preserve independent findings; check the cited code/output; do not average away a material singleton or copy praise as proof.
 9. **Run the free pass.** Re-read the report as a careful listener, scan active files for stale identity language, and inspect one fresh output for anything that feels more authoritative than the evidence.
@@ -190,9 +200,9 @@ Review questions:
 
 ### Implementation and release lens
 
-**Catches:** unsafe paths, destructive cleanup, hidden environment assumptions, partial-success misreporting, package drift, unexecuted claims, and compatibility breaks.
+**Catches:** unsafe paths, destructive cleanup, hidden environment assumptions, partial-success misreporting, package drift, unexecuted claims, compatibility breaks, and provenance/comparison overclaims.
 
-**Required checks:** source/distribution inventory, versions, manifest, install command, user-critical path, failure/rollback challenge, privacy scan, build metadata, and platform boundary.
+**Required checks:** source/distribution inventory, versions, manifest, install command, user-critical path, failure/rollback challenge, privacy scan, build/provenance metadata, diff identity/comparability gates, replay evidence hashes, and platform boundary.
 
 **Output:** intended behavior; observed behavior; verification state; exact defect or cleared concern; acceptance test; residual platform risk.
 
@@ -291,7 +301,7 @@ New constraints or prior reviews to reconcile:
 
 ## Tailoring audit result
 
-This edition was checked against the active `0.2.x` charter, rule ledger, schema, limitations, architecture, release workflow, calibration scaffolding, and the independent `0.2.0a2` Hopeful Skeptic review. It deliberately emphasizes interpretation integrity, privacy, output ownership, release truth, calibration, launcher honesty, and scope discipline.
+This edition was checked against the active `0.2.x` charter, rule ledger, schema, limitations, architecture, release workflow, calibration scaffolding, the independent `0.2.0a2` Hopeful Skeptic review, and the independent `0.2.0a3` Fable review. Version `0.1.1` adds same-track comparison, provenance, replay, and accessibility safeguards while retaining its Calibrating status. It deliberately emphasizes interpretation integrity, privacy, output ownership, release truth, calibration, launcher honesty, and scope discipline.
 
 Known limitations of this edition:
 

@@ -14,7 +14,7 @@ import click
 import yaml
 
 from audioatlas import __version__
-from audioatlas.errors import AudioAtlasError
+from audioatlas.errors import AudioAtlasError, RevisionDiffError
 from audioatlas.graph_profiles import VALID_PROFILES
 
 if TYPE_CHECKING:
@@ -90,6 +90,14 @@ def main() -> None:
     help="YAML file with an optional top-level graphs block.",
 )
 @click.option(
+    "--track-id",
+    default=None,
+    help=(
+        "Optional opaque revision token. AudioAtlas stores only its SHA-256 digest so "
+        "separately named exports can carry matching identity evidence."
+    ),
+)
+@click.option(
     "--include-local-paths",
     is_flag=True,
     help="Include resolved machine-local paths in JSON metadata (off by default for sharing).",
@@ -110,6 +118,7 @@ def analyze(
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
     graphs_config: Path | None,
+    track_id: str | None,
     include_local_paths: bool,
 ) -> None:
     """Analyze one audio file and write a report folder."""
@@ -131,6 +140,7 @@ def analyze(
             theme_name=selected_theme,
             selection=selection,
             include_local_paths=include_local_paths,
+            track_id=track_id,
         )
     except (AudioAtlasError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
@@ -337,6 +347,14 @@ def batch(
     help="YAML file with an optional top-level graphs block.",
 )
 @click.option(
+    "--track-id",
+    default=None,
+    help=(
+        "Optional opaque revision token. Only its SHA-256 digest is stored; all section "
+        "reports from this run receive the same identity."
+    ),
+)
+@click.option(
     "--include-local-paths",
     is_flag=True,
     help="Include resolved machine-local paths in JSON metadata (off by default for sharing).",
@@ -356,6 +374,7 @@ def sections(
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
     graphs_config: Path | None,
+    track_id: str | None,
     include_local_paths: bool,
 ) -> None:
     """Analyze manually supplied sections from one audio file.
@@ -386,6 +405,7 @@ def sections(
                 theme_name=selected_theme,
                 selection=selection,
                 include_local_paths=include_local_paths,
+                track_id=track_id,
             )
         except (AudioAtlasError, ValueError) as exc:
             raise click.ClickException(str(exc)) from exc
@@ -407,6 +427,85 @@ def sections(
     index_path = out_dir / "section_index.md"
     index_path.write_text("\n".join(index_lines) + "\n", encoding="utf-8")
     click.echo(f"Section index: {index_path}")
+
+
+@main.command(name="diff")
+@click.argument(
+    "report_a",
+    type=click.Path(exists=True, path_type=Path),
+)
+@click.argument(
+    "report_b",
+    type=click.Path(exists=True, path_type=Path),
+)
+@click.option(
+    "--out",
+    "out_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    required=True,
+    help="Output directory for the static revision-delta report.",
+)
+@click.option(
+    "--confirm-same-track",
+    is_flag=True,
+    help=(
+        "Assert that both reports are revisions of the same track when matching "
+        "--track-id digests are unavailable. Conflicting digests are never overridden."
+    ),
+)
+@click.option(
+    "--allow-incomparable",
+    is_flag=True,
+    help=(
+        "Generate a prominently caveated report when analysis provenance differs or is missing."
+    ),
+)
+@click.option("--label-a", default=None, help="Optional display label for report A.")
+@click.option("--label-b", default=None, help="Optional display label for report B.")
+@click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
+def diff_reports(
+    report_a: Path,
+    report_b: Path,
+    out_dir: Path,
+    confirm_same_track: bool,
+    allow_incomparable: bool,
+    label_a: str | None,
+    label_b: str | None,
+    theme: str | None,
+) -> None:
+    """Compare two completed reports for revisions of the same track."""
+
+    from audioatlas.revision_diff import (
+        generate_revision_diff,
+        load_report_inputs,
+        write_revision_diff,
+    )
+
+    selected_theme = _validate_theme_for_cli(theme)
+    try:
+        source_directories = {
+            load_report_inputs(report_a).directory.resolve(),
+            load_report_inputs(report_b).directory.resolve(),
+        }
+        if out_dir.expanduser().resolve() in source_directories:
+            raise RevisionDiffError(
+                "The revision-diff output must be separate from both source report folders."
+            )
+        payload = generate_revision_diff(
+            report_a,
+            report_b,
+            confirm_same_track=confirm_same_track,
+            allow_incomparable=allow_incomparable,
+            label_a=label_a,
+            label_b=label_b,
+        )
+        paths = write_revision_diff(payload, out_dir, theme_name=selected_theme)
+    except (AudioAtlasError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"AudioAtlas revision delta written to: {out_dir}")
+    click.echo(f"JSON:     {paths['json']}")
+    click.echo(f"Markdown: {paths['markdown']}")
+    click.echo(f"HTML:     {paths['html']}")
 
 
 @main.command()

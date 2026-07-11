@@ -20,6 +20,37 @@ SINGLE_REPORT_FILENAMES = frozenset(
 CATALOG_FILENAMES = frozenset(
     {"catalog_summary.json", "catalog.md", "catalog.html"}
 )
+REVISION_DIFF_FILENAMES = frozenset(
+    {"revision_diff.json", "revision_diff.md", "revision_diff.html"}
+)
+ROOT_GENERATED_FILENAMES = frozenset(
+    SINGLE_REPORT_FILENAMES | CATALOG_FILENAMES | REVISION_DIFF_FILENAMES
+)
+# Kept lightweight so report publication and the diff command can clean stale
+# plots without importing Matplotlib. ``tests/test_graph_registry.py`` locks
+# this set to the graph registry.
+PLOT_FILENAMES = frozenset(
+    {
+        "waveform_rms.png",
+        "rms_timeline.png",
+        "crest_factor_timeline.png",
+        "log_spectrogram.png",
+        "average_spectrum.png",
+        "sample_histogram.png",
+        "stereo_correlation.png",
+        "mid_side_energy.png",
+        "spectral_shape.png",
+        "band_energy_timeline.png",
+        "onset_density.png",
+        "chroma_cqt.png",
+        "short_term_lufs.png",
+        "peak_timeline.png",
+        "peak_vs_rms.png",
+        "rms_histogram.png",
+        "stereo_correlation_histogram.png",
+    }
+)
+ALL_GENERATED_FILENAMES = frozenset(ROOT_GENERATED_FILENAMES | PLOT_FILENAMES)
 
 
 @contextmanager

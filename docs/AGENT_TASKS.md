@@ -5,7 +5,7 @@ This file is intentionally short. Historical task lists are archived under
 
 ## Current phase
 
-`0.2.0a3` calibration readiness and workflow polish. Read, in order:
+`0.2.0a4` comparable revisions and durable calibration. Read, in order:
 
 1. `PROJECT_CHARTER.md`
 2. `docs/HOPEFUL_SKEPTIC_PROJECT_EDITION.md`
@@ -21,10 +21,16 @@ This file is intentionally short. Historical task lists are archived under
   using `docs/calibration/CALIBRATION_RUNBOOK.md`.
 - Adjudicate every triggered rule as helpful, redundant, context-dependent,
   misleading, or factually wrong.
+- Freeze the anonymous review ledger and run `make calibration-replay` before
+  accepting any finding-rule change; adjudicate every appeared, disappeared, or
+  changed prompt.
 - Rehearse macOS and Windows double-click launchers from clean target machines;
   record PATH/security behavior with `docs/LAUNCHER_REHEARSAL.md`.
 - Apply the alias lifecycle in `docs/COMPATIBILITY.md`; do not remove the
   temporary JSON aliases before a `0.3.0` schema boundary.
+- Rehearse the same-track diff on real iterative exports and confirm its
+  provenance/scope caveats remain understandable without becoming a preference
+  engine.
 - Add a local notes-export interaction only after the static artifact contract
   is preserved and tested.
 

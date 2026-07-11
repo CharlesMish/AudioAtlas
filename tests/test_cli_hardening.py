@@ -59,6 +59,33 @@ if loaded:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_importing_alt_text_does_not_eagerly_load_scientific_or_plotting_stack():
+    script = """
+import sys
+import audioatlas.alt_text  # noqa: F401
+
+heavy_modules = (
+    "librosa", "matplotlib", "numpy", "pyloudnorm", "scipy", "soundfile"
+)
+loaded = [name for name in heavy_modules if name in sys.modules]
+if loaded:
+    raise SystemExit("unexpected eager imports: " + ", ".join(loaded))
+"""
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(ROOT / "src")
+
+    result = subprocess.run(
+        [sys.executable, "-S", "-c", script],
+        cwd=ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_corrupt_single_file_has_clean_cli_error_without_traceback_or_path_leak(tmp_path):
     private_dir = tmp_path / "private-user-directory"
     private_dir.mkdir()

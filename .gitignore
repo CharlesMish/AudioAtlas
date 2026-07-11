@@ -27,6 +27,9 @@ outputs/
 *.aiff
 *.aif
 !tests/fixtures/*.wav
+!tests/fixtures/malformed/
+!tests/fixtures/malformed/*.wav
+!tests/fixtures/malformed/*.flac
 
 # Calibration and private review material
 calibration_audio/

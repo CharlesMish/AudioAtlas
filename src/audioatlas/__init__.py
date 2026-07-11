@@ -1,20 +1,24 @@
 """AudioAtlas: factual single-track audio maps."""
 
 from audioatlas.release import (
+    CALIBRATION_REPLAY_SCHEMA_VERSION,
     CATALOG_SCHEMA_VERSION,
     FINDING_RULESET_VERSION,
     FINDINGS_SCHEMA_VERSION,
     RELEASE_LABEL,
+    REVISION_DIFF_SCHEMA_VERSION,
     SUMMARY_SCHEMA_VERSION,
 )
 
 __all__ = [
+    "CALIBRATION_REPLAY_SCHEMA_VERSION",
     "CATALOG_SCHEMA_VERSION",
     "FINDING_RULESET_VERSION",
     "FINDINGS_SCHEMA_VERSION",
     "RELEASE_LABEL",
+    "REVISION_DIFF_SCHEMA_VERSION",
     "SUMMARY_SCHEMA_VERSION",
     "__version__",
 ]
 
-__version__ = "0.2.0a3"
+__version__ = "0.2.0a4"

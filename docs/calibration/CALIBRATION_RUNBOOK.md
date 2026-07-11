@@ -29,6 +29,8 @@ private_calibration/
 ├── finding_review.csv             # per-trigger human judgments
 ├── corpus_manifest.csv            # anonymous coverage record
 ├── rule_decisions.csv             # aggregate decision ledger
+├── rule_replay.json               # anonymous candidate-ruleset churn
+├── rule_replay.csv                # optional tabular replay view
 └── session_notes.md               # methods, anomalies, and deviations
 ```
 
@@ -44,6 +46,9 @@ Record in `session_notes.md`:
 - operating system and Python version;
 - graph profile and any graph overrides;
 - analysis configuration overrides;
+- analysis-configuration, measurement-code, finding-rule-code,
+  compatible-analysis, and exact-environment hashes copied from one
+  representative `summary.json`;
 - reviewer identity or stable pseudonym;
 - date and whether this is an initial review or a repeat/adjudication pass.
 
@@ -95,8 +100,9 @@ uv run python scripts/prepare_calibration_review.py \
 
 The shareable review sheet contains anonymous asset IDs, package/schema/ruleset
 versions, report and per-finding hashes, exact prompt/non-claim wording, all
-triggered rules, and whether each item appeared inside the visible report cap.
-It does **not** contain source filenames or report paths.
+triggered rules, whether each item appeared inside the visible report cap, and
+the analysis provenance hashes needed to detect mixed configurations or
+implementations. It does **not** contain source filenames or report paths.
 
 The optional private map contains basenames and relative report folders. Keep it
 private. The script preflights both outputs and refuses to overwrite either
@@ -167,18 +173,40 @@ For every keep/change/remove decision, record:
 - schema/ruleset impact;
 - preservation constraint.
 
-## Stage 7 — Re-run changed rules
+## Stage 7 — Replay and re-review changed rules
+
+Before regenerating measurements, replay the candidate checkout's finding logic
+against the frozen summaries and human-review ledger:
+
+```bash
+uv run python scripts/replay_calibration_rules.py \
+  private_calibration/reports \
+  --asset-map private_calibration/private_asset_map.csv \
+  --review-ledger private_calibration/finding_review.csv \
+  --out private_calibration/rule_replay.json \
+  --csv private_calibration/rule_replay.csv
+```
+
+The replay must first confirm that each report evidence hash still matches the
+frozen ledger. Then inspect every `appeared`, `disappeared`, and `changed` row;
+`unchanged` means the serialized rule payload is unchanged for that asset, not
+that the prompt has been musically validated.
 
 After a rule change:
 
 1. update the rule ledger and ruleset version;
-2. add or revise deterministic positive and counterexample tests;
-3. regenerate affected reports from the same source audio/configuration;
-4. create a fresh worksheet rather than editing hashes in place;
-5. re-review affected cases and any new triggers;
-6. preserve the old decision record as historical evidence.
+2. add or revise deterministic positive, counterexample, and invariant tests;
+3. run ruleset replay against the frozen summaries and preserve its anonymous
+   churn record;
+4. re-review every affected case and every new trigger;
+5. when measurement code, configuration, or required summary fields changed,
+   regenerate reports from the same authorized source audio and create a fresh
+   worksheet instead of editing hashes in place;
+6. preserve the old decision and replay records as historical evidence.
 
-Do not compare stale reports against new rule prose.
+Ruleset replay isolates changes in finding logic. It does not rerun DSP, replace
+listening, or make stale/incompatible analyses comparable. Do not compare stale
+reports against new rule prose without a frozen, hash-verified ledger.
 
 ## Stage 8 — Freeze the gate record
 
@@ -188,7 +216,8 @@ A calibration release record should contain only share-safe material:
 - per-trigger outcomes without filenames or local paths;
 - aggregate rule decisions;
 - package/schema/ruleset versions;
-- report evidence hashes;
+- report evidence and analysis-provenance hashes;
+- anonymous candidate-ruleset replay/churn record;
 - methods and deviations;
 - explicit residual limitations.
 

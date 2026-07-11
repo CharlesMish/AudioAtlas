@@ -23,6 +23,11 @@ REVIEW_FIELDS = (
     "summary_schema_version",
     "findings_schema_version",
     "ruleset_version",
+    "analysis_config_sha256",
+    "measurement_code_sha256",
+    "finding_rule_code_sha256",
+    "compatible_analysis_sha256",
+    "exact_environment_sha256",
     "report_evidence_sha256",
     "finding_payload_sha256",
     "triggered",
@@ -161,12 +166,28 @@ def prepare_review_rows(
             }
         )
 
+        provenance = (
+            summary.get("analysis_provenance")
+            if isinstance(summary.get("analysis_provenance"), dict)
+            else {}
+        )
         common = {
             "asset_id": asset_id,
             "audioatlas_version": _string(marker.get("audioatlas_version")),
             "summary_schema_version": _string(summary.get("schema_version")),
             "findings_schema_version": _string(findings_payload.get("schema_version")),
             "ruleset_version": _string(findings_payload.get("ruleset_version")),
+            "analysis_config_sha256": _string(provenance.get("analysis_config_sha256")),
+            "measurement_code_sha256": _string(provenance.get("measurement_code_sha256")),
+            "finding_rule_code_sha256": _string(
+                provenance.get("finding_rule_code_sha256")
+            ),
+            "compatible_analysis_sha256": _string(
+                provenance.get("compatible_analysis_sha256")
+            ),
+            "exact_environment_sha256": _string(
+                provenance.get("exact_environment_sha256")
+            ),
             "report_evidence_sha256": _report_digest(
                 summary_path, findings_path, marker_path
             ),

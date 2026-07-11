@@ -18,9 +18,9 @@ from audioatlas.errors import AudioAtlasError
 from audioatlas.graphs import all_graphs
 from audioatlas.graphs.selection import GraphSelection
 from audioatlas.output import (
+    ALL_GENERATED_FILENAMES,
     CATALOG_FILENAMES,
     OUTPUT_MARKER_FILENAME,
-    SINGLE_REPORT_FILENAMES,
     publish_staged_output,
     staged_output_directory,
     write_output_manifest,
@@ -139,8 +139,7 @@ def analyze_folder(
         )
         # Clear only known single-report roots/plots if the same destination is
         # intentionally repurposed as a catalog. Human files remain untouched.
-        owned_names = set(CATALOG_FILENAMES | SINGLE_REPORT_FILENAMES)
-        owned_names.update(graph.filename for graph in all_graphs())
+        owned_names = set(ALL_GENERATED_FILENAMES)
         publish_staged_output(staging, out, owned_filenames=owned_names)
 
     return BatchRunResult(
