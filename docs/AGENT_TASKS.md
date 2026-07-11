@@ -5,23 +5,26 @@ This file is intentionally short. Historical task lists are archived under
 
 ## Current phase
 
-`0.2.0a2` convergence and calibration. Read, in order:
+`0.2.0a3` calibration readiness and workflow polish. Read, in order:
 
 1. `PROJECT_CHARTER.md`
-2. `docs/FINDING_RULES.md`
-3. `docs/ARCHITECTURE.md`
-4. `docs/SUMMARY_SCHEMA.md`
-5. the current source and tests
+2. `docs/HOPEFUL_SKEPTIC_PROJECT_EDITION.md`
+3. `docs/FINDING_RULES.md`
+4. `docs/COMPATIBILITY.md`
+5. `docs/ARCHITECTURE.md`
+6. `docs/SUMMARY_SCHEMA.md`
+7. the current source and tests
 
 ## Before beta
 
-- Complete and freeze a private authorized musical-corpus calibration record.
+- Complete and freeze a private authorized musical-corpus calibration record
+  using `docs/calibration/CALIBRATION_RUNBOOK.md`.
 - Adjudicate every triggered rule as helpful, redundant, context-dependent,
   misleading, or factually wrong.
 - Rehearse macOS and Windows double-click launchers from clean target machines;
-  record PATH/security behavior.
-- Decide whether to keep or remove temporary alpha compatibility aliases in the
-  next schema boundary.
+  record PATH/security behavior with `docs/LAUNCHER_REHEARSAL.md`.
+- Apply the alias lifecycle in `docs/COMPATIBILITY.md`; do not remove the
+  temporary JSON aliases before a `0.3.0` schema boundary.
 - Add a local notes-export interaction only after the static artifact contract
   is preserved and tested.
 

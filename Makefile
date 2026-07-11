@@ -5,8 +5,11 @@ VENV ?= .venv
 VENV_BIN := $(VENV)/bin
 DEMO_OUT ?= reports/_demo
 GOLDEN_WAV := tests/fixtures/sine_1k_-6dbfs_2s.wav
+CALIBRATION_REPORTS ?= private_calibration/reports
+CALIBRATION_REVIEW ?= private_calibration/finding_review.csv
+CALIBRATION_MAP ?= private_calibration/private_asset_map.csv
 
-.PHONY: help venv install test lint check demo golden clean
+.PHONY: help venv install test lint check demo golden calibration-fixtures calibration-review clean
 
 help:  ## Show this help.
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) \
@@ -35,6 +38,13 @@ demo:  ## Analyze the golden fixture and write a report to $(DEMO_OUT).
 
 golden:  ## Regenerate the golden WAV + expected JSON.
 	$(PY) tests/fixtures/_build_golden.py
+
+calibration-fixtures:  ## Generate rights-safe deterministic calibration audio.
+	$(PY) scripts/generate_calibration_fixtures.py
+
+calibration-review:  ## Seed an anonymous review CSV from $(CALIBRATION_REPORTS).
+	$(PY) scripts/prepare_calibration_review.py $(CALIBRATION_REPORTS) \
+		--out $(CALIBRATION_REVIEW) --private-map $(CALIBRATION_MAP)
 
 clean:  ## Remove caches, builds, demo outputs.
 	rm -rf .pytest_cache .ruff_cache .mypy_cache

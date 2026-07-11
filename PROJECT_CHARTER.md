@@ -1,7 +1,7 @@
 # AudioAtlas Project Charter
 
 **Current phase:** convergence and public-alpha hardening
-**Current release line:** `0.2.0a2`
+**Current release line:** `0.2.0a3`
 **Authoritative for:** product identity, scope, interpretation rules, and release direction
 
 ## North star
@@ -89,13 +89,14 @@ new product decision, not an incidental pull request.
 
 ## Current release priorities
 
-The `0.2.0a2` line prioritizes:
+The `0.2.0a3` line prioritizes:
 
 1. interpretation integrity and stable finding rules;
 2. safe errors, path privacy, and partial batch success;
 3. coherent output publication without stale artifacts;
-4. release/documentation truth;
-5. representative calibration and cross-platform packaging evidence.
+4. release/documentation and compatibility truth;
+5. a runnable musical-calibration handoff and cross-platform launcher evidence;
+6. lightweight command discovery without weakening the analysis stack.
 
 New generic metrics, themes, dashboards, and major interaction systems are below
 those priorities.
@@ -117,3 +118,6 @@ A public beta should require more than a passing unit suite. At minimum:
 Runtime behavior and tests outrank stale prose. This charter outranks archived
 design/review notes. `docs/FINDING_RULES.md` is authoritative for default finding
 semantics. `docs/SUMMARY_SCHEMA.md` is authoritative for serialized fields.
+`docs/COMPATIBILITY.md` is authoritative for alias retention and removal.
+`docs/HOPEFUL_SKEPTIC_PROJECT_EDITION.md` governs recurring review behavior
+until a named freshness trigger makes it stale.

@@ -7,6 +7,38 @@ tracked separately in `src/audioatlas/release.py`.
 
 No entries yet.
 
+## `0.2.0a3` — 2026-07-11
+
+### Calibration and review readiness
+
+- Added a project-specific Hopeful Skeptic edition for recurring AudioAtlas
+  reviews, release gates, and implementation handoffs.
+- Added a concrete private musical-calibration runbook, expanded anonymous
+  corpus/rule-decision templates, and a privacy-conscious worksheet generator.
+- The worksheet generator captures displayed and report-cap-suppressed findings,
+  records package/schema/ruleset versions, report/per-finding hashes, exact
+  prompt and non-claim wording, keeps filenames in an optional private map, and
+  preflights both outputs before replacing human labels.
+- Added a native macOS/Windows launcher rehearsal protocol and fillable log.
+- Archived the independent `0.2.0a2` Hopeful Skeptic audit that motivated this
+  bounded follow-up pass.
+
+### Workflow polish and release truth
+
+- Made `--version`, `--help`, and `themes` lightweight by deferring DSP, decoder,
+  graph-registry, and plotting imports until an analysis command is selected.
+- Added immediate preparation feedback before heavy single-track, batch, and
+  section initialization.
+- Formalized package/schema/ruleset/output-manifest version axes and the
+  compatibility-alias lifecycle. JSON aliases remain through `0.2.x`; removal
+  may occur no earlier than `0.3.0` with an explicit schema migration.
+- Kept the finding ruleset at `0.2.0a2`: no trigger, priority, or interpretive
+  rule semantics changed in this release.
+- Removed stale active `v0.1` docstring/comment references without rewriting
+  intentionally archived history.
+- Added Makefile helpers for deterministic fixtures and calibration-sheet
+  preparation.
+
 ## `0.2.0a2` — 2026-07-11
 
 ### Interpretation integrity

@@ -100,7 +100,7 @@ def plot_rms_timeline(
     *,
     title: str = "Frame RMS Timeline (dBFS)",
 ) -> Path:
-    """Save the v0.1 RMS dBFS timeline.
+    """Save the frame RMS dBFS timeline.
 
     This is RMS dBFS, not K-weighted short-term LUFS. The name reflects that
     intentionally - per PROJECT_CHARTER.md, AudioAtlas does not overclaim.

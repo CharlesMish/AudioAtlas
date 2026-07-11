@@ -2,9 +2,14 @@
 
 Unit tests establish deterministic behavior; they do not prove that a default
 review prompt is useful across music. This folder defines the additional beta
-calibration gate.
+calibration gate and provides share-safe record templates.
 
-## Public deterministic corpus
+For the concrete end-to-end procedure, use
+[`CALIBRATION_RUNBOOK.md`](CALIBRATION_RUNBOOK.md).
+
+## Two evidence sets
+
+### Public deterministic fixtures
 
 Generate rights-safe fixtures:
 
@@ -12,35 +17,55 @@ Generate rights-safe fixtures:
 uv run python scripts/generate_calibration_fixtures.py
 ```
 
-The generated folder is intentionally ignored by Git. The generated synthetic
-fixtures contain no third-party audio and are distributed under the repository's
-MIT license. The script covers
-silence, tones, impulses, clipping, over-nominal float audio, short input,
-dual-mono, anti-phase, decorrelated stereo, and a corrupt header. Tests may call
-the generator in a temporary directory.
+The generated folder is ignored by Git. The synthetic fixtures contain no
+third-party audio and are distributed under the repository MIT license. The
+script covers silence, tones, impulses, clipping, over-nominal float audio,
+short input, dual-mono, anti-phase, decorrelated stereo, and a corrupt header.
+Tests may call the generator in a temporary directory.
 
-For each fixture, verify both positive and negative behavior. A fixture designed
-to exercise one rule should not accidentally create unsupported musical claims
-from unrelated measurements.
+Use fixtures to establish:
 
-## Private musical corpus
+- exact positive and negative trigger behavior;
+- numerical monotonicity and boundary handling;
+- path safety, decoder failure behavior, and report stability;
+- counterexamples that prevent unrelated musical claims.
 
-Maintain a noncommitted set of authorized tracks or stems spanning at least:
+Fixture success does not establish usefulness on music.
 
-- sparse and dense arrangements;
-- acoustic and electronic material;
-- bright, dark, broadband, and intentionally bandwidth-limited sources;
-- mono, dual-mono, narrow, wide, and phase-rich stereo;
-- clean, clipped, intentionally distorted, rough, and final material;
-- lossless and lossy delivery formats.
+### Private authorized musical corpus
 
-A practical first pass is 20–30 items. Do not commit copyrighted or private
-audio. Record only authorized labels and review outcomes in a private copy of
-`musical_corpus_review_template.csv`.
+Maintain a noncommitted set of roughly 20–30 authorized tracks or stems spanning
+sparse/dense, acoustic/electronic, bright/dark/bandwidth-limited, mono/wide,
+clean/distorted, rough/final, lossless/lossy, and varied sample-rate material.
 
-## Prompt adjudication
+Do not commit copyrighted/private audio, generated private reports, source
+filenames, or local paths. Version-control only anonymous coverage/outcome
+records when appropriate.
 
-For every triggered finding, assign exactly one outcome:
+## Preparing the human review sheet
+
+After generating reports, seed a worksheet with every triggered finding,
+including items suppressed by the visible report cap:
+
+```bash
+uv run python scripts/prepare_calibration_review.py \
+  private_calibration/reports \
+  --out private_calibration/finding_review.csv \
+  --private-map private_calibration/private_asset_map.csv
+```
+
+The main worksheet uses anonymous `asset-###` IDs and includes package, schema,
+ruleset, report/finding hashes, trigger visibility, exact prompt wording,
+non-claim boundaries, checks, metrics, thresholds, and graph fields. It does not
+include filenames or report paths. The optional private map connects asset IDs
+to basenames and relative report folders; keep it out of version control.
+
+The script preflights both outputs and refuses to overwrite existing labels
+unless `--force` is supplied.
+
+## Prompt review labels
+
+For each triggered rule, record exactly one:
 
 - `helpful`
 - `true_but_redundant`
@@ -48,16 +73,39 @@ For every triggered finding, assign exactly one outcome:
 - `misleading`
 - `factually_wrong`
 
-Record the rule ID/version, triggering evidence, reviewer rationale, and any
-wording or eligibility change. Use `finding_review_template.csv`.
+Also record whether evidence was easy to trace, the listening check was
+completed/useful, and the non-claim prevented overinterpretation.
 
-A rule remains default only when its useful signal clearly exceeds its
-false-authority cost. Any `factually_wrong` result blocks beta until repaired.
-Repeated `misleading` or `context_dependent` outcomes require narrower
-eligibility, narrower prose, or removal from default findings.
+## Retention gate
+
+A default prompt remains active only when:
+
+1. deterministic trigger and counterexample tests pass;
+2. the report sentence follows from the metric;
+3. common counterexamples are documented;
+4. musical review shows useful signal clearly outweighing false-authority cost;
+5. the prompt points to concrete evidence or a graph;
+6. the same observation cannot be presented more safely as technical context.
+
+Any `factually_wrong` result blocks beta until repaired. Repeated `misleading` or
+`context_dependent` results require narrower eligibility/prose or removal from
+default findings. A failed gate does not require deleting the measurement: keep
+it in summaries/plots when technically useful.
+
+## Included templates
+
+- `musical_corpus_review_template.csv` — anonymous corpus coverage.
+- `finding_review_template.csv` — per-trigger schema produced by the preparation
+  script.
+- `MANUAL_CALIBRATION_WORKSHEET.csv` — aggregate per-rule decision ledger.
+
+Calibration records should identify package, schema, and ruleset versions,
+reviewer/date, anonymous asset ID, report evidence hash, and finding-payload
+hash.
 
 ## What this package does not claim
 
-The repository includes the harness and public fixtures. It does **not** claim
-that the private musical calibration gate has been completed. That requires
-human listening, authorized material, and a frozen review record.
+The repository includes the harness, public fixtures, runbook, and templates. It
+does **not** claim that private musical calibration is complete. That requires
+human listening, authorized material, a frozen record, and rule-level
+adjudication.

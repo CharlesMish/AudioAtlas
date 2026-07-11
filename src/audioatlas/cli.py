@@ -8,19 +8,19 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 import yaml
 
 from audioatlas import __version__
-from audioatlas.batch import analyze_folder
-from audioatlas.config import AnalysisConfig
 from audioatlas.errors import AudioAtlasError
-from audioatlas.graphs import all_graphs
-from audioatlas.graphs.selection import VALID_PROFILES, GraphSelection, GraphSelectionError
-from audioatlas.pipeline import AnalysisRunResult, analyze_file
-from audioatlas.theme import theme_listing_text, validate_theme_name
+from audioatlas.graph_profiles import VALID_PROFILES
+
+if TYPE_CHECKING:
+    from audioatlas.config import AnalysisConfig
+    from audioatlas.graphs.selection import GraphSelection
+    from audioatlas.pipeline import AnalysisRunResult
 
 
 @click.group()
@@ -113,6 +113,9 @@ def analyze(
     include_local_paths: bool,
 ) -> None:
     """Analyze one audio file and write a report folder."""
+
+    click.echo(f"Preparing AudioAtlas analysis for: {input_path.name}")
+    from audioatlas.pipeline import analyze_file
 
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
@@ -225,6 +228,9 @@ def batch(
     include_local_paths: bool,
 ) -> None:
     """Analyze a folder of audio files and write a neutral catalog."""
+
+    click.echo(f"Preparing AudioAtlas batch from: {input_folder.name}")
+    from audioatlas.batch import analyze_folder
 
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
@@ -358,10 +364,13 @@ def sections(
     pipeline on explicit source ranges supplied by the user.
     """
 
+    parsed_sections = _collect_section_definitions(section_specs, config_path)
+    click.echo(f"Preparing {len(parsed_sections)} manual section report(s) for: {input_path.name}")
+    from audioatlas.pipeline import analyze_file
+
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
     selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
-    parsed_sections = _collect_section_definitions(section_specs, config_path)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     section_results: list[tuple[str, float, float | None, AnalysisRunResult]] = []
@@ -404,10 +413,14 @@ def sections(
 def themes() -> None:
     """List built-in static report themes."""
 
+    from audioatlas.theme import theme_listing_text
+
     click.echo(theme_listing_text())
 
 
 def _validate_theme_for_cli(theme: str | None) -> str:
+    from audioatlas.theme import validate_theme_name
+
     try:
         return validate_theme_name(theme)
     except ValueError as exc:
@@ -420,6 +433,9 @@ def _make_selection(
     cli_disable: tuple[str, ...],
     graphs_config: Path | None,
 ) -> GraphSelection:
+    from audioatlas.graphs import all_graphs
+    from audioatlas.graphs.selection import GraphSelection, GraphSelectionError
+
     file_selection = _parse_graphs_config(graphs_config) if graphs_config is not None else {}
     profile = cli_profile or str(file_selection.get("profile", "standard"))
     enable = _merge_graph_key_lists(
@@ -651,6 +667,8 @@ def _make_config(
     db_floor: float,
     true_peak_oversample: int,
 ) -> AnalysisConfig:
+    from audioatlas.config import AnalysisConfig
+
     return AnalysisConfig(
         n_fft=n_fft,
         hop_length=hop_length,

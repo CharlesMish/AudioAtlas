@@ -15,7 +15,9 @@ audioatlas --version
 ```
 
 A source checkout with `uv` may instead use `uv sync`, but the double-click
-scripts look for the installed `audioatlas` command on `PATH`.
+scripts look for the installed `audioatlas` command on `PATH`. The first full
+analysis in a fresh environment may pause while scientific libraries initialize;
+the launcher should remain open and AudioAtlas prints a preparation message.
 
 ## 2. Batch launcher
 
@@ -41,4 +43,5 @@ four-plot view; it still performs the complete analysis.
 The Python CLI and generated reports are tested automatically. Native double-
 click behavior, PATH inheritance, Gatekeeper, and Windows security prompts must
 still be rehearsed on the target machines before describing this as a
-nontechnical installation path.
+nontechnical installation path. Follow `docs/LAUNCHER_REHEARSAL.md` and copy
+`starter_kit/LAUNCHER_REHEARSAL_LOG.md` for each native run.

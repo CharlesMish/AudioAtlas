@@ -9,13 +9,15 @@ bundle of HTML, Markdown, JSON, PNG plots, and an ownership manifest. The report
 helps you decide **where to listen more carefully**; it does not decide whether
 the music is good.
 
-## Status: `0.2.0a2` — trust and failure hardening
+## Status: `0.2.0a3` — calibration readiness and workflow polish
 
 AudioAtlas is a public alpha. The report pipeline, graph registry, sections, and
 catalog workflows are usable, but finding thresholds remain in calibration.
 Treat findings as review prompts—not diagnoses, scores, or mastering decisions.
 See [the project charter](PROJECT_CHARTER.md) for the product boundary and
 [the finding-rule ledger](docs/FINDING_RULES.md) for exact trigger semantics.
+This release keeps the `0.2.0a2` finding ruleset unchanged while improving
+calibration, review, compatibility, launcher, and CLI workflows.
 
 ![AudioAtlas report overview](docs/assets/readme/report_overview.png)
 
@@ -86,7 +88,10 @@ From an environment where AudioAtlas is installed:
 audioatlas analyze /path/to/song.wav --out reports/song
 ```
 
-Open `reports/song/report.html` directly in a browser.
+Open `reports/song/report.html` directly in a browser. The first analysis in
+a fresh environment can take longer while scientific libraries initialize;
+AudioAtlas prints a preparation message immediately, and lightweight commands
+such as `--version`, `--help`, and `themes` avoid loading the analysis stack.
 
 Common variants:
 
@@ -255,7 +260,9 @@ energy integrated across differently sized bands.
 `starter_kit/` and `scripts/` contain convenience launchers for an **already
 installed** AudioAtlas environment. They are not installers and have not been
 recast as a native desktop app. Read [README_EASY_RUN.md](README_EASY_RUN.md)
-before handing them to a nontechnical user.
+before handing them to a nontechnical user. Use the
+[native launcher rehearsal](docs/LAUNCHER_REHEARSAL.md) and the included log
+before making stronger ease-of-use claims.
 
 ## Development and verification
 
@@ -271,9 +278,18 @@ Generate the public deterministic calibration fixtures:
 uv run python scripts/generate_calibration_fixtures.py
 ```
 
+Seed an anonymous human-review worksheet from completed private reports:
+
+```bash
+uv run python scripts/prepare_calibration_review.py private_reports \
+  --out finding_review.csv \
+  --private-map private_asset_map.csv
+```
+
 The private musical-corpus gate is documented in
-[`docs/calibration/README.md`](docs/calibration/README.md); the repository does
-not claim that human listening calibration is complete.
+[`docs/calibration/README.md`](docs/calibration/README.md) and the concrete
+[`calibration runbook`](docs/calibration/CALIBRATION_RUNBOOK.md). The repository
+does not claim that human listening calibration is complete.
 
 ## Documentation
 
@@ -281,8 +297,12 @@ not claim that human listening calibration is complete.
 - [Finding rule ledger](docs/FINDING_RULES.md)
 - [Alpha limitations](docs/ALPHA_LIMITATIONS.md)
 - [Summary and findings schemas](docs/SUMMARY_SCHEMA.md)
+- [Compatibility policy](docs/COMPATIBILITY.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Calibration workflow](docs/calibration/README.md)
+- [Musical calibration runbook](docs/calibration/CALIBRATION_RUNBOOK.md)
+- [Native launcher rehearsal](docs/LAUNCHER_REHEARSAL.md)
+- [Hopeful Skeptic Project Edition](docs/HOPEFUL_SKEPTIC_PROJECT_EDITION.md)
 - [Changelog](docs/CHANGELOG.md)
 - [Examples](examples/README.md)
 

@@ -33,4 +33,6 @@ basenames rather than resolved usernames and folder paths.
 The launchers call the installed `audioatlas` command. Native Finder,
 Gatekeeper, Windows shell, PATH, spaces, and non-ASCII filename behavior still
 need platform rehearsal before this kit should be advertised as one-click
-nontechnical installation.
+nontechnical installation. The first analysis on a fresh installation may take
+longer while the scientific libraries initialize; keep the launcher window open.
+Use `LAUNCHER_REHEARSAL_LOG.md` to record a native test.

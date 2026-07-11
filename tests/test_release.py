@@ -27,9 +27,12 @@ def test_release_contract_has_one_consistent_alpha_identity():
     assert audioatlas.FINDINGS_SCHEMA_VERSION == FINDINGS_SCHEMA_VERSION
     assert audioatlas.CATALOG_SCHEMA_VERSION == CATALOG_SCHEMA_VERSION
     assert audioatlas.FINDING_RULESET_VERSION == FINDING_RULESET_VERSION
-    assert "alpha 2" in RELEASE_LABEL
+    assert "alpha 3" in RELEASE_LABEL
+    assert audioatlas.__version__ == "0.2.0a3"
     assert SUMMARY_SCHEMA_VERSION == FINDINGS_SCHEMA_VERSION == CATALOG_SCHEMA_VERSION == "0.2.0"
-    assert audioatlas.__version__ == FINDING_RULESET_VERSION
+    # This pass changes calibration and delivery workflow, not finding semantics.
+    assert FINDING_RULESET_VERSION == "0.2.0a2"
+    assert audioatlas.__version__ != FINDING_RULESET_VERSION
 
 
 def test_declared_license_file_exists_and_is_not_empty():

@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from audioatlas.graphs.registry import GraphSpec
+from audioatlas.graph_profiles import VALID_PROFILES
 
-VALID_PROFILES = ("minimal", "standard", "full")
+if TYPE_CHECKING:
+    from audioatlas.graphs.registry import GraphSpec
 
 
 class GraphSelectionError(ValueError):

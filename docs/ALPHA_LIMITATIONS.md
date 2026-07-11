@@ -1,6 +1,6 @@
 # AudioAtlas alpha limitations
 
-AudioAtlas `0.2.0a2` is a measurement and report-generation tool for structured
+AudioAtlas `0.2.0a3` is a measurement and report-generation tool for structured
 listening. It is not a mastering assistant or quality judge.
 
 ## Current limitations
@@ -22,6 +22,9 @@ listening. It is not a mastering assistant or quality judge.
   `.aiff`, and `.mp3`; actual decoding depends on the local audio stack.
 - The launcher kit requires a prior installation and PATH setup. Native
   Windows/macOS double-click behavior has not been claimed as fully rehearsed.
+- A fresh environment can have a noticeable first-analysis initialization
+  delay from the scientific Python stack. Lightweight discovery commands avoid
+  importing that stack, but report generation still requires it.
 - The HTML note fields are temporary browser fields and are not saved.
 - Full analysis runs for every graph profile; `minimal` only publishes fewer
   plots.

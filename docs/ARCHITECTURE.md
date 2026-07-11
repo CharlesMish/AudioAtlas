@@ -37,7 +37,17 @@ output.py ── staged publication + ownership manifest
 | `batch.py` | per-file isolation and catalog assembly | DSP math or ranking |
 | report writers | static presentation | new measurements or causal claims |
 | `output.py` | staged publication and owned-artifact cleanup | analysis or interpretation |
-| `cli.py` | arguments and friendly user errors | business logic |
+| `cli.py` | arguments, lightweight discovery, and friendly user errors | business logic |
+
+## CLI loading boundary
+
+`audioatlas --version`, `--help`, and `themes` do not import the DSP, decoder,
+or plotting stack. Analysis, batch, and section commands print a preparation
+message and then import their heavy orchestration path. This improves startup
+feedback and launcher checks without changing numerical behavior or replacing
+the scientific dependencies. Graph-profile names live in the lightweight
+`graph_profiles.py` module so command discovery does not initialize the graph
+registry.
 
 ## Internal audio contract
 

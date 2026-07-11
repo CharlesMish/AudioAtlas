@@ -330,7 +330,7 @@ def _previous_owned_directories(target: Path) -> set[str]:
                 owned.add(value)
         return owned
 
-    # Narrow compatibility recovery for pre-manifest v0.1 catalogs. A directory
+    # Narrow compatibility recovery for legacy pre-manifest catalogs. A directory
     # is adopted only when the catalog has the exact old schema, its report path
     # is one direct child, and the expected AudioAtlas report files are present.
     catalog_path = target / "catalog_summary.json"

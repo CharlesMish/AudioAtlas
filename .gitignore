@@ -30,6 +30,7 @@ outputs/
 
 # Calibration and private review material
 calibration_audio/
+private_calibration/
 calibration*/
 !docs/calibration/
 !docs/calibration/**
