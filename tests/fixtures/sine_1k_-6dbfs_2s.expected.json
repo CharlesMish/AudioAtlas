@@ -1,0 +1,15 @@
+{
+  "channels": 1,
+  "clipped_samples": 0,
+  "crest_factor_db_approx": 3.01,
+  "crest_factor_db_tolerance": 0.5,
+  "duration_seconds": 2.0,
+  "near_clipping_samples": 0,
+  "rms_dbfs_approx": -9.01,
+  "rms_dbfs_tolerance": 0.5,
+  "sample_peak_dbfs_approx": -6.0,
+  "sample_peak_dbfs_tolerance": 0.5,
+  "sample_rate": 48000,
+  "strongest_bin_hz_approx": 1000.0,
+  "strongest_bin_hz_tolerance": 50.0
+}

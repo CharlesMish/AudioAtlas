@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "audioatlas"
+version = "0.2.0a2"
+description = "A local single-track audio analysis framework for factual music maps."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Charles Mish" }
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Multimedia :: Sound/Audio :: Analysis",
+]
+# Runtime dependencies for local analysis and static report generation.
+dependencies = [
+  "numpy>=1.26",
+  "scipy>=1.12",
+  "soundfile>=0.13",
+  "librosa>=0.11",
+  "matplotlib>=3.8",
+  "pyloudnorm>=0.1.1",
+  "click>=8.1",
+  "PyYAML>=6.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.8",
+  "mypy>=1.10"
+]
+
+[project.scripts]
+audioatlas = "audioatlas.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/audioatlas"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/README.md",
+  "/README_EASY_RUN.md",
+  "/PROJECT_CHARTER.md",
+  "/LICENSE",
+  "/pyproject.toml",
+  "/docs",
+  "/examples",
+  "/scripts",
+  "/starter_kit",
+  "/DEMO_AUDIO_PROVENANCE.txt",
+  "/Makefile",
+]
+exclude = ["/docs/archive"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]

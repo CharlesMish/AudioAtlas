@@ -1,0 +1,6 @@
+ruleset_version,rule_id,rule_version,asset_id,asset_class,expected_trigger,actual_trigger,rating,associated_graphs_reviewed,listening_check_completed,notes,reviewer,date
+0.2.0a2,levels.true_peak_above_zero,1,,,,,,,,,,
+0.2.0a2,levels.near_full_scale_samples,1,,,,,,,,,,
+0.2.0a2,levels.sample_clipping,1,,,,,,,,,,
+0.2.0a2,dynamics.low_plr_with_level_pressure,2,,,,,,,,,,
+0.2.0a2,stereo.low_correlation_or_side_heavy,1,,,,,,,,,,

@@ -1,0 +1,143 @@
+/* AudioAtlas Theme: Warm Tape (Analog Paper)
+ * Warm, human, comfortable analog-desk feeling.
+ * Ideal for long listening notes and print-oriented review.
+ */
+
+:root {
+  --bg: #f7f0e4;
+  --surface: #fdfaf3;
+  --surface-muted: #f5e9d9;
+  --text: #3c2f2f;
+  --text-muted: #6b5a4a;
+  --text-soft: #8a7660;
+  --border: #d4c3a8;
+  --border-soft: #e8d9c2;
+  --accent: #8b5e3c;
+  --accent-muted: #e8d4b8;
+  --chip-bg: #f0e0cc;
+  --callout-bg: #f5e9d9;
+  --callout-border: #c9a77a;
+  --shadow-card: 0 1px 2px rgba(60, 47, 47, 0.08), 0 8px 20px rgba(60, 47, 47, 0.05);
+
+  /* Warm, non-alarmist semantic tokens */
+  --priority-issue-bg: #f4e4bc;
+  --priority-issue-text: #7c3f00;
+  --priority-issue-border: #e8c88a;
+
+  --priority-warning-bg: #e0f0d8;
+  --priority-warning-text: #2f5c3f;
+  --priority-warning-border: #a8d0a0;
+
+  --priority-info-bg: #e8e0d8;
+  --priority-info-text: #5c4f3f;
+  --priority-info-border: #d4c3a8;
+
+  --trait-tag-bg: #f0e0cc;
+  --trait-tag-text: #5c4f3f;
+  --trait-tag-border: #d4c3a8;
+
+  --pattern-count-bg: #e8d4b8;
+  --pattern-count-text: #8b5e3c;
+
+  --distribution-bar-bg: #e8d9c2;
+  --track-dot: #8a7660;
+  --median-tick: #8b5e3c;
+
+  --lightbox-scrim: rgba(60, 47, 47, 0.75);
+  --lightbox-surface: #fdfaf3;
+  --lightbox-header-bg: #f5e9d9;
+  --lightbox-image-wrap-bg: #f0e4d4;
+  --lightbox-border: #d4c3a8;
+  --lightbox-close-hover-bg: #f4d8d8;
+}
+
+/* Base + overrides */
+body { background: var(--bg); color: var(--text); }
+
+.metric-card, .distribution-card, .fingerprint-card, .context-card, .pattern-card,
+.table-wrap, .finding-card, .plot-card, details, .note-box {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+.metric-value { color: #2c2522; }
+.metric-label, .metric-note, .section-intro, .shown-findings, .muted,
+.fingerprint-card p, .context-card p, .pattern-card p, .caveat, .range-row,
+.glossary-list dd { color: var(--text-muted); }
+
+.chip { background: var(--chip-bg); border-color: var(--border); color: var(--text-muted); }
+.chip strong { color: var(--text); }
+
+.how-to-read {
+  background: var(--callout-bg);
+  border-color: #d4c3a8;
+  border-left-color: var(--callout-border);
+  color: #4a3f2f;
+}
+
+.track-table th { background: var(--surface-muted); color: #4a3f2f; border-bottom-color: #d4c3a8; }
+.track-table td { border-bottom-color: #e8d9c2; }
+.track-table a { color: var(--accent); }
+
+.trait-tag {
+  background: var(--trait-tag-bg);
+  border-color: var(--trait-tag-border);
+  color: var(--trait-tag-text);
+}
+
+.distribution-card h3, .fingerprint-card h3, .pattern-card h3 { color: #2c2522; }
+
+.pattern-count {
+  color: var(--pattern-count-text);
+  background: var(--pattern-count-bg);
+}
+
+.range-bar { background: var(--distribution-bar-bg); }
+.track-dot { background: var(--track-dot); }
+.median-tick { background: var(--median-tick); }
+
+/* Warm badges */
+.priority-issue {
+  background: var(--priority-issue-bg);
+  color: var(--priority-issue-text);
+  border: 1px solid var(--priority-issue-border);
+}
+.priority-warning {
+  background: var(--priority-warning-bg);
+  color: var(--priority-warning-text);
+  border: 1px solid var(--priority-warning-border);
+}
+.priority-info {
+  background: var(--priority-info-bg);
+  color: var(--priority-info-text);
+  border: 1px solid var(--priority-info-border);
+}
+
+.category {
+  background: var(--surface-muted);
+  color: #5c4f3f;
+  border-color: var(--border-soft);
+}
+
+/* Lightbox warm */
+.lightbox { background: var(--lightbox-scrim); }
+.lightbox-content {
+  background: var(--lightbox-surface);
+  border-color: var(--lightbox-border);
+}
+.lightbox-header { background: var(--lightbox-header-bg); border-bottom-color: var(--border); }
+.lightbox-nav button { background: var(--surface); border-color: var(--border); color: var(--text); }
+.lightbox-nav button:hover { background: var(--accent-muted); border-color: #c9a77a; }
+.lightbox-title { color: #2c2522; }
+.lightbox-filename, .lightbox-counter, .lightbox-footer { color: var(--text-muted); }
+.lightbox-image-wrap { background: var(--lightbox-image-wrap-bg); }
+.lightbox-close { border-color: var(--border); color: var(--text-muted); }
+.lightbox-close:hover {
+  background: var(--lightbox-close-hover-bg);
+  border-color: #d4a0a0;
+  color: #7c3f00;
+}
+.lightbox-footer { border-top-color: var(--border); background: var(--surface); }
+
+.glossary-list dt { color: #2c2522; }

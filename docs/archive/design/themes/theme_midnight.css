@@ -1,0 +1,143 @@
+/* AudioAtlas Theme: Midnight (Dark Studio)
+ * Deep-focus, immersive, low eye-strain dark palette.
+ * Excellent for late-night critical listening and catalog reviews.
+ */
+
+:root {
+  --bg: #0b1120;
+  --surface: #1e293b;
+  --surface-muted: #334155;
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-soft: #64748b;
+  --border: #475569;
+  --border-soft: #334155;
+  --accent: #14b8a6;
+  --accent-muted: #134e4b;
+  --chip-bg: #334155;
+  --callout-bg: #1e293b;
+  --callout-border: #475569;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35), 0 10px 25px rgba(0, 0, 0, 0.25);
+
+  /* Dark-adjusted semantic tokens */
+  --priority-issue-bg: #431407;
+  --priority-issue-text: #fed7aa;
+  --priority-issue-border: #9a3412;
+
+  --priority-warning-bg: #134e4b;
+  --priority-warning-text: #99f6e4;
+  --priority-warning-border: #0f766e;
+
+  --priority-info-bg: #334155;
+  --priority-info-text: #cbd5e1;
+  --priority-info-border: #475569;
+
+  --trait-tag-bg: #334155;
+  --trait-tag-text: #cbd5e1;
+  --trait-tag-border: #475569;
+
+  --pattern-count-bg: #134e4b;
+  --pattern-count-text: #5eead4;
+
+  --distribution-bar-bg: #475569;
+  --track-dot: #94a3b8;
+  --median-tick: #14b8a6;
+
+  --lightbox-scrim: rgba(0, 0, 0, 0.88);
+  --lightbox-surface: #1e293b;
+  --lightbox-header-bg: #334155;
+  --lightbox-image-wrap-bg: #0f172a;
+  --lightbox-border: #475569;
+  --lightbox-close-hover-bg: #3f2a2a;
+}
+
+/* Base + overrides */
+body { background: var(--bg); color: var(--text); }
+
+.metric-card, .distribution-card, .fingerprint-card, .context-card, .pattern-card,
+.table-wrap, .finding-card, .plot-card, details, .note-box {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+.metric-value { color: #e0e7ff; }
+.metric-label, .metric-note, .section-intro, .shown-findings, .muted,
+.fingerprint-card p, .context-card p, .pattern-card p, .caveat, .range-row,
+.glossary-list dd { color: var(--text-muted); }
+
+.chip { background: var(--chip-bg); border-color: var(--border); color: var(--text-muted); }
+.chip strong { color: var(--text); }
+
+.how-to-read {
+  background: var(--callout-bg);
+  border-color: #475569;
+  border-left-color: var(--callout-border);
+  color: #cbd5e1;
+}
+
+.track-table th { background: var(--surface-muted); color: #e0e7ff; border-bottom-color: #475569; }
+.track-table td { border-bottom-color: #475569; }
+.track-table a { color: var(--accent); }
+
+.trait-tag {
+  background: var(--trait-tag-bg);
+  border-color: var(--trait-tag-border);
+  color: var(--trait-tag-text);
+}
+
+.distribution-card h3, .fingerprint-card h3, .pattern-card h3 { color: #e0e7ff; }
+
+.pattern-count {
+  color: var(--pattern-count-text);
+  background: var(--pattern-count-bg);
+}
+
+.range-bar { background: var(--distribution-bar-bg); }
+.track-dot { background: var(--track-dot); }
+.median-tick { background: var(--median-tick); }
+
+/* Priority badges — high contrast on dark */
+.priority-issue {
+  background: var(--priority-issue-bg);
+  color: var(--priority-issue-text);
+  border: 1px solid var(--priority-issue-border);
+}
+.priority-warning {
+  background: var(--priority-warning-bg);
+  color: var(--priority-warning-text);
+  border: 1px solid var(--priority-warning-border);
+}
+.priority-info {
+  background: var(--priority-info-bg);
+  color: var(--priority-info-text);
+  border: 1px solid var(--priority-info-border);
+}
+
+.category {
+  background: var(--surface-muted);
+  color: #e0e7ff;
+  border-color: var(--border-soft);
+}
+
+/* Lightbox dark */
+.lightbox { background: var(--lightbox-scrim); }
+.lightbox-content {
+  background: var(--lightbox-surface);
+  border-color: var(--lightbox-border);
+}
+.lightbox-header { background: var(--lightbox-header-bg); border-bottom-color: var(--border); }
+.lightbox-nav button { background: var(--surface); border-color: var(--border); color: var(--text); }
+.lightbox-nav button:hover { background: var(--accent-muted); border-color: #5eead4; }
+.lightbox-title { color: #f1f5f9; }
+.lightbox-filename, .lightbox-counter, .lightbox-footer { color: var(--text-muted); }
+.lightbox-image-wrap { background: var(--lightbox-image-wrap-bg); }
+.lightbox-close { border-color: var(--border); color: var(--text-muted); }
+.lightbox-close:hover {
+  background: var(--lightbox-close-hover-bg);
+  border-color: #5f3a3a;
+  color: #fecaca;
+}
+.lightbox-footer { border-top-color: var(--border); background: var(--surface); }
+
+.glossary-list dt { color: #e0e7ff; }
