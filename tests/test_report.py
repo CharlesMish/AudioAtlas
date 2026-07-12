@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -724,7 +725,7 @@ def test_report_md_renders_friendly_no_findings_state(tmp_path: Path):
 
 
 def _html_findings() -> dict:
-    return {
+    payload = {
         "count": 1,
         "all_count": 2,
         "max_findings": 1,
@@ -762,6 +763,22 @@ def _html_findings() -> dict:
             }
         ],
     }
+    payload["all_findings"] = [
+        *payload["findings_shown"],
+        {
+            "rule_id": "levels.true_peak_above_zero",
+            "severity": "info",
+            "category": "levels",
+            "title": "Approximate true peak is above 0 dBTP",
+            "evidence": "Approximate true peak measured 0.2 dBTP.",
+            "why_it_matters": "Encoding can reconstruct samples above nominal full scale.",
+            "does_not_mean": "This does not mean the file is audibly distorting.",
+            "suggested_checks": ["Inspect the peak timeline."],
+            "associated_graphs": ["peak_timeline", "waveform_rms"],
+            "confidence": "medium",
+        },
+    ]
+    return payload
 
 
 def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
@@ -784,7 +801,7 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
     assert "This does not mean the passage is clipped." in text
     assert "Suggested listening checks" in text
     assert "Near-clipping count measured 12 samples." in text
-    assert "1 lower-priority finding(s) suppressed" in text
+    assert "Show 1 more lower-priority observation(s)" in text
     assert "Delivery / headroom context" in text
     assert "playback system using a lower loudness reference" in text
     assert "streaming normalization reference levels" not in text
@@ -868,7 +885,7 @@ def test_write_report_html_keeps_polished_visual_structure(tmp_path: Path):
     assert "--shadow-card:" in text
     assert ".metric-card { min-height:" in text
     assert ".finding-card { padding:" in text
-    assert ".plot-image-wrapper { background: var(--surface-muted)" in text
+    assert ".plot-image-wrapper { appearance: none; display: block; width: 100%; background: var(--surface-muted)" in text
     assert ".priority-warning { background: var(--warning-bg)" in text
     assert "--warning-bg:" in text
     assert "letter-spacing: 0;" in text
@@ -997,10 +1014,11 @@ def test_write_report_html_how_to_read_and_notes_persistence(tmp_path: Path):
         "A report can have no prioritized findings; the plots still describe the track"
         in text
     )
-    assert (
-        "Notes typed here are temporary in this browser page and are not saved into the report files."
-        in text
-    )
+    assert "Notes stay in this browser for this report path." in text
+    assert "audioatlas:notes:" in text
+    assert 'id="notes-copy"' in text
+    assert 'id="notes-export"' in text
+    assert 'id="notes-clear"' in text
 
 
 def test_write_report_html_renders_grouped_stereo_evidence_and_capped_ranges(
@@ -1068,7 +1086,7 @@ def test_write_report_html_includes_lightbox_structure_and_plot_hooks(tmp_path: 
     assert 'class="lightbox"' in text
     assert 'role="dialog"' in text
     assert 'aria-modal="true"' in text
-    assert 'aria-label="Plot image viewer"' in text
+    assert 'aria-labelledby="lb-title"' in text
 
     # Controls present (prev/next/close + counter)
     assert 'id="lb-prev"' in text
@@ -1082,7 +1100,8 @@ def test_write_report_html_includes_lightbox_structure_and_plot_hooks(tmp_path: 
     # Plot cards expose data attrs for the lightbox JS (real PNG srcs are used)
     assert 'data-title="' in text
     assert 'data-filename="' in text
-    assert 'class="plot-image-wrapper" data-title=' in text
+    assert 'type="button" class="plot-image-wrapper"' in text
+    assert 'aria-label="Open enlarged ' in text
     # All 10 plots should participate
     assert text.count('data-filename="') >= 10
 
@@ -1091,6 +1110,8 @@ def test_write_report_html_includes_lightbox_structure_and_plot_hooks(tmp_path: 
     assert "openLightbox" in text or "function openLightbox" in text
     assert "ArrowLeft" in text and "ArrowRight" in text
     assert "Escape" in text or "Esc" in text
+    assert "activeOpener" in text
+    assert 'e.key==="Tab"' in text
     assert "getAttribute('data-title')" in text or "data-title" in text
 
     # No external dependencies or CDNs introduced (presentation layer only)
@@ -1105,6 +1126,38 @@ def test_write_report_html_includes_lightbox_structure_and_plot_hooks(tmp_path: 
     # Existing plot img tags remain relative and escaped (sanity)
     assert '<img src="log_spectrogram.png"' in text
     assert '<img src="waveform_rms.png"' in text
+
+
+class _IdAndAnchorParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ids: list[str] = []
+        self.targets: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = dict(attrs)
+        if values.get("id"):
+            self.ids.append(str(values["id"]))
+        href = values.get("href")
+        if tag == "a" and isinstance(href, str) and href.startswith("#"):
+            self.targets.append(href[1:])
+
+
+def test_report_html_has_complete_local_navigation_and_related_links(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+    parser = _IdAndAnchorParser()
+    parser.feed(text)
+
+    assert len(parser.ids) == len(set(parser.ids))
+    assert set(parser.targets).issubset(set(parser.ids))
+    assert 'class="skip-link" href="#main-content"' in text
+    assert 'id="glossary-lufs"' in text
+    assert 'href="#glossary-lufs">Integrated LUFS</a>' in text
+    assert 'id="plot-waveform_rms"' in text
+    assert 'href="#plot-waveform_rms"' in text
+    assert 'href="#finding-levels-true_peak_above_zero"' in text
 
 
 def test_git_revision_label_is_bound_to_audioatlas_repo_and_marks_dirty(tmp_path: Path):

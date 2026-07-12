@@ -11,6 +11,7 @@ from audioatlas.presentation import (
     presentation_controls_html,
     presentation_css,
     presentation_script,
+    skip_link_html,
     validate_presentation_mode,
 )
 
@@ -25,8 +26,8 @@ def _report_test_helpers():
 
 
 def test_presentation_modes_validate_without_loading_scientific_stack():
-    assert DEFAULT_PRESENTATION_MODE == "focus"
-    assert validate_presentation_mode(None) == "focus"
+    assert DEFAULT_PRESENTATION_MODE == "studio"
+    assert validate_presentation_mode(None) == "studio"
     assert validate_presentation_mode("focus") == "focus"
     assert validate_presentation_mode("studio") == "studio"
     with pytest.raises(ValueError, match="Unknown presentation mode"):
@@ -37,10 +38,13 @@ def test_presentation_shell_is_accessible_local_and_data_preserving():
     controls = presentation_controls_html("focus")
     css = presentation_css()
     script = presentation_script("focus")
+    skip_link = skip_link_html()
 
     assert 'role="group"' in controls
     assert 'aria-pressed="true"' in controls
     assert 'data-presentation-choice="studio"' in controls
+    assert 'href="#main-content"' in skip_link
+    assert "Skip to report content" in skip_link
     assert 'body[data-presentation="studio"]' in css
     assert ".plot-image-wrapper img" in css
     assert "filter:" not in css
@@ -48,6 +52,8 @@ def test_presentation_shell_is_accessible_local_and_data_preserving():
     assert "fetch(" not in script
     assert "http://" not in script
     assert "https://" not in script
+    assert "beforeprint" in script
+    assert "afterprint" in script
 
 
 def test_report_html_can_open_in_studio_and_switch_back_to_focus(tmp_path: Path):
@@ -68,3 +74,24 @@ def test_report_html_can_open_in_studio_and_switch_back_to_focus(tmp_path: Path)
     assert 'body[data-presentation="studio"] .plot-card' in text
     assert 'var fallback="studio"' in text
     assert "audioatlas:presentation:" in text
+
+
+def test_report_html_defaults_to_studio_and_honors_explicit_focus(tmp_path: Path):
+    make_summary, html_findings = _report_test_helpers()
+    summary = make_summary()
+    default_path = write_report_html(
+        summary,
+        summary["plots"],
+        tmp_path / "default",
+        html_findings(),
+    )
+    focus_path = write_report_html(
+        summary,
+        summary["plots"],
+        tmp_path / "focus",
+        html_findings(),
+        presentation_mode="focus",
+    )
+
+    assert '<body data-presentation="studio">' in default_path.read_text(encoding="utf-8")
+    assert '<body data-presentation="focus">' in focus_path.read_text(encoding="utf-8")

@@ -1,7 +1,7 @@
 # AudioAtlas Project Charter
 
 **Current phase:** convergence and public-alpha hardening
-**Current release line:** `0.2.0a5`
+**Current release line:** `0.2.0a6`
 **Authoritative for:** product identity, scope, interpretation rules, and release direction
 
 ## North star
@@ -105,7 +105,7 @@ new product decision, not an incidental pull request.
 
 ## Current release priorities
 
-The `0.2.0a5` line prioritizes:
+The `0.2.0a6` line prioritizes:
 
 1. interpretation integrity and stable finding rules;
 2. safe errors, path privacy, and partial batch success;
@@ -113,8 +113,9 @@ The `0.2.0a5` line prioritizes:
 4. release/documentation and compatibility truth;
 5. a frozen-evidence calibration replay workflow and cross-platform launcher evidence;
 6. guarded same-track revision deltas backed by explicit provenance;
-7. accessibility through measured-value plot descriptions;
-8. mechanism-level invariant and malformed-input regression coverage.
+7. accessible, keyboard-complete static reports with measured-value plot descriptions;
+8. private local notes and direct navigation between prompts, plots, and definitions;
+9. mechanism-level invariant and malformed-input regression coverage.
 
 New generic metrics, themes, dashboards, and major interaction systems are below
 those priorities.

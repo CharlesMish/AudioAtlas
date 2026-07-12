@@ -247,6 +247,10 @@ def test_lossy_decoded_catalog_caveat_renders_for_mp3_heavy_folder(tmp_path: Pat
     assert "About these files" in html
     assert "decoded-audio delivery context" in html
     assert "do not establish whether the original master clipped" in html
+    assert '<body data-presentation="studio">' in html
+    assert 'class="skip-link" href="#main-content"' in html
+    assert '<nav class="top-nav" aria-label="Catalog sections">' in html
+    assert 'role="region" aria-label="Analyzed tracks" tabindex="0"' in html
     assert "decoded-audio delivery context" in md
 
 
@@ -293,8 +297,8 @@ def test_catalog_html_uses_trait_tags_and_distribution_median_ticks(tmp_path: Pa
     )
     html = write_catalog_html(catalog, tmp_path).read_text(encoding="utf-8")
 
-    assert "<th>Traits</th>" in html
-    assert "<th>Shown findings</th>" in html
+    assert '<th scope="col">Traits</th>' in html
+    assert '<th scope="col">Shown findings</th>' in html
     assert "decoded levels" in html
     assert "3 shown" in html
     assert "median-tick" in html

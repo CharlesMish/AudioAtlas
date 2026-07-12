@@ -13,6 +13,7 @@ from audioatlas.presentation import (
     presentation_controls_html,
     presentation_css,
     presentation_script,
+    skip_link_html,
     validate_presentation_mode,
 )
 from audioatlas.release import CATALOG_SCHEMA_VERSION
@@ -483,6 +484,7 @@ def write_catalog_html(
         "</style>",
         "</head>",
         f'<body data-presentation="{_h(selected_presentation)}">',
+        skip_link_html(),
         '<div class="container">',
         "<header>",
         f"<h1>{_h(folder_name)}</h1>",
@@ -493,7 +495,15 @@ def write_catalog_html(
         _chip("Input", _short_path(catalog.get("input_folder", ""))),
         "</div>",
         "</header>",
-        '<section class="how-to-read">',
+        '<nav class="top-nav" aria-label="Catalog sections">',
+        '<a href="#summary">Summary</a><span aria-hidden="true">·</span>',
+        '<a href="#tracks">Tracks</a><span aria-hidden="true">·</span>',
+        '<a href="#distributions">Distributions</a><span aria-hidden="true">·</span>',
+        '<a href="#fingerprints">Fingerprints</a><span aria-hidden="true">·</span>',
+        '<a href="#context">Glossary</a>',
+        "</nav>",
+        '<main id="main-content" tabindex="-1">',
+        '<section class="how-to-read" id="how-to-read">',
         "<strong>How to read this catalog</strong>",
         (
             "<p>This catalog summarizes measurements across a folder of tracks. It shows "
@@ -503,7 +513,7 @@ def write_catalog_html(
         "</section>",
         _decoded_context_html(catalog),
         _common_patterns_html(catalog),
-        "<section>",
+        '<section id="summary">',
         "<h2>Summary</h2>",
         '<div class="metrics-grid">',
         _metric_card("Track count", catalog.get("track_count"), "", "Analyzed files in this folder"),
@@ -534,6 +544,7 @@ def write_catalog_html(
         _metric_distributions(catalog),
         _fingerprint_cards(catalog),
         _context_section(),
+        "</main>",
         "</div>",
         presentation_script(selected_presentation),
         "</body>",
@@ -800,8 +811,9 @@ def _track_table(catalog: dict[str, Any]) -> str:
     lines = [
         '<section id="tracks">',
         "<h2>Tracks</h2>",
-        '<div class="table-wrap">',
+        '<div class="table-wrap" role="region" aria-label="Analyzed tracks" tabindex="0">',
         '<table class="track-table">',
+        '<caption class="sr-only">Measurements and report links for analyzed tracks</caption>',
         "<thead><tr>",
     ]
     headers = [
@@ -818,7 +830,7 @@ def _track_table(catalog: dict[str, Any]) -> str:
         "Report",
     ]
     for header in headers:
-        lines.append(f"<th>{_h(header)}</th>")
+        lines.append(f'<th scope="col">{_h(header)}</th>')
     lines.append("</tr></thead><tbody>")
     for track in _track_list(catalog):
         lines.append("<tr>")
@@ -990,6 +1002,10 @@ h3 { margin: 0; }
 .meta-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .chip { display: inline-flex; gap: 6px; background: var(--chip-bg); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; color: var(--text-muted); }
 .chip strong { color: var(--text); font-weight: 550; }
+.top-nav { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 26px; padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.top-nav a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.top-nav a:hover { text-decoration: underline; }
+.top-nav span { color: var(--text-soft); }
 .how-to-read { background: var(--callout-bg); border: 1px solid var(--border); border-left: 4px solid var(--callout-border); padding: 16px 18px; border-radius: 8px; font-size: 14px; color: var(--text-muted); }
 .how-to-read strong { display: block; margin-bottom: 4px; color: var(--text); }
 .how-to-read p { margin: 4px 0; }

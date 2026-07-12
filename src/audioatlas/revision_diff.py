@@ -28,6 +28,7 @@ from audioatlas.presentation import (
     presentation_controls_html,
     presentation_css,
     presentation_script,
+    skip_link_html,
     validate_presentation_mode,
 )
 from audioatlas.provenance import canonical_json_sha256, provenance_signature
@@ -788,11 +789,17 @@ th:first-child, td:first-child {{ text-align: left; }}
 .small {{ color: var(--text-muted); }}
 .columns {{ display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }}
 ul {{ padding-left: 20px; }}
+.top-nav {{ display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 18px; padding: 12px 4px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--bg); }}
+.top-nav a {{ color: var(--accent); font-weight: 650; text-decoration: none; }}
+.top-nav a:hover {{ text-decoration: underline; }}
+.top-nav span {{ color: var(--text-soft); }}
 @media (max-width: 760px) {{ .pair, .columns {{ grid-template-columns: 1fr; }} table {{ font-size: .88rem; }} }}
 {presentation_css()}
 </style>
 </head>
-<body data-presentation="{escape(presentation_mode)}"><main>
+<body data-presentation="{escape(presentation_mode)}">
+{skip_link_html()}
+<main id="main-content" tabindex="-1">
 <header>
 <h1>Same-track revision delta</h1>
 {presentation_controls_html(presentation_mode)}
@@ -802,11 +809,12 @@ ul {{ padding-left: 20px; }}
 {override}
 <ul>{notes or '<li>No additional comparability caveats.</li>'}</ul>
 </header>
-<section><h2>Scalar measurement deltas</h2>
-<table><thead><tr><th>Metric</th><th>{escape(str(labels['a']))}</th><th>{escape(str(labels['b']))}</th><th>Δ B−A</th><th>Unit</th></tr></thead><tbody>{''.join(rows) or '<tr><td colspan="5">No shared scalar measurements.</td></tr>'}</tbody></table></section>
-<section><h2>Relative mean band-power median deltas</h2><p class="small">Mean spectral power per included FFT bin, normalized within each file. These are not integrated band-energy values.</p>
-<table><thead><tr><th>Band</th><th>{escape(str(labels['a']))}</th><th>{escape(str(labels['b']))}</th><th>Δ B−A</th></tr></thead><tbody>{''.join(band_rows) or '<tr><td colspan="4">No shared band-power medians.</td></tr>'}</tbody></table></section>
-<section><h2>Review-prompt changes</h2><p class="small">Attribution: {escape(str(changes.get('attribution', 'unknown')))}.</p><div class="columns">
+<nav class="top-nav" aria-label="Revision delta sections"><a href="#scalar-deltas">Scalar deltas</a><span aria-hidden="true">·</span><a href="#band-deltas">Band deltas</a><span aria-hidden="true">·</span><a href="#prompt-changes">Prompt changes</a></nav>
+<section id="scalar-deltas"><h2>Scalar measurement deltas</h2>
+<div class="table-scroll" role="region" aria-label="Scalar measurement deltas" tabindex="0"><table><thead><tr><th scope="col">Metric</th><th scope="col">{escape(str(labels['a']))}</th><th scope="col">{escape(str(labels['b']))}</th><th scope="col">Δ B−A</th><th scope="col">Unit</th></tr></thead><tbody>{''.join(rows) or '<tr><td colspan="5">No shared scalar measurements.</td></tr>'}</tbody></table></div></section>
+<section id="band-deltas"><h2>Relative mean band-power median deltas</h2><p class="small">Mean spectral power per included FFT bin, normalized within each file. These are not integrated band-energy values.</p>
+<div class="table-scroll" role="region" aria-label="Relative band-power median deltas" tabindex="0"><table><thead><tr><th scope="col">Band</th><th scope="col">{escape(str(labels['a']))}</th><th scope="col">{escape(str(labels['b']))}</th><th scope="col">Δ B−A</th></tr></thead><tbody>{''.join(band_rows) or '<tr><td colspan="4">No shared band-power medians.</td></tr>'}</tbody></table></div></section>
+<section id="prompt-changes"><h2>Review-prompt changes</h2><p class="small">Attribution: {escape(str(changes.get('attribution', 'unknown')))}.</p><div class="columns">
 {_finding_html_column('Appeared in B', changes.get('appeared', []))}
 {_finding_html_column('Disappeared in B', changes.get('disappeared', []))}
 {_finding_html_column('Changed payload', changes.get('changed', []))}

@@ -5,7 +5,7 @@ This file is intentionally short. Historical task lists are archived under
 
 ## Current phase
 
-`0.2.0a5` friendly reports and clean public distribution. Read, in order:
+`0.2.0a6` accessible interactive reports. Read, in order:
 
 1. `PROJECT_CHARTER.md`
 2. `docs/HOPEFUL_SKEPTIC_PROJECT_EDITION.md`

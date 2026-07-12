@@ -51,16 +51,17 @@ presentation, not the underlying measurements.
 | **Standard** | no extra flag | Fourteen plots and the normal first-read experience |
 | **Full** | `--graphs-profile full` | All seventeen registered plots |
 
-Every HTML report includes a **Focus / Studio** switch:
+Every HTML report opens in **Studio** and includes a **Focus / Studio** switch:
 
+- **Studio** is the polished default, with richer framing, hierarchy, and atmosphere.
 - **Focus** is restrained and information-first.
-- **Studio** adds richer framing, hierarchy, and atmosphere around the same
-  text and PNG plots.
 
-Choose the opening view when generating a report:
+Both views wrap the same text and PNG plots.
+
+Choose the restrained opening view when generating a report:
 
 ```bash
-audioatlas analyze song.wav --presentation studio
+audioatlas analyze song.wav --presentation focus
 ```
 
 The switch remains available inside the finished report, works offline, and
@@ -79,8 +80,8 @@ audioatlas analyze song.wav --out reports/song
 # Compact first read
 audioatlas analyze song.wav --graphs-profile compact
 
-# Richer opening presentation
-audioatlas analyze song.wav --presentation studio
+# Restrained opening presentation
+audioatlas analyze song.wav --presentation focus
 
 # All plots with a built-in theme
 audioatlas analyze song.wav --graphs-profile full --theme midnight_studio
@@ -106,6 +107,11 @@ A normal report folder contains:
 
 Local absolute paths are excluded by default, so shared reports do not normally
 reveal usernames or folder structures.
+
+The HTML report also provides keyboard-accessible plot zoom, direct links between
+review prompts and their plots, and private Human notes. Notes autosave in local
+browser storage for that report path and can be copied or exported as text; they
+are never written into report JSON or sent over a network.
 
 ## Compare two revisions of the same track
 
@@ -163,7 +169,7 @@ surface no prioritized prompts at all.
 
 ## Alpha status
 
-AudioAtlas `0.2.0a5` is a public alpha. The report pipeline and comparison tools
+AudioAtlas `0.2.0a6` is a public alpha. The report pipeline and comparison tools
 are usable, but the default review prompts are still being calibrated on real
 music. Native double-click launchers also remain convenience wrappers for an
 already installed AudioAtlas environment, not a standalone desktop installer.

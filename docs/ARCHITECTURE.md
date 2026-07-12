@@ -109,7 +109,7 @@ runs from retaining completed Matplotlib graphs and their analysis bundles.
 
 Librosa uses Numba/llvmlite in analysis paths, so those transitive packages are
 part of the executable measurement environment rather than incidental build
-tools. AudioAtlas `0.2.0a5` promotes Numba into the direct dependency contract
+tools. AudioAtlas `0.2.0a6` promotes Numba into the direct dependency contract
 and constrains it to `>=0.65.1,<0.66` after a clean Python 3.13 report stalled
 and crashed with Numba 0.66.0 / llvmlite 0.48.0 but completed with Numba 0.65.1
 / llvmlite 0.47.0. Dependency versions are recorded in provenance; widening

@@ -1,6 +1,6 @@
 # AudioAtlas alpha limitations
 
-AudioAtlas `0.2.0a5` is a measurement and report-generation tool for structured
+AudioAtlas `0.2.0a6` is a measurement and report-generation tool for structured
 listening. It is not a mastering assistant or quality judge.
 
 ## Current limitations
@@ -25,12 +25,13 @@ listening. It is not a mastering assistant or quality judge.
 - A fresh environment can have a noticeable first-analysis initialization
   delay from the scientific Python stack. Lightweight discovery commands avoid
   importing that stack, but report generation still requires it.
-- The `0.2.0a5` dependency contract temporarily constrains Numba to
+- The `0.2.0a6` dependency contract temporarily constrains Numba to
   `>=0.65.1,<0.66`. A clean Python 3.13 smoke with Numba 0.66.0 /
   llvmlite 0.48.0 stalled in LLVM code generation; the same workflow
   completed with Numba 0.65.1 / llvmlite 0.47.0. This ceiling should be
   revisited only after a clean report smoke on the newer line.
-- The HTML note fields are temporary browser fields and are not saved.
+- HTML notes use local browser storage when available. They are not embedded in
+  report files, synchronized between browsers, or a substitute for project notes.
 - Full analysis runs for every graph profile; `compact` and its legacy
   `minimal` alias only publish fewer plots. Focus/Studio presentation changes
   the HTML shell and never changes measurements or plot pixels.
