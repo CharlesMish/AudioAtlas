@@ -1,0 +1,188 @@
+# AudioAtlas
+
+## See your track. Keep the judgment yours.
+
+AudioAtlas turns one audio file into a private, portable listening map: key
+measurements, clear plots, and a short list of places that may be worth checking
+by ear.
+
+It runs on your computer. There is no account, upload, server, telemetry, or
+quality score. The result is a folder you can open in any browser and keep with
+the track.
+
+![AudioAtlas report overview](docs/assets/readme/report_overview.png)
+
+## Make your first report
+
+AudioAtlas supports Python 3.11 or newer.
+
+```bash
+python -m pip install .
+audioatlas analyze song.wav
+```
+
+When `--out` is omitted, AudioAtlas creates a friendly folder such as:
+
+```text
+audioatlas-report-song/
+```
+
+Open `report.html` inside that folder.
+
+From a source checkout using `uv`:
+
+```bash
+uv sync
+uv run audioatlas analyze song.wav
+```
+
+The first analysis in a fresh environment may take a little longer while the
+scientific libraries initialize. Lightweight commands such as `--version`,
+`--help`, and `themes` start without loading the analysis stack.
+
+## Choose how much you want to see
+
+AudioAtlas has one analysis engine. The choices below change report depth and
+presentation, not the underlying measurements.
+
+| Experience | Command | What changes |
+|---|---|---|
+| **Compact** | `--graphs-profile compact` | Four essential plots; complete JSON remains available |
+| **Standard** | no extra flag | Fourteen plots and the normal first-read experience |
+| **Full** | `--graphs-profile full` | All seventeen registered plots |
+
+Every HTML report includes a **Focus / Studio** switch:
+
+- **Focus** is restrained and information-first.
+- **Studio** adds richer framing, hierarchy, and atmosphere around the same
+  text and PNG plots.
+
+Choose the opening view when generating a report:
+
+```bash
+audioatlas analyze song.wav --presentation studio
+```
+
+The switch remains available inside the finished report, works offline, and
+never filters or alters the measured plot images.
+
+A separate “lite” build is intentionally not maintained. Compact reports use
+the same trusted analysis engine, which avoids two editions slowly disagreeing
+about the same track.
+
+## Useful recipes
+
+```bash
+# Pick an output folder
+audioatlas analyze song.wav --out reports/song
+
+# Compact first read
+audioatlas analyze song.wav --graphs-profile compact
+
+# Richer opening presentation
+audioatlas analyze song.wav --presentation studio
+
+# All plots with a built-in theme
+audioatlas analyze song.wav --graphs-profile full --theme midnight_studio
+
+# Analyze one source range
+audioatlas analyze song.wav --start 30 --end 62 --out reports/verse
+
+# List themes
+audioatlas themes
+```
+
+## What you receive
+
+A normal report folder contains:
+
+- `report.html` — the friendly browser report;
+- `report.md` — a portable text version;
+- `summary.json` — the complete measurement summary;
+- `findings.json` — bounded review prompts and their evidence;
+- PNG plots;
+- `.audioatlas-output.json` — a manifest that lets AudioAtlas update its own
+  files without deleting unrelated files.
+
+Local absolute paths are excluded by default, so shared reports do not normally
+reveal usernames or folder structures.
+
+## Compare two revisions of the same track
+
+Give related exports the same private revision token when you analyze them:
+
+```bash
+audioatlas analyze mix-v3.wav --out reports/mix-v3 --track-id "unique-private-token"
+audioatlas analyze mix-v4.wav --out reports/mix-v4 --track-id "unique-private-token"
+audioatlas diff reports/mix-v3 reports/mix-v4 --out reports/v3-to-v4
+```
+
+The diff reports descriptive `B - A` changes and which review prompts appeared,
+disappeared, or changed. It does not choose a winner. AudioAtlas stores only the
+token's SHA-256 digest; matching digests mean the same token was supplied, not
+that AudioAtlas recognized the music.
+
+## Analyze sections or a folder
+
+Manual sections:
+
+```bash
+audioatlas sections song.wav --out reports/sections \
+  --section intro:0:30 \
+  --section verse:30:62 \
+  --section ending:62:
+```
+
+Folder catalog:
+
+```bash
+audioatlas batch /path/to/audio --out reports/catalog
+```
+
+AudioAtlas does not infer song structure. Folder catalogs remain descriptive
+and do not rank tracks.
+
+## What AudioAtlas measures
+
+AudioAtlas currently includes level and loudness context, approximate true
+peak, clipping and near-clipping counts, RMS and crest timelines, short-term
+LUFS, stereo correlation, mid/side energy, spectral shape, relative mean band
+power, onset activity, and chroma pitch-class energy.
+
+Review prompts are checks worth making, not diagnoses. A report may correctly
+surface no prioritized prompts at all.
+
+## What it does not do
+
+- No mix, mastering, loudness, or quality score.
+- No automatic EQ, compression, or mastering prescription.
+- No cross-track ranking or reference-track winner.
+- No genre, instrument, source, key, or automatic section detection.
+- No source separation, cloud dashboard, playback engine, or DAW integration.
+- No claim that a threshold crossing is audible, bad, or musically wrong.
+
+## Alpha status
+
+AudioAtlas `0.2.0a5` is a public alpha. The report pipeline and comparison tools
+are usable, but the default review prompts are still being calibrated on real
+music. Native double-click launchers also remain convenience wrappers for an
+already installed AudioAtlas environment, not a standalone desktop installer.
+
+The temporary Numba compatibility range is documented in
+[Compatibility](docs/COMPATIBILITY.md).
+
+## Learn more
+
+- [Friendly user guide](docs/USER_GUIDE.md)
+- [Easy-run launchers](README_EASY_RUN.md)
+- [Examples](examples/README.md)
+- [Finding rules](docs/FINDING_RULES.md)
+- [Alpha limitations](docs/ALPHA_LIMITATIONS.md)
+- [Compatibility](docs/COMPATIBILITY.md)
+- [Schemas](docs/SUMMARY_SCHEMA.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Changelog](docs/CHANGELOG.md)
+
+## License
+
+[MIT](LICENSE)
