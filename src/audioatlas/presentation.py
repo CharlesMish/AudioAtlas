@@ -9,7 +9,13 @@ from __future__ import annotations
 from html import escape
 
 VALID_PRESENTATION_MODES = ("focus", "studio")
-DEFAULT_PRESENTATION_MODE = "focus"
+DEFAULT_PRESENTATION_MODE = "studio"
+
+
+def skip_link_html(target: str = "main-content") -> str:
+    """Return the shared keyboard skip link for static reports."""
+
+    return f'<a class="skip-link" href="#{escape(target, quote=True)}">Skip to report content</a>'
 
 
 def validate_presentation_mode(mode: str | None) -> str:
@@ -47,6 +53,52 @@ def presentation_css() -> str:
     """
 
     return r"""
+.skip-link {
+  position: fixed;
+  z-index: 100001;
+  top: 10px;
+  left: 10px;
+  padding: 10px 14px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-160%);
+}
+.skip-link:focus { transform: translateY(0); }
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+[id] { scroll-margin-top: 76px; }
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+}
+.top-nav {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  background: var(--bg);
+}
 .presentation-controls {
   display: inline-flex;
   align-items: center;
@@ -70,7 +122,8 @@ def presentation_css() -> str:
   appearance: none;
   border: 0;
   border-radius: 999px;
-  padding: 6px 11px;
+  min-height: 36px;
+  padding: 7px 12px;
   background: transparent;
   color: var(--text-muted);
   font: inherit;
@@ -204,9 +257,36 @@ body[data-presentation="studio"] .how-to-read {
 @media (max-width: 640px) {
   body[data-presentation="studio"] header { padding: 26px 20px 16px; border-radius: 14px; }
   .presentation-controls { margin-bottom: 12px; }
+  .top-nav { position: static; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .presentation-controls button { transition: none !important; }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+@media print {
+  body, body[data-presentation="studio"] { background: #fff !important; color: #000 !important; }
+  body[data-presentation="studio"] header,
+  body[data-presentation="studio"] .metric-card,
+  body[data-presentation="studio"] .finding-card,
+  body[data-presentation="studio"] .plot-card,
+  body[data-presentation="studio"] details,
+  body[data-presentation="studio"] .note-box,
+  body[data-presentation="studio"] .context-card {
+    box-shadow: none !important;
+  }
+  body[data-presentation="studio"] header::before,
+  body[data-presentation="studio"] header::after,
+  .skip-link,
+  .presentation-controls,
+  .top-nav,
+  .lightbox,
+  .note-actions,
+  .notes-status { display: none !important; }
+  section, article, details, table, .card { break-inside: avoid; }
 }
 """
 
@@ -233,5 +313,11 @@ def presentation_script(default_mode: str) -> str:
         'for(var i=0;i<buttons.length;i++){buttons[i].addEventListener("click",function(){'
         'var mode=this.getAttribute("data-presentation-choice");apply(mode);'
         'try{window.localStorage.setItem(key,mode);}catch(e){}});}'
+        'var printOpened=[];'
+        'window.addEventListener("beforeprint",function(){printOpened=[];'
+        'var details=document.querySelectorAll("details:not([open])");'
+        'for(var j=0;j<details.length;j++){details[j].open=true;printOpened.push(details[j]);}});'
+        'window.addEventListener("afterprint",function(){'
+        'for(var j=0;j<printOpened.length;j++){printOpened[j].open=false;}printOpened=[];});'
         '})();</script>'
     )

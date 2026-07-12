@@ -31,8 +31,8 @@ def test_release_contract_has_one_consistent_alpha_identity():
     assert audioatlas.REVISION_DIFF_SCHEMA_VERSION == REVISION_DIFF_SCHEMA_VERSION
     assert audioatlas.CALIBRATION_REPLAY_SCHEMA_VERSION == CALIBRATION_REPLAY_SCHEMA_VERSION
     assert audioatlas.FINDING_RULESET_VERSION == FINDING_RULESET_VERSION
-    assert "alpha 5" in RELEASE_LABEL
-    assert audioatlas.__version__ == "0.2.0a5"
+    assert "alpha 6" in RELEASE_LABEL
+    assert audioatlas.__version__ == "0.2.0a6"
     assert SUMMARY_SCHEMA_VERSION == "0.2.1"
     assert FINDINGS_SCHEMA_VERSION == CATALOG_SCHEMA_VERSION == "0.2.0"
     assert REVISION_DIFF_SCHEMA_VERSION == CALIBRATION_REPLAY_SCHEMA_VERSION == "0.1.0"
@@ -47,6 +47,18 @@ def test_declared_license_file_exists_and_is_not_empty():
 
     assert license_path.is_file()
     assert "MIT License" in license_path.read_text(encoding="utf-8")
+
+
+def test_project_metadata_exposes_discovery_keywords_and_verified_urls():
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    project = pyproject["project"]
+
+    assert {"audio", "analysis", "music", "reports"}.issubset(project["keywords"])
+    assert project["urls"] == {
+        "Homepage": "https://github.com/CharlesMish/AudioAtlas",
+        "Repository": "https://github.com/CharlesMish/AudioAtlas",
+        "Issues": "https://github.com/CharlesMish/AudioAtlas/issues",
+    }
 
 
 def test_runtime_dependency_contract_pins_verified_numba_line():

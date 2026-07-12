@@ -69,7 +69,7 @@ def main() -> None:
     "--presentation",
     type=click.Choice(VALID_PRESENTATION_MODES),
     default=None,
-    help="Opening report view. Every HTML report can switch between Focus and Studio.",
+    help="Opening report view. Defaults to Studio; every HTML report can switch views.",
 )
 @click.option(
     "--graphs-profile",
@@ -201,7 +201,7 @@ def analyze(
     "--presentation",
     type=click.Choice(VALID_PRESENTATION_MODES),
     default=None,
-    help="Opening report view. Every HTML report can switch between Focus and Studio.",
+    help="Opening report view. Defaults to Studio; every HTML report can switch views.",
 )
 @click.option(
     "--graphs-profile",
@@ -345,7 +345,7 @@ def batch(
     "--presentation",
     type=click.Choice(VALID_PRESENTATION_MODES),
     default=None,
-    help="Opening report view. Every HTML report can switch between Focus and Studio.",
+    help="Opening report view. Defaults to Studio; every HTML report can switch views.",
 )
 @click.option(
     "--graphs-profile",
@@ -495,7 +495,7 @@ def sections(
     "--presentation",
     type=click.Choice(VALID_PRESENTATION_MODES),
     default=None,
-    help="Opening report view. The HTML diff can switch between Focus and Studio.",
+    help="Opening report view. Defaults to Studio; the HTML diff can switch views.",
 )
 def diff_reports(
     report_a: Path,

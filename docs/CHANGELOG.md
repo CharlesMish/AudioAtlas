@@ -7,6 +7,28 @@ tracked separately in `src/audioatlas/release.py`.
 
 No entries yet.
 
+## `0.2.0a6` — 2026-07-11
+
+### Accessible interactive reports
+
+- Made Studio the default opening presentation across single-track, catalog,
+  section, and revision-diff HTML while preserving explicit Focus selection.
+- Added skip links, report landmarks, consistent keyboard focus treatment,
+  responsive table regions, reduced-motion behavior, and print cleanup across
+  all static report types.
+- Made plot enlargement keyboard-operable and completed dialog focus trapping,
+  counter announcements, Escape/arrow controls, and focus restoration.
+- Linked metrics to glossary definitions and used existing finding graph keys
+  for reciprocal prompt/plot navigation; lower-priority observations now expand
+  inline instead of requiring JSON inspection.
+- Added private per-report Human note autosave with accessible status, copy,
+  text export, and clear controls. Notes remain local and outside report files.
+- Audited normal-size semantic text pairs across all 25 built-in themes and
+  repaired combinations below the WCAG AA contrast ratio.
+- Added project URLs and package keywords for distribution-page discoverability.
+- Kept all measurement, finding, graph, provenance, and JSON schema behavior
+  unchanged.
+
 ## `0.2.0a5` — 2026-07-11
 
 ### Friendly public distribution

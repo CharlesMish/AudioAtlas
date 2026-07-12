@@ -58,17 +58,16 @@ archiving, source inspection, or downstream scripts.
 
 Every generated HTML report can switch between:
 
-- **Focus** — the restrained default;
-- **Studio** — an embellished static shell with richer cards, framing, and
-  hierarchy.
+- **Studio** — the polished default with richer cards, framing, and hierarchy;
+- **Focus** — a restrained, information-first shell.
 
 The switch changes CSS only. It does not change the measurement summary,
 findings, graph selection, or PNG pixels.
 
-Use `--presentation studio` to make Studio the opening state:
+Use `--presentation focus` to make Focus the opening state:
 
 ```bash
-audioatlas analyze song.wav --presentation studio
+audioatlas analyze song.wav --presentation focus
 ```
 
 The report remembers the selected view locally for that report path when the
@@ -152,8 +151,18 @@ Important boundaries:
   normalization changes both values by the same gain and does not change PLR.
 - Lossy files are measured after decoding. Peak observations do not establish
   what happened in the original master.
-- Human note fields in HTML are temporary browser fields and are not saved into
-  the report bundle.
+- Human notes autosave in local browser storage for the report path. Copy and
+  Export create user-controlled text copies; notes are not written into the
+  report bundle or sent over a network.
+
+### Keyboard and long-report navigation
+
+- Use the skip link to move directly to report content.
+- Tab to any plot and press Enter or Space to open it. Escape closes the viewer;
+  Left/Right arrows move between plots; focus returns to the plot you opened.
+- Metric labels link to their glossary definitions. Review prompts link to their
+  associated plots, and plot cards link back to related prompts.
+- Lower-priority observations remain collapsed until requested.
 
 ## Same-track revision deltas
 
