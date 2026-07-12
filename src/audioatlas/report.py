@@ -313,7 +313,7 @@ def write_report_md(
 
     The report's job is to lay out measured facts and the generated plots.
     It must not produce verdicts ("your mix is muddy", "this is well mastered").
-    See PROJECT_CHARTER.md for the rationale.
+    See docs/ALPHA_LIMITATIONS.md for the rationale.
     """
 
     metadata = summary.get("metadata", {})

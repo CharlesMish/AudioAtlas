@@ -91,4 +91,4 @@ For each triggered rule on representative material, record one of:
 - factually wrong.
 
 A rule stays default only when its useful signal clearly exceeds its
-false-authority cost. See `docs/calibration/README.md`.
+false-authority cost. The owner-side calibration workflow is maintained in the stewardship branch.

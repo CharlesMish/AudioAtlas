@@ -24,6 +24,12 @@ from audioatlas.output import (
     staged_output_directory,
     write_output_manifest,
 )
+from audioatlas.presentation import (
+    presentation_controls_html,
+    presentation_css,
+    presentation_script,
+    validate_presentation_mode,
+)
 from audioatlas.provenance import canonical_json_sha256, provenance_signature
 from audioatlas.release import REVISION_DIFF_SCHEMA_VERSION
 from audioatlas.theme import default_theme_name, theme_css_variables, validate_theme_name
@@ -163,11 +169,13 @@ def write_revision_diff(
     out_dir: str | Path,
     *,
     theme_name: str | None = None,
+    presentation_mode: str | None = None,
 ) -> dict[str, Path]:
     """Publish JSON, Markdown, and HTML revision-diff artifacts safely."""
 
     out = Path(out_dir)
     selected_theme = validate_theme_name(theme_name or default_theme_name())
+    selected_presentation = validate_presentation_mode(presentation_mode)
     with staged_output_directory(out) as staging:
         json_path = staging / "revision_diff.json"
         json_path.write_text(
@@ -175,7 +183,12 @@ def write_revision_diff(
             encoding="utf-8",
         )
         _write_diff_markdown(payload, staging / "revision_diff.md")
-        _write_diff_html(payload, staging / "revision_diff.html", selected_theme)
+        _write_diff_html(
+            payload,
+            staging / "revision_diff.html",
+            selected_theme,
+            selected_presentation,
+        )
         write_output_manifest(
             staging,
             kind="same-track-revision-diff",
@@ -705,7 +718,12 @@ def _markdown_findings(changes: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _write_diff_html(payload: dict[str, Any], path: Path, theme_name: str) -> None:
+def _write_diff_html(
+    payload: dict[str, Any],
+    path: Path,
+    theme_name: str,
+    presentation_mode: str,
+) -> None:
     labels = payload["labels"]
     comparison = payload["comparability"]
     rows = []
@@ -771,11 +789,13 @@ th:first-child, td:first-child {{ text-align: left; }}
 .columns {{ display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }}
 ul {{ padding-left: 20px; }}
 @media (max-width: 760px) {{ .pair, .columns {{ grid-template-columns: 1fr; }} table {{ font-size: .88rem; }} }}
+{presentation_css()}
 </style>
 </head>
-<body><main>
+<body data-presentation="{escape(presentation_mode)}"><main>
 <header>
 <h1>Same-track revision delta</h1>
+{presentation_controls_html(presentation_mode)}
 <div class="pair"><div class="card"><strong>A</strong><br>{escape(str(labels['a']))}</div><div class="card"><strong>B</strong><br>{escape(str(labels['b']))}</div></div>
 <p><span class="badge">Comparability: {escape(str(comparison['status']))}</span><span class="badge">Finding rules: {escape(str(finding_rule_assessment.get('status', 'unknown')))}</span><span class="badge">Identity: {escape(str(payload['same_track']['basis']))}</span></p>
 <div class="callout"><strong>Interpretation boundary.</strong> Deltas are B minus A. They are descriptive measurements and do not assign merit, preference, readiness, or delivery suitability.</div>
@@ -791,7 +811,9 @@ ul {{ padding-left: 20px; }}
 {_finding_html_column('Disappeared in B', changes.get('disappeared', []))}
 {_finding_html_column('Changed payload', changes.get('changed', []))}
 </div><p class="small">Unchanged rules: {int(changes.get('unchanged_count', 0))}</p></section>
-</main></body></html>
+</main>
+{presentation_script(presentation_mode)}
+</body></html>
 """
     path.write_text(html, encoding="utf-8")
 

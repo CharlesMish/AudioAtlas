@@ -53,7 +53,7 @@ echo "Chosen file: $input"
 echo "Output folder: $out_dir"
 echo
 
-audioatlas analyze "$input" --out "$out_dir" --graphs-profile minimal
+audioatlas analyze "$input" --out "$out_dir" --graphs-profile compact
 status=$?
 
 echo

@@ -59,6 +59,7 @@ def analyze_file(
     start_seconds: float | None = None,
     end_seconds: float | None = None,
     theme_name: str | None = None,
+    presentation_mode: str | None = None,
     selection: GraphSelection | None = None,
     include_local_paths: bool = False,
     track_id: str | None = None,
@@ -80,6 +81,7 @@ def analyze_file(
             start_seconds=start_seconds,
             end_seconds=end_seconds,
             theme_name=theme_name,
+            presentation_mode=presentation_mode,
             selection=selection,
             include_local_paths=include_local_paths,
             track_id=track_id,
@@ -97,6 +99,7 @@ def _analyze_file_impl(
     start_seconds: float | None = None,
     end_seconds: float | None = None,
     theme_name: str | None = None,
+    presentation_mode: str | None = None,
     selection: GraphSelection | None = None,
     include_local_paths: bool = False,
     track_id: str | None = None,
@@ -187,6 +190,7 @@ def _analyze_file_impl(
             staging,
             findings,
             theme_name=theme_name,
+            presentation_mode=presentation_mode,
         )
         write_output_manifest(
             staging,

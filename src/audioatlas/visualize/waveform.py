@@ -103,7 +103,7 @@ def plot_rms_timeline(
     """Save the frame RMS dBFS timeline.
 
     This is RMS dBFS, not K-weighted short-term LUFS. The name reflects that
-    intentionally - per PROJECT_CHARTER.md, AudioAtlas does not overclaim.
+    intentionally; AudioAtlas does not infer clipping from waveform shape alone.
     A short-term-LUFS timeline can be added later as a separate, named plot.
     """
 

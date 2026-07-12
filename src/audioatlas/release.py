@@ -6,7 +6,7 @@ place so reports, catalogs, tests, and documentation cannot drift silently.
 
 from __future__ import annotations
 
-RELEASE_LABEL = "public alpha 4 · comparable revisions and durable calibration"
+RELEASE_LABEL = "public alpha 5 · friendly reports and clean public distribution"
 SUMMARY_SCHEMA_VERSION = "0.2.1"
 FINDINGS_SCHEMA_VERSION = "0.2.0"
 CATALOG_SCHEMA_VERSION = "0.2.0"

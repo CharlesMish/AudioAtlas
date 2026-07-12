@@ -8,6 +8,12 @@ from typing import Any
 
 from audioatlas.alt_text import plot_alt_text
 from audioatlas.graphs.registry import graph_by_filename
+from audioatlas.presentation import (
+    presentation_controls_html,
+    presentation_css,
+    presentation_script,
+    validate_presentation_mode,
+)
 from audioatlas.release import RELEASE_LABEL
 from audioatlas.report import (
     RELATIVE_DB_NOTE,
@@ -138,10 +144,12 @@ def write_report_html(
     findings: dict[str, Any] | None = None,
     *,
     theme_name: str | None = None,
+    presentation_mode: str | None = None,
 ) -> Path:
     """Write a static, local report.html."""
 
     selected_theme = validate_theme_name(theme_name or default_theme_name())
+    selected_presentation = validate_presentation_mode(presentation_mode)
     metadata = summary.get("metadata") if isinstance(summary.get("metadata"), dict) else {}
     levels = summary.get("levels") if isinstance(summary.get("levels"), dict) else {}
     stereo = (
@@ -179,11 +187,12 @@ def write_report_html(
         _css(selected_theme),
         "</style>",
         "</head>",
-        "<body>",
+        f'<body data-presentation="{_h(selected_presentation)}">',
         '<div class="container">',
         "<header>",
         f"<h1>{_h(filename)}</h1>",
         '<div class="subtitle">Measurement-based findings, not quality judgments.</div>',
+        presentation_controls_html(selected_presentation),
         '<div class="meta-chips">',
         _chip("Duration", duration_label),
         _chip("Source range", source_range) if source_range is not None else "",
@@ -235,6 +244,7 @@ def write_report_html(
         '<p class="footer-note">AudioAtlas reports measured facts and visual maps. The listener decides what matters for the track.</p>',
         "</div>",
         _lightbox_overlay(),
+        presentation_script(selected_presentation),
         "</body>",
         "</html>",
         "",
@@ -780,6 +790,7 @@ details[open] summary { border-bottom: 1px solid var(--border); }
   .lightbox-title { font-size: 14px; }
 }
 """
+        + presentation_css()
     )
 
 

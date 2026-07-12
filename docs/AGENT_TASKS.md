@@ -5,7 +5,7 @@ This file is intentionally short. Historical task lists are archived under
 
 ## Current phase
 
-`0.2.0a4` comparable revisions and durable calibration. Read, in order:
+`0.2.0a5` friendly reports and clean public distribution. Read, in order:
 
 1. `PROJECT_CHARTER.md`
 2. `docs/HOPEFUL_SKEPTIC_PROJECT_EDITION.md`
@@ -21,7 +21,7 @@ This file is intentionally short. Historical task lists are archived under
   using `docs/calibration/CALIBRATION_RUNBOOK.md`.
 - Adjudicate every triggered rule as helpful, redundant, context-dependent,
   misleading, or factually wrong.
-- Freeze the anonymous review ledger and run `make calibration-replay` before
+- Freeze the anonymous review ledger and run `scripts/replay_calibration_rules.py` before
   accepting any finding-rule change; adjudicate every appeared, disappeared, or
   changed prompt.
 - Rehearse macOS and Windows double-click launchers from clean target machines;
@@ -31,6 +31,8 @@ This file is intentionally short. Historical task lists are archived under
 - Rehearse the same-track diff on real iterative exports and confirm its
   provenance/scope caveats remain understandable without becoming a preference
   engine.
+- Verify the generated public tree matches the stewardship implementation and
+  contains no stewardship-only review/calibration records.
 - Add a local notes-export interaction only after the static artifact contract
   is preserved and tested.
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "audioatlas"
-version = "0.2.0a4"
+version = "0.2.0a5"
 description = "A local single-track audio analysis framework for factual music maps."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -59,7 +59,6 @@ include = [
   "/tests",
   "/README.md",
   "/README_EASY_RUN.md",
-  "/PROJECT_CHARTER.md",
   "/LICENSE",
   "/pyproject.toml",
   "/docs",
@@ -69,7 +68,26 @@ include = [
   "/DEMO_AUDIO_PROVENANCE.txt",
   "/Makefile",
 ]
-exclude = ["/docs/archive"]
+exclude = [
+  "/docs/archive",
+  "/docs/archive/**",
+  "/docs/calibration",
+  "/docs/calibration/**",
+  "/docs/stewardship",
+  "/docs/stewardship/**",
+  "/docs/AGENT_TASKS.md",
+  "/docs/HOPEFUL_SKEPTIC_PROJECT_EDITION.md",
+  "/docs/LAUNCHER_REHEARSAL.md",
+  "/scripts/export_public_tree.py",
+  "/scripts/generate_calibration_fixtures.py",
+  "/scripts/prepare_calibration_review.py",
+  "/scripts/replay_calibration_rules.py",
+  "/starter_kit/LAUNCHER_REHEARSAL_LOG.md",
+  "/tests/test_calibration_fixtures.py",
+  "/tests/test_calibration_replay.py",
+  "/tests/test_calibration_review_preparation.py",
+  "/tests/test_public_export.py",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

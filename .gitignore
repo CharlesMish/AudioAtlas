@@ -32,11 +32,9 @@ outputs/
 !tests/fixtures/malformed/*.flac
 
 # Calibration and private review material
-calibration_audio/
-private_calibration/
-calibration*/
-!docs/calibration/
-!docs/calibration/**
+/calibration_audio/
+/private_calibration/
+/calibration*/
 model_review_package*/
 *_review_package*/
 DESIGN_v0.2_*.md
@@ -53,3 +51,6 @@ docs/CODEX_*_REVIEW_PACKAGE.md
 .DS_Store
 .idea/
 .vscode/
+
+# Generated public distribution trees
+AudioAtlas-public/

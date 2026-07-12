@@ -1,7 +1,7 @@
 # Hopeful Skeptic Project Edition — AudioAtlas
 
 **Derived from:** Hopeful Skeptic Core v0.4.1
-**Project Edition version:** `0.1.1`
+**Project Edition version:** `0.1.2`
 **Project Edition status:** Calibrating
 **Compatible project artifacts:** AudioAtlas `0.2.x` public-alpha line
 **Local overrides:** None. This edition narrows and operationalizes the Core; it does not weaken it.
@@ -52,7 +52,7 @@ A proposal that crosses this ceiling is a product-direction decision requiring e
 
 **Phase:** convergence, calibration readiness, and public-alpha hardening.
 **Current decision:** whether the existing report can earn more trust and become easier to validate without expanding its interpretive authority.
-**Still fluid:** finding eligibility and wording, calibration records, launcher evidence, revision-comparison ergonomics, compatibility timing, onboarding polish, typed boundaries.
+**Still fluid:** finding eligibility and wording, calibration records, launcher evidence, revision-comparison ergonomics, compatibility timing, public-branch ergonomics, onboarding polish, typed boundaries.
 **Expensive to change:** serialized field meanings, public rule IDs, comparison signatures, output ownership semantics, report portability, privacy defaults.
 **Frozen unless a material defect appears:** no-score identity, original-level preservation, local static reports, one-track-first product center, analysis/graph/report separation.
 **Expected evidence now:** deterministic tests, inspected outputs, clean builds, failure challenges, schema traceability, real-music human review, and native-platform rehearsal.
@@ -69,7 +69,9 @@ A proposal that crosses this ceiling is a product-direction decision requiring e
 | Relative mean band power | Mean STFT power per included FFT bin, normalized within the file | Integrated total energy across unequal bands |
 | PLR | Approximate true peak minus integrated LUFS | Compression amount, dynamic range, or normalization loss |
 | Section | A user-supplied source time range | Automatically detected song structure |
-| Graph profile | Which PNGs are rendered | A cheaper or incomplete analysis mode |
+| Graph profile | Which PNGs are rendered; `compact` is the preferred four-plot name | A cheaper or incomplete analysis mode |
+| Presentation mode | Focus or Studio CSS shell around the same report content and plot pixels | A different analysis or stronger conclusion |
+| Public branch | Deterministic user-facing view generated from the stewardship source | A separate lite implementation |
 | Catalog pattern | A descriptive trait shared by files in a folder | Ranking, recommendation, or statistical norm |
 | Output manifest | Record of files/directories AudioAtlas owns in a report folder | Permission to delete arbitrary neighboring content |
 | Calibrating rule | Deterministic semantics exist; musical usefulness is not yet frozen | A validated diagnostic rule |

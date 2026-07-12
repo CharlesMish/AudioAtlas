@@ -31,8 +31,8 @@ def test_release_contract_has_one_consistent_alpha_identity():
     assert audioatlas.REVISION_DIFF_SCHEMA_VERSION == REVISION_DIFF_SCHEMA_VERSION
     assert audioatlas.CALIBRATION_REPLAY_SCHEMA_VERSION == CALIBRATION_REPLAY_SCHEMA_VERSION
     assert audioatlas.FINDING_RULESET_VERSION == FINDING_RULESET_VERSION
-    assert "alpha 4" in RELEASE_LABEL
-    assert audioatlas.__version__ == "0.2.0a4"
+    assert "alpha 5" in RELEASE_LABEL
+    assert audioatlas.__version__ == "0.2.0a5"
     assert SUMMARY_SCHEMA_VERSION == "0.2.1"
     assert FINDINGS_SCHEMA_VERSION == CATALOG_SCHEMA_VERSION == "0.2.0"
     assert REVISION_DIFF_SCHEMA_VERSION == CALIBRATION_REPLAY_SCHEMA_VERSION == "0.1.0"

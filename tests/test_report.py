@@ -559,7 +559,7 @@ def test_report_includes_all_documented_metrics(tmp_path: Path):
 
 
 def test_report_does_not_make_verdicts(tmp_path: Path):
-    """AudioAtlas must not produce judgmental language. See PROJECT_CHARTER.md."""
+    """AudioAtlas must not produce judgmental language. See docs/ALPHA_LIMITATIONS.md."""
     summary = _make_summary()
     findings = {
         "count": 1,

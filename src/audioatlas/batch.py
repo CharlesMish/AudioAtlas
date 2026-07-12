@@ -48,6 +48,7 @@ def analyze_folder(
     config: AnalysisConfig | None = None,
     max_duration_seconds: float | None = None,
     theme_name: str | None = None,
+    presentation_mode: str | None = None,
     selection: GraphSelection | None = None,
     strict: bool = False,
     include_local_paths: bool = False,
@@ -97,6 +98,7 @@ def analyze_folder(
                     config=cfg,
                     max_duration_seconds=max_duration_seconds,
                     theme_name=theme_name,
+                    presentation_mode=presentation_mode,
                     selection=selection,
                     include_local_paths=include_local_paths,
                 )
@@ -130,7 +132,12 @@ def analyze_folder(
         )
         write_catalog_summary_json(catalog, staging)
         write_catalog_md(catalog, staging)
-        write_catalog_html(catalog, staging, theme_name=theme_name)
+        write_catalog_html(
+            catalog,
+            staging,
+            theme_name=theme_name,
+            presentation_mode=presentation_mode,
+        )
         write_output_manifest(
             staging,
             kind="batch-catalog",

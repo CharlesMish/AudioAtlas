@@ -524,3 +524,26 @@ sections:
 
     assert result.exit_code != 0
     assert "greater than start" in result.output
+
+
+def test_cli_analyze_without_out_uses_friendly_default(tmp_path, monkeypatch):
+    path = tmp_path / "My Mix (v5).wav"
+    sr = 48_000
+    y = np.zeros((sr, 1), dtype=np.float32)
+    y[:, 0] = 0.05
+    sf.write(path, y, sr)
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        main,
+        ["analyze", str(path), "--graphs-profile", "compact"],
+    )
+
+    assert result.exit_code == 0, result.output
+    out_dir = tmp_path / "audioatlas-report-my-mix-v5"
+    assert out_dir.is_dir()
+    assert (out_dir / "report.html").is_file()
+    assert "No --out supplied" in result.output
+    summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["graphs"]["profile"] == "compact"
+    assert len(summary["plots"]) == 4

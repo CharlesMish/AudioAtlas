@@ -239,7 +239,7 @@ def test_revision_diff_writes_static_owned_report_and_cli_uses_guardrails(tmp_pa
     assert not (out / "waveform_rms.png").exists()
     manifest = json.loads((out / OUTPUT_MARKER_FILENAME).read_text(encoding="utf-8"))
     assert manifest["kind"] == "same-track-revision-diff"
-    assert manifest["audioatlas_version"] == "0.2.0a4"
+    assert manifest["audioatlas_version"] == "0.2.0a5"
     markdown = paths["markdown"].read_text(encoding="utf-8").lower()
     html = paths["html"].read_text(encoding="utf-8").lower()
     assert "deltas are b minus a" in markdown

@@ -53,7 +53,7 @@ echo Chosen file: %INPUT%
 echo Output folder: %OUT_DIR%
 echo.
 
-audioatlas analyze "%INPUT%" --out "%OUT_DIR%" --graphs-profile minimal
+audioatlas analyze "%INPUT%" --out "%OUT_DIR%" --graphs-profile compact
 set "STATUS=%ERRORLEVEL%"
 
 echo.

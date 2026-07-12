@@ -7,6 +7,40 @@ tracked separately in `src/audioatlas/release.py`.
 
 No entries yet.
 
+## `0.2.0a5` — 2026-07-11
+
+### Friendly public distribution
+
+- Rewrote the root README around the first user journey and moved detailed
+  operation guidance into `docs/USER_GUIDE.md`.
+- Added a deterministic public-tree exporter and documented a two-branch model:
+  a user-facing `main` branch and a full `stewardship` branch containing review,
+  calibration, and operating records without maintaining a second codebase.
+- Removed stewardship-only material from the Python source distribution while
+  keeping code, tests, user documentation, schemas, compatibility notes, and
+  launchers available to public users.
+- Kept the public Makefile focused on normal install, test, lint, demo, and
+  golden-fixture tasks; stewardship export and calibration operations remain in
+  their owner-side runbooks and scripts.
+- Made `audioatlas analyze song.wav` useful without `--out`; it now chooses a
+  predictable `audioatlas-report-<filename>` folder.
+
+### Report experience profiles
+
+- Added an accessible Focus/Studio switch to single-track, catalog, and
+  revision-diff HTML reports. Focus preserves the restrained report; Studio
+  adds richer static framing without filtering or changing plot pixels.
+- Added `--presentation focus|studio` to choose the opening view. Reports remain
+  local and dependency-free and remember the selection per report path when
+  local storage is available.
+- Added `compact` as the preferred public name for the four-plot graph profile.
+  The legacy `minimal` name remains an equivalent compatibility alias.
+- Kept one analysis engine rather than introducing a separate lite package;
+  compact/full depth and Focus/Studio presentation are delivery choices only.
+- Kept summary, findings, catalog, comparison, and finding-ruleset schemas
+  unchanged because this pass does not alter measurement or interpretation
+  semantics.
+
 ## `0.2.0a4` — 2026-07-11
 
 ### Comparable same-track revisions

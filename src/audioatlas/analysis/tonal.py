@@ -1,7 +1,7 @@
 """Tonal analysis (chroma).
 
 Descriptive pitch-class energy only — AudioAtlas does not attempt key
-detection. See ``PROJECT_CHARTER.md`` for the no-verdict rule.
+detection. See ``docs/ALPHA_LIMITATIONS.md`` for the no-verdict boundary.
 """
 
 from __future__ import annotations

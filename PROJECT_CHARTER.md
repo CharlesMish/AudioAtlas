@@ -1,7 +1,7 @@
 # AudioAtlas Project Charter
 
 **Current phase:** convergence and public-alpha hardening
-**Current release line:** `0.2.0a4`
+**Current release line:** `0.2.0a5`
 **Authoritative for:** product identity, scope, interpretation rules, and release direction
 
 ## North star
@@ -105,7 +105,7 @@ new product decision, not an incidental pull request.
 
 ## Current release priorities
 
-The `0.2.0a4` line prioritizes:
+The `0.2.0a5` line prioritizes:
 
 1. interpretation integrity and stable finding rules;
 2. safe errors, path privacy, and partial batch success;

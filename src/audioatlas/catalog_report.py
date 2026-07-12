@@ -9,6 +9,12 @@ from pathlib import Path
 from statistics import mean, median
 from typing import Any
 
+from audioatlas.presentation import (
+    presentation_controls_html,
+    presentation_css,
+    presentation_script,
+    validate_presentation_mode,
+)
 from audioatlas.release import CATALOG_SCHEMA_VERSION
 from audioatlas.theme import default_theme_name, theme_css_variables, validate_theme_name
 from audioatlas.utils import mmss
@@ -458,9 +464,11 @@ def write_catalog_html(
     out_dir: str | Path,
     *,
     theme_name: str | None = None,
+    presentation_mode: str | None = None,
 ) -> Path:
     out = Path(out_dir) / "catalog.html"
     selected_theme = validate_theme_name(theme_name or default_theme_name())
+    selected_presentation = validate_presentation_mode(presentation_mode)
     folder_name = Path(str(catalog.get("input_folder", "folder"))).name
     stats = catalog.get("statistics") if isinstance(catalog.get("statistics"), dict) else {}
     lines = [
@@ -474,11 +482,12 @@ def write_catalog_html(
         _css(selected_theme),
         "</style>",
         "</head>",
-        "<body>",
+        f'<body data-presentation="{_h(selected_presentation)}">',
         '<div class="container">',
         "<header>",
         f"<h1>{_h(folder_name)}</h1>",
         '<div class="subtitle">Folder-level technical fingerprints, not verdicts.</div>',
+        presentation_controls_html(selected_presentation),
         '<div class="meta-chips">',
         _chip("Tracks", catalog.get("track_count", 0)),
         _chip("Input", _short_path(catalog.get("input_folder", ""))),
@@ -526,6 +535,7 @@ def write_catalog_html(
         _fingerprint_cards(catalog),
         _context_section(),
         "</div>",
+        presentation_script(selected_presentation),
         "</body>",
         "</html>",
         "",
@@ -1020,4 +1030,5 @@ h3 { margin: 0; }
   .glossary-list { grid-template-columns: 1fr; }
 }
 """
+        + presentation_css()
     )

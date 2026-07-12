@@ -109,7 +109,7 @@ runs from retaining completed Matplotlib graphs and their analysis bundles.
 
 Librosa uses Numba/llvmlite in analysis paths, so those transitive packages are
 part of the executable measurement environment rather than incidental build
-tools. AudioAtlas `0.2.0a4` promotes Numba into the direct dependency contract
+tools. AudioAtlas `0.2.0a5` promotes Numba into the direct dependency contract
 and constrains it to `>=0.65.1,<0.66` after a clean Python 3.13 report stalled
 and crashed with Numba 0.66.0 / llvmlite 0.48.0 but completed with Numba 0.65.1
 / llvmlite 0.47.0. Dependency versions are recorded in provenance; widening
@@ -176,5 +176,19 @@ The architecture is intentionally optimized for static, inspectable reports.
 Scores, automated mastering advice, classifiers, cross-track reference
 ranking, hosted services, playback/DAW state, and a plugin platform are not
 incremental feature slices; they would be product redesigns governed by
-`PROJECT_CHARTER.md`. Guarded descriptive comparison between user-asserted
+the public product boundary. Guarded descriptive comparison between user-asserted
 revisions of one track is the narrow exception documented above.
+
+## Public distribution and presentation
+
+The stewardship checkout is the complete project record.
+`scripts/export_public_tree.py` derives the friendly public tree by copying the
+same tracked implementation while excluding internal review, private
+calibration operations, and launcher-rehearsal records. This is a distribution
+projection, not a fork.
+
+Graph profiles remain rendering selection only. `compact` resolves to the same
+four graph set as the legacy `minimal` name. Focus and Studio presentation are
+implemented in `presentation.py` and injected into static HTML writers. They
+change CSS and local interaction only; they do not enter the analysis
+provenance signature or alter generated PNG pixels.

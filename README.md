@@ -1,370 +1,188 @@
 # AudioAtlas
 
-**AudioAtlas turns one audio file into a private, portable listening map:**
-measured context, places worth inspecting, and clear limits on what each
-measurement establishes.
+## See your track. Keep the judgment yours.
 
-It runs locally, preserves decoded input levels, and writes a self-contained
-bundle of HTML, Markdown, JSON, PNG plots, and an ownership manifest. The report
-helps you decide **where to listen more carefully**; it does not decide whether
-the music is good.
+AudioAtlas turns one audio file into a private, portable listening map: key
+measurements, clear plots, and a short list of places that may be worth checking
+by ear.
 
-## Status: `0.2.0a4` — comparable revisions and durable calibration
-
-AudioAtlas is a public alpha. The report pipeline, graph registry, sections, and
-catalog workflows are usable, but finding thresholds remain in calibration.
-Treat findings as review prompts—not diagnoses, scores, or mastering decisions.
-See [the project charter](PROJECT_CHARTER.md) for the product boundary and
-[the finding-rule ledger](docs/FINDING_RULES.md) for exact trigger semantics.
-This release keeps the `0.2.0a2` finding ruleset unchanged while adding
-explicit analysis provenance, guarded same-track revision deltas, calibration
-replay, measured plot alt text, and stronger invariant/error-boundary tests.
+It runs on your computer. There is no account, upload, server, telemetry, or
+quality score. The result is a folder you can open in any browser and keep with
+the track.
 
 ![AudioAtlas report overview](docs/assets/readme/report_overview.png)
 
-## What it does
+## Make your first report
 
-- Preserves original decoded levels; input is never auto-normalized.
-- Measures scalar levels, approximate true peak, clipping/near-clipping, RMS,
-  crest factor, short-term LUFS, stereo correlation, mid/side energy, spectral
-  shape, relative mean band power, onset activity, and chroma pitch-class
-  energy.
-- Generates static local reports with no server, account, CDN, telemetry, or
-  network dependency.
-- Records bounded review prompts with stable rule IDs, typed evidence, and
-  associated graph keys for audit and future linking.
-- Records path-safe analysis provenance: configuration, measurement-code,
-  dependency, decoder, and environment fingerprints.
-- Compares two revisions of the **same track** through descriptive B-minus-A
-  deltas and finding churn, with no ranking or preference language.
-- Gives plot images measured-value alt text in both HTML and Markdown reports.
-- Supports user-defined time sections and descriptive folder catalogs.
-- Excludes machine-local absolute paths from report data by default.
-- Renders into a staging folder and rolls back a failed publication so an
-  analysis, rendering, or individual file-update failure does not erase the
-  last complete result; stale AudioAtlas plots are removed while unrelated
-  files are preserved.
-- Continues batch runs after an unreadable file by default and records the
-  failure in the catalog.
-
-## What it deliberately does not do
-
-- No mix, loudness, mastering, or quality score.
-- No automated EQ, compression, or mastering prescription.
-- No reference-track ranking or cross-track winner comparison.
-- No genre, instrument, source, key, or automatic section detection.
-- No source separation, cloud dashboard, playback engine, or DAW integration.
-- No claim that a threshold crossing is audible, bad, or musically wrong.
-
-## Install from a source checkout
-
-AudioAtlas supports Python 3.11 or newer. The tested support matrix is defined in
-`.github/workflows/ci.yml`.
-
-With [`uv`](https://docs.astral.sh/uv/):
+AudioAtlas supports Python 3.11 or newer.
 
 ```bash
-uv sync --extra dev
+python -m pip install .
+audioatlas analyze song.wav
 ```
 
-With a standard virtual environment:
+When `--out` is omitted, AudioAtlas creates a friendly folder such as:
+
+```text
+audioatlas-report-song/
+```
+
+Open `report.html` inside that folder.
+
+From a source checkout using `uv`:
 
 ```bash
-python -m venv .venv
-# macOS/Linux
-source .venv/bin/activate
-# Windows PowerShell
-# .venv\Scripts\Activate.ps1
-
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+uv sync
+uv run audioatlas analyze song.wav
 ```
 
-## Analyze one track
+The first analysis in a fresh environment may take a little longer while the
+scientific libraries initialize. Lightweight commands such as `--version`,
+`--help`, and `themes` start without loading the analysis stack.
 
-From a source checkout with `uv`:
+## Choose how much you want to see
+
+AudioAtlas has one analysis engine. The choices below change report depth and
+presentation, not the underlying measurements.
+
+| Experience | Command | What changes |
+|---|---|---|
+| **Compact** | `--graphs-profile compact` | Four essential plots; complete JSON remains available |
+| **Standard** | no extra flag | Fourteen plots and the normal first-read experience |
+| **Full** | `--graphs-profile full` | All seventeen registered plots |
+
+Every HTML report includes a **Focus / Studio** switch:
+
+- **Focus** is restrained and information-first.
+- **Studio** adds richer framing, hierarchy, and atmosphere around the same
+  text and PNG plots.
+
+Choose the opening view when generating a report:
 
 ```bash
-uv run audioatlas analyze /path/to/song.wav --out reports/song
+audioatlas analyze song.wav --presentation studio
 ```
 
-From an environment where AudioAtlas is installed:
+The switch remains available inside the finished report, works offline, and
+never filters or alters the measured plot images.
+
+A separate “lite” build is intentionally not maintained. Compact reports use
+the same trusted analysis engine, which avoids two editions slowly disagreeing
+about the same track.
+
+## Useful recipes
 
 ```bash
-audioatlas analyze /path/to/song.wav --out reports/song
+# Pick an output folder
+audioatlas analyze song.wav --out reports/song
+
+# Compact first read
+audioatlas analyze song.wav --graphs-profile compact
+
+# Richer opening presentation
+audioatlas analyze song.wav --presentation studio
+
+# All plots with a built-in theme
+audioatlas analyze song.wav --graphs-profile full --theme midnight_studio
+
+# Analyze one source range
+audioatlas analyze song.wav --start 30 --end 62 --out reports/verse
+
+# List themes
+audioatlas themes
 ```
 
-Open `reports/song/report.html` directly in a browser. The first analysis in
-a fresh environment can take longer while scientific libraries initialize;
-AudioAtlas prints a preparation message immediately, and lightweight commands
-such as `--version`, `--help`, and `themes` avoid loading the analysis stack.
-The `0.2.0a4` package also constrains Numba to the clean-smoked `0.65.x`
-line; see [compatibility policy](docs/COMPATIBILITY.md) for the observed
-Numba 0.66.0 / llvmlite 0.48.0 failure boundary.
+## What you receive
 
-Common variants:
+A normal report folder contains:
+
+- `report.html` — the friendly browser report;
+- `report.md` — a portable text version;
+- `summary.json` — the complete measurement summary;
+- `findings.json` — bounded review prompts and their evidence;
+- PNG plots;
+- `.audioatlas-output.json` — a manifest that lets AudioAtlas update its own
+  files without deleting unrelated files.
+
+Local absolute paths are excluded by default, so shared reports do not normally
+reveal usernames or folder structures.
+
+## Compare two revisions of the same track
+
+Give related exports the same private revision token when you analyze them:
 
 ```bash
-# Compact four-plot first read; complete analysis JSON is still generated
-uv run audioatlas analyze song.wav --out reports/compact --graphs-profile minimal
-
-# All 17 registered plots
-uv run audioatlas analyze song.wav --out reports/full --graphs-profile full
-
-# A manual source range
-uv run audioatlas analyze song.wav --out reports/verse --start 30 --end 62
-
-# A built-in presentation theme
-uv run audioatlas analyze song.wav --out reports/dark --theme midnight_studio
-
-# Explicitly include absolute local paths (off by default)
-uv run audioatlas analyze song.wav --out reports/local --include-local-paths
-
-# Give related exports the same opaque revision token; only its SHA-256 is stored
-uv run audioatlas analyze mix-v3.wav --out reports/mix-v3 --track-id "private-song-token"
+audioatlas analyze mix-v3.wav --out reports/mix-v3 --track-id "unique-private-token"
+audioatlas analyze mix-v4.wav --out reports/mix-v4 --track-id "unique-private-token"
+audioatlas diff reports/mix-v3 reports/mix-v4 --out reports/v3-to-v4
 ```
 
-## Compare revisions of the same track
+The diff reports descriptive `B - A` changes and which review prompts appeared,
+disappeared, or changed. It does not choose a winner. AudioAtlas stores only the
+token's SHA-256 digest; matching digests mean the same token was supplied, not
+that AudioAtlas recognized the music.
 
-Analyze both exports with the same `--track-id` token, then compare their
-completed report folders:
+## Analyze sections or a folder
+
+Manual sections:
 
 ```bash
-uv run audioatlas analyze mix-v3.wav --out reports/mix-v3 --track-id "private-song-token"
-uv run audioatlas analyze mix-v4.wav --out reports/mix-v4 --track-id "private-song-token"
-uv run audioatlas diff reports/mix-v3 reports/mix-v4 --out reports/mix-v3-to-v4
-```
-
-The raw token is not serialized; each report stores only its SHA-256 digest.
-Hashing prevents casual plaintext disclosure, but it does not make a short or
-reused token secret: a guessed token can be hashed again, and reuse can link
-separate reports. Use a unique, high-entropy token per track. The command
-argument may also remain in shell history. Matching digests establish only that
-the same token was supplied—not that AudioAtlas independently recognized the
-music. Conflicting digests are never overridden.
-
-The diff output directory must be separate from both source report folders.
-It emits `revision_diff.json`, `revision_diff.md`, and `revision_diff.html`.
-It reports B-minus-A changes in scalar measurements, broad-band medians, and
-finding appearance, disappearance, or changed prompt fields. It does not
-name a preferred revision. Reports with missing identity require the explicit
-`--confirm-same-track` assertion. Reports with incompatible or missing analysis
-provenance are refused unless `--allow-incomparable` is deliberately supplied;
-the resulting artifact remains prominently caveated.
-
-### Graph profiles
-
-Graph profiles control **rendered PNG depth only**. They do not skip DSP or
-remove measurements from `summary.json`.
-
-| CLI profile | Plots | Purpose |
-|---|---:|---|
-| `minimal` | 4 | Compact first read; name retained for CLI compatibility |
-| `standard` | 14 | Default report |
-| `full` | 17 | Adds distribution/detail plots |
-
-You may add or remove graph keys without changing the analysis summary:
-
-```bash
-uv run audioatlas analyze song.wav --out reports/custom \
-  --graphs-profile minimal \
-  --enable chroma_cqt,stereo_correlation
-```
-
-Or use YAML:
-
-```yaml
-graphs:
-  profile: minimal
-  enable: [chroma_cqt, stereo_correlation]
-  disable: []
-```
-
-```bash
-uv run audioatlas analyze song.wav --out reports/custom --graphs-config graphs.yaml
-```
-
-List built-in themes:
-
-```bash
-uv run audioatlas themes
-```
-
-## Manual sections
-
-AudioAtlas does not infer song structure. It applies the same report pipeline to
-source ranges you provide:
-
-```bash
-uv run audioatlas sections song.wav --out reports/song_sections \
+audioatlas sections song.wav --out reports/sections \
   --section intro:0:30 \
   --section verse:30:62 \
   --section ending:62:
 ```
 
-Or save ranges in YAML:
-
-```yaml
-sections:
-  - name: intro
-    start: 0
-    end: 30
-  - name: verse
-    start: 30
-    end: 62
-  - name: ending
-    start: 62
-```
+Folder catalog:
 
 ```bash
-uv run audioatlas sections song.wav --out reports/song_sections --config sections.yaml
+audioatlas batch /path/to/audio --out reports/catalog
 ```
 
-The output includes `section_index.md` with a neutral comparison table.
+AudioAtlas does not infer song structure. Folder catalogs remain descriptive
+and do not rank tracks.
 
-![AudioAtlas section comparison table](docs/assets/readme/sections_comparison.png)
+## What AudioAtlas measures
 
-## Folder catalogs
+AudioAtlas currently includes level and loudness context, approximate true
+peak, clipping and near-clipping counts, RMS and crest timelines, short-term
+LUFS, stereo correlation, mid/side energy, spectral shape, relative mean band
+power, onset activity, and chroma pitch-class energy.
 
-```bash
-uv run audioatlas batch /path/to/audio_folder --out reports/catalog
-```
+Review prompts are checks worth making, not diagnoses. A report may correctly
+surface no prioritized prompts at all.
 
-Batch discovery recognizes `.wav`, `.wave`, `.flac`, `.ogg`, `.aif`, `.aiff`,
-and `.mp3`. Actual decoding depends on the local `libsndfile` build. Unreadable
-files are listed in `catalog_summary.json`, `catalog.md`, and `catalog.html`
-while valid tracks continue.
+## What it does not do
 
-Use strict mode when partial success is not acceptable:
+- No mix, mastering, loudness, or quality score.
+- No automatic EQ, compression, or mastering prescription.
+- No cross-track ranking or reference-track winner.
+- No genre, instrument, source, key, or automatic section detection.
+- No source separation, cloud dashboard, playback engine, or DAW integration.
+- No claim that a threshold crossing is audible, bad, or musically wrong.
 
-```bash
-uv run audioatlas batch audio_folder --out reports/catalog --strict
-```
+## Alpha status
 
-By default, catalog and track JSON use folder/file labels rather than absolute
-paths. `--include-local-paths` is an explicit sharing-sensitive opt-in.
+AudioAtlas `0.2.0a5` is a public alpha. The report pipeline and comparison tools
+are usable, but the default review prompts are still being calibrated on real
+music. Native double-click launchers also remain convenience wrappers for an
+already installed AudioAtlas environment, not a standalone desktop installer.
 
-## Output contract
+The temporary Numba compatibility range is documented in
+[Compatibility](docs/COMPATIBILITY.md).
 
-A standard single-track folder contains:
+## Learn more
 
-```text
-reports/song/
-├── .audioatlas-output.json
-├── summary.json
-├── findings.json
-├── report.md
-├── report.html
-├── waveform_rms.png
-├── rms_timeline.png
-├── crest_factor_timeline.png
-├── log_spectrogram.png
-├── average_spectrum.png
-├── sample_histogram.png
-├── stereo_correlation.png
-├── mid_side_energy.png
-├── spectral_shape.png
-├── band_energy_timeline.png
-├── onset_density.png
-├── chroma_cqt.png
-├── short_term_lufs.png
-└── peak_timeline.png
-```
-
-`summary.json` also records `source_identity` and `analysis_provenance`. The
-identity block contains no raw token. The provenance block separates a
-cross-environment compatible-analysis signature from a stricter exact-environment
-signature so downstream comparisons can state what matched.
-
-The historical filename `band_energy_timeline.png` remains stable for existing
-links and graph configurations. Its current title and schema define the actual
-measurement: **relative mean spectral power per included FFT bin**, not total
-energy integrated across differently sized bands.
-
-![Representative AudioAtlas graph examples](docs/assets/readme/graph_examples.png)
-
-## How to interpret the report
-
-- Findings are threshold-backed prompts. They do not prove audibility, intent,
-  quality, or a defect.
-- Relative dB plots are normalized within an analysis view. They are not dBFS
-  and should not be compared as absolute levels across songs.
-- PLR is approximate true peak minus integrated loudness. Loudness
-  normalization changes both by the same gain and therefore does not change
-  PLR.
-- Absolute rolloff, highest broad band, onset movement, centroid movement, and
-  dominant chroma remain descriptive measurements; they do not create musical
-  conclusions by default.
-- Lossy files are measured after decoding. Peak/clipping observations do not
-  establish what happened in the source master.
-- Human note fields in the static HTML are temporary browser fields; they are
-  not currently saved into the report bundle.
-
-## Double-click launchers
-
-`starter_kit/` and `scripts/` contain convenience launchers for an **already
-installed** AudioAtlas environment. They are not installers and have not been
-recast as a native desktop app. Read [README_EASY_RUN.md](README_EASY_RUN.md)
-before handing them to a nontechnical user. Use the
-[native launcher rehearsal](docs/LAUNCHER_REHEARSAL.md) and the included log
-before making stronger ease-of-use claims.
-
-## Development and verification
-
-```bash
-uv run --extra dev pytest
-uv run --extra dev ruff check .
-uv build
-```
-
-Generate the public deterministic calibration fixtures:
-
-```bash
-uv run python scripts/generate_calibration_fixtures.py
-```
-
-Seed an anonymous human-review worksheet from completed private reports:
-
-```bash
-uv run python scripts/prepare_calibration_review.py private_reports \
-  --out finding_review.csv \
-  --private-map private_asset_map.csv
-```
-
-After the ledger is frozen and reviewed, replay the current finding rules over
-the saved summaries without opening the audio:
-
-```bash
-uv run python scripts/replay_calibration_rules.py private_reports \
-  --asset-map private_asset_map.csv \
-  --review-ledger finding_review.csv \
-  --out rule_replay.json
-```
-
-The replay first verifies that each report still matches the evidence hash in
-the human-review ledger, then records anonymous appeared/disappeared/changed
-prompt rows. It does not replace listening judgments or re-run measurements.
-
-The private musical-corpus gate is documented in
-[`docs/calibration/README.md`](docs/calibration/README.md) and the concrete
-[`calibration runbook`](docs/calibration/CALIBRATION_RUNBOOK.md). The repository
-does not claim that human listening calibration is complete.
-
-## Documentation
-
-- [Project charter](PROJECT_CHARTER.md)
-- [Finding rule ledger](docs/FINDING_RULES.md)
-- [Alpha limitations](docs/ALPHA_LIMITATIONS.md)
-- [Summary and findings schemas](docs/SUMMARY_SCHEMA.md)
-- [Compatibility policy](docs/COMPATIBILITY.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Calibration workflow](docs/calibration/README.md)
-- [Musical calibration runbook](docs/calibration/CALIBRATION_RUNBOOK.md)
-- [Native launcher rehearsal](docs/LAUNCHER_REHEARSAL.md)
-- [Hopeful Skeptic Project Edition](docs/HOPEFUL_SKEPTIC_PROJECT_EDITION.md)
-- [Changelog](docs/CHANGELOG.md)
+- [Friendly user guide](docs/USER_GUIDE.md)
+- [Easy-run launchers](README_EASY_RUN.md)
 - [Examples](examples/README.md)
+- [Finding rules](docs/FINDING_RULES.md)
+- [Alpha limitations](docs/ALPHA_LIMITATIONS.md)
+- [Compatibility](docs/COMPATIBILITY.md)
+- [Schemas](docs/SUMMARY_SCHEMA.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Changelog](docs/CHANGELOG.md)
 
 ## License
 
-[MIT](LICENSE).
+[MIT](LICENSE)

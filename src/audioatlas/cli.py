@@ -16,6 +16,7 @@ import yaml
 from audioatlas import __version__
 from audioatlas.errors import AudioAtlasError, RevisionDiffError
 from audioatlas.graph_profiles import VALID_PROFILES
+from audioatlas.presentation import VALID_PRESENTATION_MODES
 
 if TYPE_CHECKING:
     from audioatlas.config import AnalysisConfig
@@ -33,8 +34,8 @@ def main() -> None:
 @click.argument("input_path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option(
     "--out", "out_dir",
-    type=click.Path(file_okay=False, path_type=Path), required=True,
-    help="Output directory for the report.",
+    type=click.Path(file_okay=False, path_type=Path), required=False,
+    help="Output directory. Defaults to ./audioatlas-report-<filename>.",
 )
 @click.option(
     "--max-duration", type=float, default=None,
@@ -64,6 +65,12 @@ def main() -> None:
          "Set to 1 to disable oversampling and use sample peak.",
 )
 @click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
+@click.option(
+    "--presentation",
+    type=click.Choice(VALID_PRESENTATION_MODES),
+    default=None,
+    help="Opening report view. Every HTML report can switch between Focus and Studio.",
+)
 @click.option(
     "--graphs-profile",
     type=click.Choice(VALID_PROFILES),
@@ -104,7 +111,7 @@ def main() -> None:
 )
 def analyze(
     input_path: Path,
-    out_dir: Path,
+    out_dir: Path | None,
     max_duration: float | None,
     start_seconds: float | None,
     end_seconds: float | None,
@@ -114,6 +121,7 @@ def analyze(
     db_floor: float,
     true_peak_oversample: int,
     theme: str | None,
+    presentation: str | None,
     graphs_profile: str | None,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
@@ -123,6 +131,9 @@ def analyze(
 ) -> None:
     """Analyze one audio file and write a report folder."""
 
+    if out_dir is None:
+        out_dir = _default_report_out(input_path)
+        click.echo(f"No --out supplied; using: {out_dir}")
     click.echo(f"Preparing AudioAtlas analysis for: {input_path.name}")
     from audioatlas.pipeline import analyze_file
 
@@ -138,6 +149,7 @@ def analyze(
             start_seconds=start_seconds,
             end_seconds=end_seconds,
             theme_name=selected_theme,
+            presentation_mode=presentation,
             selection=selection,
             include_local_paths=include_local_paths,
             track_id=track_id,
@@ -186,6 +198,12 @@ def analyze(
 )
 @click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
 @click.option(
+    "--presentation",
+    type=click.Choice(VALID_PRESENTATION_MODES),
+    default=None,
+    help="Opening report view. Every HTML report can switch between Focus and Studio.",
+)
+@click.option(
     "--graphs-profile",
     type=click.Choice(VALID_PROFILES),
     default=None,
@@ -230,6 +248,7 @@ def batch(
     db_floor: float,
     true_peak_oversample: int,
     theme: str | None,
+    presentation: str | None,
     graphs_profile: str | None,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
@@ -252,6 +271,7 @@ def batch(
             config=cfg,
             max_duration_seconds=max_duration,
             theme_name=selected_theme,
+            presentation_mode=presentation,
             selection=selection,
             strict=strict,
             include_local_paths=include_local_paths,
@@ -322,6 +342,12 @@ def batch(
 )
 @click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
 @click.option(
+    "--presentation",
+    type=click.Choice(VALID_PRESENTATION_MODES),
+    default=None,
+    help="Opening report view. Every HTML report can switch between Focus and Studio.",
+)
+@click.option(
     "--graphs-profile",
     type=click.Choice(VALID_PROFILES),
     default=None,
@@ -370,6 +396,7 @@ def sections(
     db_floor: float,
     true_peak_oversample: int,
     theme: str | None,
+    presentation: str | None,
     graphs_profile: str | None,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
@@ -403,6 +430,7 @@ def sections(
                 start_seconds=start_seconds,
                 end_seconds=end_seconds,
                 theme_name=selected_theme,
+                presentation_mode=presentation,
                 selection=selection,
                 include_local_paths=include_local_paths,
                 track_id=track_id,
@@ -463,6 +491,12 @@ def sections(
 @click.option("--label-a", default=None, help="Optional display label for report A.")
 @click.option("--label-b", default=None, help="Optional display label for report B.")
 @click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
+@click.option(
+    "--presentation",
+    type=click.Choice(VALID_PRESENTATION_MODES),
+    default=None,
+    help="Opening report view. The HTML diff can switch between Focus and Studio.",
+)
 def diff_reports(
     report_a: Path,
     report_b: Path,
@@ -472,6 +506,7 @@ def diff_reports(
     label_a: str | None,
     label_b: str | None,
     theme: str | None,
+    presentation: str | None,
 ) -> None:
     """Compare two completed reports for revisions of the same track."""
 
@@ -499,7 +534,12 @@ def diff_reports(
             label_a=label_a,
             label_b=label_b,
         )
-        paths = write_revision_diff(payload, out_dir, theme_name=selected_theme)
+        paths = write_revision_diff(
+            payload,
+            out_dir,
+            theme_name=selected_theme,
+            presentation_mode=presentation,
+        )
     except (AudioAtlasError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
     click.echo(f"AudioAtlas revision delta written to: {out_dir}")
@@ -515,6 +555,14 @@ def themes() -> None:
     from audioatlas.theme import theme_listing_text
 
     click.echo(theme_listing_text())
+
+
+def _default_report_out(input_path: Path) -> Path:
+    """Return a predictable friendly output folder for one-track analysis."""
+
+    chars = [char.lower() if char.isalnum() else "-" for char in input_path.stem]
+    slug = re.sub(r"-+", "-", "".join(chars)).strip("-") or "track"
+    return Path.cwd() / f"audioatlas-report-{slug}"
 
 
 def _validate_theme_for_cli(theme: str | None) -> str:

@@ -65,7 +65,7 @@ def test_pipeline_writes_expected_outputs(tmp_path: Path, sr: int):
     assert summary["metadata"]["local_paths_included"] is False
     assert summary["source_identity"] == {"kind": "none", "track_id_sha256": None}
     provenance = summary["analysis_provenance"]
-    assert provenance["audioatlas_version"] == "0.2.0a4"
+    assert provenance["audioatlas_version"] == "0.2.0a5"
     assert provenance["summary_schema_version"] == SUMMARY_SCHEMA_VERSION
     assert len(provenance["analysis_config_sha256"]) == 64
     assert len(provenance["measurement_code_sha256"]) == 64
