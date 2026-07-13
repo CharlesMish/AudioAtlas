@@ -8,6 +8,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 import soundfile as sf
+from matplotlib import image as matplotlib_image
+from matplotlib.colors import to_rgb
 
 import audioatlas.pipeline as pipeline_module
 from audioatlas.batch import analyze_folder
@@ -22,6 +24,7 @@ from audioatlas.release import (
     FINDINGS_SCHEMA_VERSION,
     SUMMARY_SCHEMA_VERSION,
 )
+from audioatlas.theme import get_theme
 
 
 def _small_config() -> AnalysisConfig:
@@ -118,6 +121,23 @@ def test_pipeline_writes_expected_outputs(tmp_path: Path, sr: int):
         assert "://" not in src
         assert not src.startswith(("/", "\\"))
         assert (result.out_dir / src).exists()
+
+
+def test_pipeline_applies_dark_report_theme_to_plot_canvas(tmp_path: Path, sr: int):
+    path = tmp_path / "song.wav"
+    _write_short_sine(path, sr)
+
+    result = analyze_file(
+        path,
+        tmp_path / "report",
+        config=_small_config(),
+        selection=GraphSelection(profile="minimal"),
+        theme_name="midnight_studio",
+    )
+
+    image = matplotlib_image.imread(result.out_dir / "rms_timeline.png")
+    expected_rgb = np.asarray(to_rgb(get_theme("midnight_studio").tokens["surface"]))
+    assert np.allclose(image[0, 0, :3], expected_rgb, atol=1 / 255)
 
 
 def test_pipeline_track_id_is_hashed_and_never_serializes_the_raw_token(

@@ -894,6 +894,9 @@ def test_write_report_html_keeps_polished_visual_structure(tmp_path: Path):
     assert "--warning-bg:" in text
     assert "letter-spacing: 0;" in text
     assert "border-left: 5px solid var(--callout-border);" in text
+    assert "text-wrap: balance;" in text
+    assert ".section-intro, .how-to-read p, .finding-title, .plot-desc { text-wrap: pretty; }" in text
+    assert ".metric-value, .metrics-table { font-variant-numeric: tabular-nums lining-nums; }" in text
     assert ".note-box textarea:focus { outline: 2px solid var(--accent-muted); border-color: var(--accent);" in text
     assert "#5eead4" not in text
     assert "background: #fff;" not in text
@@ -914,6 +917,7 @@ def test_write_report_html_keeps_typography_improvements_in_dark_mode(tmp_path: 
     assert "h2::before" in text
     assert ".section-intro {\n  font-size: 13.6px;\n  color: var(--text-muted);" in text
     assert ".metric-card { min-height: 124px; padding: 20px 18px 18px;" in text
+    assert ".metric-value, .metrics-table { font-variant-numeric: tabular-nums lining-nums; }" in text
 
 
 def test_write_report_html_renders_default_and_non_default_themes(tmp_path: Path):

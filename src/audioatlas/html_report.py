@@ -733,7 +733,7 @@ body {
 }
 .container { max-width: 1120px; margin: 0 auto; padding: 34px 20px 84px; }
 header { margin-bottom: 30px; padding: 24px 0 8px; }
-h1 { font-size: 34px; font-weight: 680; margin: 0 0 8px; line-height: 1.14; }
+h1 { font-size: 34px; font-weight: 680; margin: 0 0 8px; line-height: 1.14; text-wrap: balance; }
 h2 {
   font-size: 21px;
   font-weight: 680;
@@ -742,6 +742,7 @@ h2 {
   border-top: 1px solid var(--border-soft);
   border-bottom: 1px solid var(--border);
   line-height: 1.25;
+  text-wrap: balance;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -783,6 +784,7 @@ section { margin-top: 40px; }
   max-width: 80ch;
   margin: 0 0 18px;
 }
+.section-intro, .how-to-read p, .finding-title, .plot-desc { text-wrap: pretty; }
 .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(166px, 1fr)); gap: 14px; }
 .metric-card, .finding-card, .plot-card, details, .note-box, .context-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-card); }
 .metric-card { min-height: 124px; padding: 20px 18px 18px; display: flex; flex-direction: column; justify-content: space-between; }
@@ -790,6 +792,7 @@ section { margin-top: 40px; }
 .context-card h3 { font-size: 14px; margin: 0 0 6px; }
 .context-card p { margin: 0; color: var(--text-muted); }
 .metric-value { font-size: 24px; font-weight: 700; line-height: 1.05; margin-bottom: 8px; color: var(--text); }
+.metric-value, .metrics-table { font-variant-numeric: tabular-nums lining-nums; }
 .metric-label { font-size: 12.6px; color: var(--text-muted); font-weight: 560; }
 .metric-label a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .metric-label a:hover { color: var(--accent); }
