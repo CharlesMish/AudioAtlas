@@ -10,7 +10,10 @@ It runs on your computer. There is no account, upload, server, telemetry, or
 quality score. The result is a folder you can open in any browser and keep with
 the track.
 
-![AudioAtlas report overview](docs/assets/readme/report_overview.png)
+![Current default AudioAtlas Studio report generated from the included guitar demo](docs/assets/readme/report_overview.png)
+
+This is the regular no-theme output: AudioAtlas uses the polished light default
+theme and opens the finished report in Studio.
 
 ## Make your first report
 
@@ -85,7 +88,18 @@ Every HTML report opens in **Studio** and includes a **Focus / Studio** switch:
 - **Studio** is the polished default, with richer framing, hierarchy, and atmosphere.
 - **Focus** is restrained and information-first.
 
-Both views wrap the same text and PNG plots.
+Both views wrap the same report content and plot pixels. The presentation switch
+changes framing only.
+
+The polished light theme shown above is the no-flag default. Theme selection
+styles both the report shell and generated PNG canvases at report-generation
+time. Midnight Studio is an optional built-in alternative:
+
+```bash
+audioatlas analyze song.wav --theme midnight_studio
+```
+
+![Midnight Studio report plot cards with theme-matched PNG canvases](docs/assets/readme/midnight_report_plots.png)
 
 Choose the restrained opening view when generating a report:
 
@@ -94,7 +108,7 @@ audioatlas analyze song.wav --presentation focus
 ```
 
 The switch remains available inside the finished report, works offline, and
-never filters or alters the measured plot images.
+never changes the measured plot content or pixels.
 
 A separate “lite” build is intentionally not maintained. Compact reports use
 the same trusted analysis engine, which avoids two editions slowly disagreeing

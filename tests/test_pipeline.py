@@ -112,12 +112,17 @@ def test_pipeline_writes_expected_outputs(tmp_path: Path, sr: int):
     assert "Findings" in html
     assert "Key metrics" in html
     assert "waveform_rms.png" in html
+    assert '<body data-presentation="studio">' in html
     image_srcs = re.findall(r'<img src="([^"]+)"', html)
     assert sorted(image_srcs) == sorted(expected_plots)
     for src in image_srcs:
         assert "://" not in src
         assert not src.startswith(("/", "\\"))
         assert (result.out_dir / src).exists()
+
+    image = matplotlib_image.imread(result.out_dir / "rms_timeline.png")
+    expected_rgb = np.asarray(to_rgb(get_theme("default").tokens["surface"]))
+    assert np.allclose(image[0, 0, :3], expected_rgb, atol=1 / 255)
 
 
 def test_pipeline_track_id_is_hashed_and_never_serializes_the_raw_token(
