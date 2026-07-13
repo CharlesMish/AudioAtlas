@@ -20,6 +20,10 @@ there during active owner-directed development, then a deterministic public
 snapshot is generated from the same commit. The public snapshot must pass the
 same tests and build the same wheel.
 
+Public candidate branches preserve the existing GitHub `main` history. The
+exported tree is overlaid onto a branch created from the current `origin/main`;
+the exporter does not create an orphan history or replace public ancestry.
+
 ## Why not maintain a separate lite fork?
 
 A second codebase would invite measurement drift, duplicated fixes, and unclear
@@ -52,6 +56,32 @@ cd /tmp/AudioAtlas-public
 python -m pytest
 python -m build
 ```
+
+## Staging a public candidate
+
+Fetch GitHub and create the candidate from the exact public base that was
+reviewed. Abort if `origin/main` changed after review:
+
+```bash
+git fetch origin
+git worktree add -b public/v0.2.0a6-linear \
+  /tmp/AudioAtlas-public-candidate origin/main
+rsync -a --delete --exclude=.git \
+  /tmp/AudioAtlas-public/ /tmp/AudioAtlas-public-candidate/
+git -C /tmp/AudioAtlas-public-candidate add -A
+git -C /tmp/AudioAtlas-public-candidate commit -m \
+  "Publish AudioAtlas v0.2.0a6"
+```
+
+Before pushing, confirm the candidate worktree is byte-identical to the export
+apart from Git metadata, `origin/main` is an ancestor of the candidate, and the
+diff contains the intended public additions, modifications, and deletions.
+Push the candidate to a new review branch and use a normal pull request.
+
+Do not use `--allow-unrelated-histories` and do not force-push `main` for a
+normal public release. An older unrelated candidate may remain temporarily for
+comparison, but it is not a merge source and should be deleted after the
+linear-history pull request lands.
 
 Native launcher and private musical-calibration evidence remain owner-side
 records. Public documentation should report only the conclusions that are safe
