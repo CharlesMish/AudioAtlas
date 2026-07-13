@@ -19,7 +19,7 @@ fi
 mkdir -p "$AUDIO_DIR" "$REPORTS_DIR"
 
 shopt -s nullglob nocaseglob
-files=("$AUDIO_DIR"/*.wav "$AUDIO_DIR"/*.mp3 "$AUDIO_DIR"/*.flac "$AUDIO_DIR"/*.aiff "$AUDIO_DIR"/*.aif)
+files=("$AUDIO_DIR"/*.wav "$AUDIO_DIR"/*.wave "$AUDIO_DIR"/*.flac "$AUDIO_DIR"/*.ogg "$AUDIO_DIR"/*.aiff "$AUDIO_DIR"/*.aif "$AUDIO_DIR"/*.mp3)
 shopt -u nullglob nocaseglob
 
 if [ "${#files[@]}" -eq 0 ]; then
@@ -82,6 +82,7 @@ if [ "$status" -eq 0 ]; then
   echo "Section report succeeded."
   echo "Output folder: $out_dir"
   echo "Open report.html inside a section folder, or open section_index.md."
+  open "$out_dir" >/dev/null 2>&1 || true
 else
   echo "Section report failed."
   echo "Output folder: $out_dir"

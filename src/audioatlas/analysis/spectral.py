@@ -49,7 +49,13 @@ class AverageSpectrumResult:
     power_db: NDArray[np.float64]
     sample_rate: int
     nperseg: int
-    band_energies: dict[str, dict[str, float | None]]
+    band_mean_power: dict[str, dict[str, float | None]]
+
+    @property
+    def band_energies(self) -> dict[str, dict[str, float | None]]:
+        """Deprecated compatibility alias for ``band_mean_power``."""
+
+        return self.band_mean_power
 
     def to_summary_dict(self) -> dict[str, object]:
         valid = self.freqs_hz >= 20
@@ -57,19 +63,25 @@ class AverageSpectrumResult:
             return {
                 "nperseg": self.nperseg,
                 "bins": int(len(self.freqs_hz)),
-                "band_energies": self.band_energies,
+                "band_measurement": "relative_mean_power_per_fft_bin",
+                "band_mean_power": self.band_mean_power,
+                "band_energies": self.band_mean_power,
             }
         freqs = self.freqs_hz[valid]
         power = self.power_db[valid]
         peak_idx = int(np.argmax(power))
-        strongest_band = _strongest_band(self.band_energies)
+        highest_mean_power_band = _highest_mean_power_band(self.band_mean_power)
         return {
             "nperseg": self.nperseg,
             "bins": int(len(self.freqs_hz)),
             "strongest_bin_hz": float(freqs[peak_idx]),
             "strongest_bin_db": float(power[peak_idx]),
-            "band_energies": self.band_energies,
-            "strongest_band": strongest_band,
+            "band_measurement": "relative_mean_power_per_fft_bin",
+            "band_mean_power": self.band_mean_power,
+            "highest_mean_power_band": highest_mean_power_band,
+            # Deprecated compatibility aliases retained for the 0.2 alpha line.
+            "band_energies": self.band_mean_power,
+            "strongest_band": highest_mean_power_band,
         }
 
 
@@ -157,12 +169,17 @@ class SpectralShapeResult:
 
 
 @dataclass(frozen=True)
-class BandEnergyTimelineResult:
-    """Time-varying relative energy for broad frequency bands."""
+class BandPowerTimelineResult:
+    """Time-varying relative mean power for broad frequency bands.
+
+    Values are the mean STFT power per included FFT bin, normalized to the
+    maximum band/frame value in the analyzed file. They are not integrated
+    energy over each differently sized frequency band.
+    """
 
     times_seconds: NDArray[np.float64]
     band_names: list[str]
-    band_energy_db_by_band: dict[str, NDArray[np.float64]]
+    band_mean_power_db_by_band: dict[str, NDArray[np.float64]]
     valid_frames: NDArray[np.bool_]
     sample_rate: int
     n_fft: int
@@ -170,12 +187,18 @@ class BandEnergyTimelineResult:
     db_floor: float
     warnings: list[str]
 
+    @property
+    def band_energy_db_by_band(self) -> dict[str, NDArray[np.float64]]:
+        """Deprecated compatibility alias for ``band_mean_power_db_by_band``."""
+
+        return self.band_mean_power_db_by_band
+
     def to_summary_dict(self) -> dict[str, object]:
         bands: dict[str, dict[str, object]] = {}
         strongest_band: str | None = None
         strongest_median = -np.inf
         for name in self.band_names:
-            values = self.band_energy_db_by_band[name]
+            values = self.band_mean_power_db_by_band[name]
             valid_values = values[self.valid_frames & np.isfinite(values)]
             if len(valid_values):
                 median = float(np.median(valid_values))
@@ -218,6 +241,7 @@ class BandEnergyTimelineResult:
         if strongest_median == -np.inf:
             strongest_band = None
         return {
+            "measurement": "relative_mean_power_per_fft_bin",
             "n_fft": self.n_fft,
             "hop_length": self.hop_length,
             "frames": int(len(self.times_seconds)),
@@ -225,9 +249,15 @@ class BandEnergyTimelineResult:
             "undefined_frames": int(len(self.valid_frames) - np.count_nonzero(self.valid_frames)),
             "band_names": self.band_names,
             "bands": bands,
+            "highest_mean_power_band_by_median": strongest_band,
+            # Deprecated compatibility alias retained for the 0.2 alpha line.
             "strongest_band_by_median": strongest_band,
             "warnings": self.warnings,
         }
+
+
+# Public compatibility alias. New code should use ``BandPowerTimelineResult``.
+BandEnergyTimelineResult = BandPowerTimelineResult
 
 
 def compute_log_spectrogram(
@@ -302,7 +332,7 @@ def compute_average_spectrum(
         valid = freqs >= 20
         ref_db = float(np.max(raw_power_db[valid])) if np.any(valid) else float(np.max(raw_power_db))
         power_db = np.maximum(raw_power_db - ref_db, cfg.db_floor)
-    band_energies = _compute_band_energies(
+    band_mean_power = _compute_band_mean_power(
         freqs.astype(np.float64), power_db, nyquist=float(sr / 2), floor_db=cfg.db_floor
     )
     return AverageSpectrumResult(
@@ -310,14 +340,14 @@ def compute_average_spectrum(
         power_db=power_db,
         sample_rate=int(sr),
         nperseg=int(nperseg),
-        band_energies=band_energies,
+        band_mean_power=band_mean_power,
     )
 
 
-def compute_band_energy_timeline(
+def compute_band_power_timeline(
     y: NDArray[np.floating], sr: int, config: AnalysisConfig | None = None
-) -> BandEnergyTimelineResult:
-    """Compute frame-wise relative energy in broad frequency bands."""
+) -> BandPowerTimelineResult:
+    """Compute frame-wise relative mean power in broad frequency bands."""
 
     cfg = config or AnalysisConfig()
     cfg.validate()
@@ -343,7 +373,7 @@ def compute_band_energy_timeline(
     valid_frames = frame_power > EPS
     warnings: list[str] = []
     if not np.all(valid_frames):
-        warnings.append("one or more silent frames; band energy values are undefined there")
+        warnings.append("one or more silent frames; band mean-power values are undefined there")
 
     band_linear: dict[str, NDArray[np.float64]] = {}
     for name, low_hz, high_hz in BANDS:
@@ -371,10 +401,10 @@ def compute_band_energy_timeline(
             )
         band_db[name] = out
 
-    return BandEnergyTimelineResult(
+    return BandPowerTimelineResult(
         times_seconds=times,
         band_names=[name for name, _low, _high in BANDS],
-        band_energy_db_by_band=band_db,
+        band_mean_power_db_by_band=band_db,
         valid_frames=valid_frames.astype(bool),
         sample_rate=int(sr),
         n_fft=cfg.n_fft,
@@ -382,6 +412,14 @@ def compute_band_energy_timeline(
         db_floor=cfg.db_floor,
         warnings=warnings,
     )
+
+
+def compute_band_energy_timeline(
+    y: NDArray[np.floating], sr: int, config: AnalysisConfig | None = None
+) -> BandPowerTimelineResult:
+    """Deprecated compatibility wrapper for :func:`compute_band_power_timeline`."""
+
+    return compute_band_power_timeline(y, sr, config)
 
 
 def compute_spectral_shape(
@@ -465,7 +503,7 @@ def compute_spectral_shape(
     )
 
 
-def _compute_band_energies(
+def _compute_band_mean_power(
     freqs: NDArray[np.float64],
     power_db: NDArray[np.float64],
     *,
@@ -477,27 +515,33 @@ def _compute_band_energies(
     for name, low_hz, high_hz in BANDS:
         capped_high = min(high_hz, nyquist)
         if capped_high <= low_hz:
-            energy_db = None
+            mean_power_db = None
         else:
             mask = (freqs >= low_hz) & (freqs < capped_high)
             if not np.any(mask):
-                energy_db = None
+                mean_power_db = None
             else:
-                energy_linear = float(np.mean(rel_power[mask]))
-                energy_db = float(max(power_to_db(energy_linear, floor_db=floor_db), floor_db))
+                mean_power_linear = float(np.mean(rel_power[mask]))
+                mean_power_db = float(
+                    max(power_to_db(mean_power_linear, floor_db=floor_db), floor_db)
+                )
         out[name] = {
             "low_hz": low_hz,
             "high_hz": capped_high,
-            "energy_db": energy_db,
+            "mean_power_db": mean_power_db,
+            # Deprecated compatibility alias retained for the 0.2 alpha line.
+            "energy_db": mean_power_db,
         }
     return out
 
 
-def _strongest_band(bands: dict[str, dict[str, float | None]]) -> str | None:
+def _highest_mean_power_band(
+    bands: dict[str, dict[str, float | None]],
+) -> str | None:
     valid = [
-        (name, values["energy_db"])
+        (name, values["mean_power_db"])
         for name, values in bands.items()
-        if isinstance(values.get("energy_db"), (int, float))
+        if isinstance(values.get("mean_power_db"), (int, float))
     ]
     if not valid:
         return None

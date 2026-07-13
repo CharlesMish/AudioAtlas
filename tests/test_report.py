@@ -9,10 +9,16 @@ from __future__ import annotations
 
 import json
 import re
+from html.parser import HTMLParser
 from pathlib import Path
 
+import pytest
+
+from audioatlas import __version__
+from audioatlas.alt_text import plot_alt_text
 from audioatlas.graphs import all_graphs
 from audioatlas.html_report import write_report_html
+from audioatlas.release import RELEASE_LABEL, SUMMARY_SCHEMA_VERSION
 from audioatlas.report import (
     LEVEL_METRIC_DISPLAY,
     write_findings_json,
@@ -22,8 +28,8 @@ from audioatlas.report import (
 
 
 def _make_summary() -> dict:
-    return {
-        "schema_version": "0.1.0",
+    summary = {
+        "schema_version": SUMMARY_SCHEMA_VERSION,
         "metadata": {
             "filename": "test.wav",
             "samplerate": 48000,
@@ -69,10 +75,37 @@ def _make_summary() -> dict:
             "bins": 4097,
             "strongest_bin_hz": 1000.0,
             "strongest_bin_db": -12.0,
+            "band_measurement": "relative_mean_power_per_fft_bin",
+            "highest_mean_power_band": "mid",
+            "band_mean_power": {
+                "bass": {
+                    "low_hz": 60.0,
+                    "high_hz": 120.0,
+                    "mean_power_db": -18.0,
+                    "energy_db": -18.0,
+                },
+                "mid": {
+                    "low_hz": 350.0,
+                    "high_hz": 2000.0,
+                    "mean_power_db": -6.0,
+                    "energy_db": -6.0,
+                },
+            },
+            # Deprecated aliases remain in 0.2 alpha output.
             "strongest_band": "mid",
             "band_energies": {
-                "bass": {"low_hz": 60.0, "high_hz": 120.0, "energy_db": -18.0},
-                "mid": {"low_hz": 350.0, "high_hz": 2000.0, "energy_db": -6.0},
+                "bass": {
+                    "low_hz": 60.0,
+                    "high_hz": 120.0,
+                    "mean_power_db": -18.0,
+                    "energy_db": -18.0,
+                },
+                "mid": {
+                    "low_hz": 350.0,
+                    "high_hz": 2000.0,
+                    "mean_power_db": -6.0,
+                    "energy_db": -6.0,
+                },
             },
         },
         "stereo_correlation": {
@@ -135,7 +168,8 @@ def _make_summary() -> dict:
             "centroid_large_shift_time_ranges": [],
             "warnings": [],
         },
-        "band_energy_timeline": {
+        "band_power_timeline": {
+            "measurement": "relative_mean_power_per_fft_bin",
             "n_fft": 4096,
             "hop_length": 1024,
             "frames": 100,
@@ -202,6 +236,8 @@ def _make_summary() -> dict:
             "warnings": [],
         },
     }
+    summary["band_energy_timeline"] = dict(summary["band_power_timeline"])
+    return summary
 
 
 def test_write_summary_json_roundtrips(tmp_path: Path):
@@ -211,7 +247,7 @@ def test_write_summary_json_roundtrips(tmp_path: Path):
     assert path.exists()
 
     parsed = json.loads(path.read_text(encoding="utf-8"))
-    assert parsed["schema_version"] == "0.1.0"
+    assert parsed["schema_version"] == SUMMARY_SCHEMA_VERSION
     assert parsed["levels"]["integrated_lufs"] == -10.8
     assert parsed["plots"] == summary["plots"]
 
@@ -252,8 +288,8 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "# AudioAtlas Report: test.wav" in text
     assert "## File" in text
     assert "## Report metadata" in text
-    assert "AudioAtlas: 0.2.0a1" in text
-    assert "Release label: public early alpha" in text
+    assert f"AudioAtlas: {__version__}" in text
+    assert f"Release label: {RELEASE_LABEL}" in text
     assert "## Level metrics" in text
     assert "## Per-channel breakdown" in text
     assert "## Warnings / caveats" in text
@@ -262,9 +298,11 @@ def test_write_report_md_contains_expected_sections(tmp_path: Path):
     assert "Crest factor median: 3.000 dB" in text
     assert "crest_factor_db_median" not in text
     assert "## Average spectrum summary" in text
-    assert "## Band energy summary" in text
+    assert "## Relative mean band power summary" in text
     assert "## Spectral shape summary" in text
-    assert "## Band energy timeline summary" in text
+    assert "## Relative mean band power timeline summary" in text
+    assert "mean spectral power per included FFT bin" in text
+    assert "not integrated total energy" in text
     assert "## Onset / transient density summary" in text
     assert "## Chroma CQT summary" in text
     assert "dominant_pitch_class: A" in text
@@ -522,7 +560,7 @@ def test_report_includes_all_documented_metrics(tmp_path: Path):
 
 
 def test_report_does_not_make_verdicts(tmp_path: Path):
-    """AudioAtlas must not produce judgmental language. See AGENT_BRIEF.md."""
+    """AudioAtlas must not produce judgmental language. See docs/ALPHA_LIMITATIONS.md."""
     summary = _make_summary()
     findings = {
         "count": 1,
@@ -644,9 +682,9 @@ def test_report_md_lufs_context_not_finding(tmp_path: Path):
     text = path.read_text(encoding="utf-8")
 
     assert "Integrated loudness: -8.200 LUFS" in text
-    assert "streaming normalization reference levels" in text
-    assert "streaming normalization targets" not in text
-    assert "platforms that normalize playback may reduce level" in text
+    assert "playback system using a lower loudness reference" in text
+    assert "streaming normalization reference levels" not in text
+    assert "exact adjustment depends on its measurement, mode, and policy" in text
     assert "### Integrated loudness is above -10 LUFS" not in text
 
 
@@ -687,13 +725,15 @@ def test_report_md_renders_friendly_no_findings_state(tmp_path: Path):
 
 
 def _html_findings() -> dict:
-    return {
+    payload = {
         "count": 1,
         "all_count": 2,
         "max_findings": 1,
         "findings_suppressed_count": 1,
         "findings_shown": [
             {
+                "rule_id": "levels.near_full_scale_samples",
+                "rule_version": 1,
                 "severity": "warning",
                 "category": "levels",
                 "title": "Near-full-scale samples detected",
@@ -701,6 +741,20 @@ def _html_findings() -> dict:
                 "threshold": 0,
                 "unit": "samples",
                 "evidence": "Near-clipping count measured 12 samples.",
+                "evidence_items": [
+                    {
+                        "metric": "levels.near_clipping_samples",
+                        "label": "Near-clipping count measured 12 samples.",
+                        "value": 12,
+                        "unit": "samples",
+                        "comparator": ">",
+                        "threshold": 0,
+                        "time_ranges": [
+                            {"start": 1.0, "end": 1.5, "duration": 0.5}
+                        ],
+                    }
+                ],
+                "associated_graphs": ["peak_timeline", "sample_histogram"],
                 "why_it_matters": "Near-full-scale samples can leave little margin for encoding or level changes.",
                 "does_not_mean": "This does not mean the passage is clipped.",
                 "suggested_checks": ["Inspect the sample histogram."],
@@ -709,6 +763,22 @@ def _html_findings() -> dict:
             }
         ],
     }
+    payload["all_findings"] = [
+        *payload["findings_shown"],
+        {
+            "rule_id": "levels.true_peak_above_zero",
+            "severity": "info",
+            "category": "levels",
+            "title": "Approximate true peak is above 0 dBTP",
+            "evidence": "Approximate true peak measured 0.2 dBTP.",
+            "why_it_matters": "Encoding can reconstruct samples above nominal full scale.",
+            "does_not_mean": "This does not mean the file is audibly distorting.",
+            "suggested_checks": ["Inspect the peak timeline."],
+            "associated_graphs": ["peak_timeline", "waveform_rms"],
+            "confidence": "medium",
+        },
+    ]
+    return payload
 
 
 def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
@@ -719,8 +789,8 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
 
     assert path.name == "report.html"
     assert "Measurement-based findings, not quality judgments." in text
-    assert "public early alpha" in text
-    assert "AudioAtlas</strong> 0.2.0a1" in text
+    assert RELEASE_LABEL in text
+    assert f"AudioAtlas</strong> {__version__}" in text
     assert "Use this alpha report as a workflow" in text
     assert ">Findings<" in text
     assert "Listening prompts" not in text
@@ -730,10 +800,11 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
     assert "Does not mean:" in text
     assert "This does not mean the passage is clipped." in text
     assert "Suggested listening checks" in text
-    assert "1 lower-priority finding(s) suppressed" in text
+    assert "Near-clipping count measured 12 samples." in text
+    assert "Show 1 more lower-priority observation(s)" in text
     assert "Delivery / headroom context" in text
-    assert "streaming normalization reference levels" in text
-    assert "streaming normalization targets" not in text
+    assert "playback system using a lower loudness reference" in text
+    assert "streaming normalization reference levels" not in text
 
 
 def test_report_html_shows_source_range_for_manual_section(tmp_path: Path):
@@ -758,8 +829,8 @@ def test_write_report_html_contains_glossary_and_explanations(tmp_path: Path):
     assert "Onset density is an attack/activity map for this track" in text
     assert "It is not punch, groove quality, drum hits per second, or mix quality." in text
     assert "Relative dB plots show shape within this track." in text
-    assert "PLR is the relationship between true peak and integrated loudness" in text
-    assert "Higher PLR means more peak headroom relative to loudness" in text
+    assert "PLR is approximate true peak minus integrated loudness" in text
+    assert "does not by itself identify compression" in text
     assert "+1 means nearly identical channels" in text
     assert "0 dB means side and mid energy are similar" in text
     assert "moves higher when energy shifts upward in frequency" in text
@@ -773,9 +844,13 @@ def test_write_report_html_renders_relative_plot_links_and_curated_names(
     path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
     text = path.read_text(encoding="utf-8")
 
-    assert '<img src="log_spectrogram.png" alt="Log-Frequency Spectrogram">' in text
-    assert '<img src="average_spectrum.png" alt="Welch Average Spectrum">' in text
-    assert '<img src="band_energy_timeline.png" alt="Frequency Band Energy Timeline">' in text
+    for filename in (
+        "log_spectrogram.png",
+        "average_spectrum.png",
+        "band_energy_timeline.png",
+    ):
+        expected_alt = plot_alt_text(filename, summary)
+        assert f'<img src="{filename}" alt="{expected_alt}">' in text
     assert "plot-card plot-card-wide" in text
     assert "What this shows:" in text
 
@@ -810,7 +885,7 @@ def test_write_report_html_keeps_polished_visual_structure(tmp_path: Path):
     assert "--shadow-card:" in text
     assert ".metric-card { min-height:" in text
     assert ".finding-card { padding:" in text
-    assert ".plot-image-wrapper { background: var(--surface-muted)" in text
+    assert ".plot-image-wrapper { appearance: none; display: block; width: 100%; background: var(--surface-muted)" in text
     assert ".priority-warning { background: var(--warning-bg)" in text
     assert "--warning-bg:" in text
     assert "letter-spacing: 0;" in text
@@ -883,6 +958,9 @@ def test_write_report_html_escapes_filename_and_finding_text(tmp_path: Path):
     findings = _html_findings()
     findings["findings_shown"][0]["title"] = "<script>alert(1)</script>"
     findings["findings_shown"][0]["evidence"] = "value < 1 & value > 0"
+    findings["findings_shown"][0]["evidence_items"][0]["label"] = (
+        "value < 1 & value > 0"
+    )
     findings["findings_shown"][0]["suggested_checks"] = ['Inspect "A&B" <now>.']
 
     path = write_report_html(
@@ -936,10 +1014,11 @@ def test_write_report_html_how_to_read_and_notes_persistence(tmp_path: Path):
         "A report can have no prioritized findings; the plots still describe the track"
         in text
     )
-    assert (
-        "Notes typed here are temporary in this browser page and are not saved into the report files."
-        in text
-    )
+    assert "Notes stay in this browser for this report path." in text
+    assert "audioatlas:notes:" in text
+    assert 'id="notes-copy"' in text
+    assert 'id="notes-export"' in text
+    assert 'id="notes-clear"' in text
 
 
 def test_write_report_html_renders_grouped_stereo_evidence_and_capped_ranges(
@@ -1007,7 +1086,7 @@ def test_write_report_html_includes_lightbox_structure_and_plot_hooks(tmp_path: 
     assert 'class="lightbox"' in text
     assert 'role="dialog"' in text
     assert 'aria-modal="true"' in text
-    assert 'aria-label="Plot image viewer"' in text
+    assert 'aria-labelledby="lb-title"' in text
 
     # Controls present (prev/next/close + counter)
     assert 'id="lb-prev"' in text
@@ -1021,7 +1100,8 @@ def test_write_report_html_includes_lightbox_structure_and_plot_hooks(tmp_path: 
     # Plot cards expose data attrs for the lightbox JS (real PNG srcs are used)
     assert 'data-title="' in text
     assert 'data-filename="' in text
-    assert 'class="plot-image-wrapper" data-title=' in text
+    assert 'type="button" class="plot-image-wrapper"' in text
+    assert 'aria-label="Open enlarged ' in text
     # All 10 plots should participate
     assert text.count('data-filename="') >= 10
 
@@ -1030,6 +1110,8 @@ def test_write_report_html_includes_lightbox_structure_and_plot_hooks(tmp_path: 
     assert "openLightbox" in text or "function openLightbox" in text
     assert "ArrowLeft" in text and "ArrowRight" in text
     assert "Escape" in text or "Esc" in text
+    assert "activeOpener" in text
+    assert 'e.key==="Tab"' in text
     assert "getAttribute('data-title')" in text or "data-title" in text
 
     # No external dependencies or CDNs introduced (presentation layer only)
@@ -1044,3 +1126,66 @@ def test_write_report_html_includes_lightbox_structure_and_plot_hooks(tmp_path: 
     # Existing plot img tags remain relative and escaped (sanity)
     assert '<img src="log_spectrogram.png"' in text
     assert '<img src="waveform_rms.png"' in text
+
+
+class _IdAndAnchorParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ids: list[str] = []
+        self.targets: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = dict(attrs)
+        if values.get("id"):
+            self.ids.append(str(values["id"]))
+        href = values.get("href")
+        if tag == "a" and isinstance(href, str) and href.startswith("#"):
+            self.targets.append(href[1:])
+
+
+def test_report_html_has_complete_local_navigation_and_related_links(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+    parser = _IdAndAnchorParser()
+    parser.feed(text)
+
+    assert len(parser.ids) == len(set(parser.ids))
+    assert set(parser.targets).issubset(set(parser.ids))
+    assert 'class="skip-link" href="#main-content"' in text
+    assert 'id="glossary-lufs"' in text
+    assert 'href="#glossary-lufs">Integrated LUFS</a>' in text
+    assert 'id="plot-waveform_rms"' in text
+    assert 'href="#plot-waveform_rms"' in text
+    assert 'href="#finding-levels-true_peak_above_zero"' in text
+
+
+def test_git_revision_label_is_bound_to_audioatlas_repo_and_marks_dirty(tmp_path: Path):
+    import shutil
+    import subprocess
+
+    from audioatlas.report import git_revision_label
+
+    if shutil.which("git") is None:
+        pytest.skip("git is not available")
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.name", "AudioAtlas Tests"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "config", "user.email", "audioatlas@example.invalid"],
+        check=True,
+    )
+    tracked = repo / "tracked.txt"
+    tracked.write_text("clean\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "tracked.txt"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "fixture"], check=True)
+
+    clean = git_revision_label(repo)
+    assert clean is not None
+    assert not clean.endswith("+dirty")
+
+    tracked.write_text("changed\n", encoding="utf-8")
+    assert git_revision_label(repo) == f"{clean}+dirty"
+    assert git_revision_label(tmp_path / "not-a-repo") is None

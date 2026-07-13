@@ -1,150 +1,194 @@
 # AudioAtlas Architecture
 
-This document explains the layering of AudioAtlas so an agent (or new
-contributor) can place new code in the right place without rediscovering
-the conventions from source.
+AudioAtlas is a deterministic local pipeline: one decoded audio array enters,
+pure analysis functions produce frozen result dataclasses, selected graph
+adapters render PNGs, and static writers serialize a portable report bundle.
+There is no server, plugin system, hidden state, or cloud dependency.
 
-## One-paragraph summary
+## Layer map
 
-AudioAtlas is a thin, deterministic pipeline that runs a fixed set of
-**analysis** functions on one audio file, hands their dataclass results to
-matching **visualization** functions and **report** writers, and emits a
-directory containing PNGs, Markdown/HTML reports, and JSON summaries.
-There is no statefulness, no plugin system, and no implicit configuration.
+```text
+cli.py
+  ├── pipeline.py      ── one-track/section orchestration
+  ├── batch.py         ── folder orchestration
+  └── revision_diff.py ── guarded same-track report deltas
+         ↓
+io.py ── decoded audio + portable metadata
+         ↓
+analysis/*.py ── arrays → frozen result dataclasses
+         ↓
+graphs/registry.py + graphs/adapters.py
+         ↓
+visualize/*.py ── result dataclass → PNG
+         ↓
+provenance.py ── path-safe configuration/code/environment fingerprints
+         ↓
+report.py / html_report.py / catalog_report.py / alt_text.py
+         ↓
+output.py ── staged publication + ownership manifest
 
-## The four layers
-
-```
-   ┌─────────────────────────────────────────────────────────────┐
-   │ cli.py                  ──  argparse + Click only           │
-   │   ↓                                                         │
-   │ pipeline.py / batch.py   ──  thin orchestrators              │
-   │   ↓                          (no DSP, no plotting)          │
-   │ analysis/*.py           ──  pure arrays → dataclasses       │
-   │   (levels, spectral, ...)    no file paths, no matplotlib   │
-   │   ↓                                                         │
-   │ visualize/*.py          ──  dataclass → PNG                 │
-   │   (waveform, ...)            no re-analysis allowed         │
-   │   ↓                                                         │
-   │ report.py/html_report.py ──  dict → report.md/html/json     │
-   │ catalog_report.py       ──  catalog dict → md/html/json     │
-   │ theme.py                ──  built-in theme tokens → CSS vars │
-   └─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-                       reports/<name>/
-                       ├── summary.json
-                       ├── findings.json
-                       ├── report.md
-                       ├── report.html
-                       └── <graph_key>.png
+scripts/prepare_calibration_review.py
+  └── scripts/replay_calibration_rules.py ── frozen-summary finding churn
 ```
 
-### Layer rules (enforced by code review, not by tests)
+## Layer rules
 
-| Layer | Allowed to import | Forbidden |
+| Layer | Owns | Must not own |
 |---|---|---|
-| `analysis/*` | numpy, scipy, librosa, pyloudnorm, `config`, `utils` | matplotlib, file paths, `io`, `pipeline` |
-| `visualize/*` | matplotlib, the analysis dataclasses it plots | re-running analysis, soundfile, `io` |
-| `pipeline.py` | all analysis + visualize + report + io | DSP math, matplotlib calls |
-| `batch.py` | `pipeline`, catalog report writers | DSP math, matplotlib calls |
-| `cli.py` | click + pipeline | DSP math, matplotlib, IO besides paths |
-| `report.py` / `html_report.py` / `catalog_report.py` | stdlib only, plus `utils` | DSP math, matplotlib, plotting |
-| `theme.py` | stdlib + packaged theme JSON | arbitrary user CSS, network access |
-| `io.py` | soundfile + utils | DSP math, plotting |
+| `io.py` | decoding, ranges, metadata privacy | DSP interpretation, plotting |
+| `analysis/*` | pure measurements and JSON-safe summaries | paths, matplotlib, report prose |
+| `graphs/*` | stable plot identity, profile membership, captions, adapters | DSP recomputation |
+| `visualize/*` | rendering supplied results | decoding or analysis |
+| `pipeline.py` | one coherent run and summary assembly | DSP math |
+| `batch.py` | per-file isolation and catalog assembly | DSP math or ranking |
+| `provenance.py` | canonical hashes, dependency/decoder/environment metadata, opaque identity digest | source paths, audio recognition, quality inference |
+| `revision_diff.py` | same-track guard, comparability assessment, descriptive B-minus-A artifacts | audio analysis, cross-track ranking, preferred-version claims |
+| `alt_text.py` | measured descriptions from existing summary values | analysis recomputation or musical inference |
+| report writers | static presentation | new measurements or causal claims |
+| `output.py` | staged publication and owned-artifact cleanup | analysis or interpretation |
+| calibration scripts | anonymous review/replay evidence and hash verification | opening audio or replacing human listening |
+| `cli.py` | arguments, lightweight discovery, and friendly user errors | business logic |
 
-If you find yourself wanting to break one of these (e.g. "I just need
-matplotlib in `analysis/spectral.py` to debug"), the answer is: don't.
-That code goes in `visualize/` or in a scratch notebook outside the package.
+## CLI loading boundary
 
-## The shape of a "feature slice"
+`audioatlas --version`, `--help`, and `themes` do not import the DSP, decoder,
+or plotting stack. Analysis, batch, and section commands print a preparation
+message and then import their heavy orchestration path. This improves startup
+feedback and launcher checks without changing numerical behavior or replacing
+the scientific dependencies. Graph-profile names live in the lightweight
+`graph_profiles.py` module so command discovery does not initialize the graph
+registry.
 
-Adding a new measurement (e.g. spectral centroid) follows this shape:
+## Internal audio contract
 
-1. **Dataclass.** Add a `frozen=True` result dataclass in
-   `analysis/<topic>.py`. Include `sample_rate: int` if you have a time
-   axis. Include `to_summary_dict()` returning a small JSON-safe dict.
-2. **Pure function.** Implement `compute_<thing>(y, sr, config) -> Result`.
-   - `y` has shape `(n_samples, n_channels)`. Use `to_mono` if you want
-     a single-channel input.
-   - Read all tunables from `config: AnalysisConfig`. Don't sneak in
-     module-level constants.
-   - Never normalize the input.
-3. **Tests.** Add `tests/test_<topic>.py` using synthetic signals from
-   `tests/conftest.py`. Cover at minimum: shape, monotone behavior on
-   a known input, edge case of too-short or silent audio.
-4. **Visualization** (if there's something to look at). Add
-   `visualize/<topic>.py` with a function that takes the result
-   dataclass and an `out_path`. Do not pass `sr` separately if the
-   dataclass carries it.
-5. **Summary entry.** Add a key in the summary dict in `pipeline.py`,
-   sourced from `result.to_summary_dict()`.
-6. **Graph registry entry** (if there is a plot). Add a `GraphSpec` with
-   stable key, stable filename, render order, profile membership, required
-   analysis blocks, report note/caption, and render adapter.
-7. **Report entry.** Update `report.py` only for new textual summary
-   sections or metrics. Plot titles, filenames, and captions come from the
-   graph registry.
-8. **Pipeline wiring.** Keep `pipeline.py` as orchestration: compute the full
-   analysis bundle, render selected graph specs, and serialize complete
-   summaries.
+`AudioData.y` always has shape `(n_samples, n_channels)` and dtype `float32`.
+The loader never normalizes. User-supplied source ranges are represented in
+metadata. Absolute local paths are excluded unless `include_local_paths=True`.
 
-This is the *only* shape AudioAtlas supports. If your idea doesn't fit
-this shape, propose a separate module rather than bending the layering.
+## Analysis bundle
 
-## Things that are intentionally not here
+`AnalysisBundle` lazily computes and memoizes named result blocks. Graph
+selection affects rendering only; `pipeline.py` requests the full analysis set
+before serialization. `band_energy` remains a deprecated request alias for
+`band_power` during the alpha compatibility window.
 
-- **No plugin system.** Stay declarative in `pipeline.py`. If a future
-  v0.3 wants user-supplied analyses, that's a deliberate redesign, not
-  an incremental extension.
-- **No automated mastering advice / judgments / scores.** Hard rule from
-  `AGENT_BRIEF.md`. The product is facts and visualizations.
-- **No reference-track comparison.** Out of scope for v0.1 - v0.2.
-- **No hosted report app.** Static `report.html` is generated locally;
-  Streamlit, servers, PDF export, and playback UI remain out of scope.
-- **No real-time / playback UI.**
-- **No section segmentation** unless explicitly marked experimental and
-  off by default.
+## Graph registry
 
-## Configuration
+Each `GraphSpec` defines a stable key, display name, filename, render order,
+required analysis blocks, profile membership, cost tier, caption, report note,
+and summary link. The historical key/filename `band_energy_timeline` remains
+stable, while its display language now states the actual relative mean-power
+measurement.
 
-`audioatlas.config.AnalysisConfig` is a frozen dataclass holding every
-tunable used by the analysis layer. If you need a new knob:
+## Safe publication
 
-- Add it to `AnalysisConfig` with a sensible default.
-- Add a `validate()` check if the field has constraints.
-- Expose it as a CLI flag in `cli.py` only if a user is realistically
-  going to want to change it.
+A run renders into a sibling temporary directory. Only after every writer and
+plot succeeds does `output.py` publish the completed artifacts. It:
 
-The config is serialized in `summary.json` via
-`dataclasses.asdict(cfg)`, so every run is reproducible from its own
-output.
+- replaces individual files with same-filesystem atomic operations;
+- removes stale known AudioAtlas outputs absent from the new run, including
+  obsolete root artifacts when a folder switches between single-report and
+  catalog mode;
+- preserves unrelated files;
+- records owned files/directories in `.audioatlas-output.json`;
+- removes prior batch-track directories only when both the parent catalog and
+  child report carry recognized ownership evidence (or a narrow legacy catalog
+  recovery rule applies);
+- moves the previous generated set into a sibling recovery directory before
+  publication and restores it if any individual file or directory update
+  fails;
+- leaves unrelated user files untouched throughout publication and rollback.
 
-## The dB-floor convention
+Each one-track analysis also runs inside a short lifecycle frame. After the
+result or exception leaves that frame, `pipeline.py` explicitly collects
+renderer/artist reference cycles. This prevents repeated in-process catalog
+runs from retaining completed Matplotlib graphs and their analysis bundles.
 
-All dBFS / dBTP / dB-power values shown to the user are clamped to
-`config.db_floor` (default `-100`). Use `linear_to_dbfs(..., floor_db=cfg.db_floor)`
-and `power_to_db(..., floor_db=cfg.db_floor)` for this. Internal math
-that needs raw values can pass `floor_db=None`.
 
-Relative dB plots, such as spectrogram, Welch average spectrum, and
-frequency-band timelines, use the track or analysis-view maximum as
-0 dB. They are shape/contrast views, not calibrated dBFS meters.
+## Scientific dependency boundary
 
-A silent input must produce identical floor values in `levels.rms_dbfs`,
-`levels.sample_peak_dbfs`, and the entire `rms_envelope.rms_dbfs` series.
-There's a test for this in `tests/test_levels.py`.
+Librosa uses Numba/llvmlite in analysis paths, so those transitive packages are
+part of the executable measurement environment rather than incidental build
+tools. AudioAtlas `0.2.0a6` promotes Numba into the direct dependency contract
+and constrains it to `>=0.65.1,<0.66` after a clean Python 3.13 report stalled
+and crashed with Numba 0.66.0 / llvmlite 0.48.0 but completed with Numba 0.65.1
+/ llvmlite 0.47.0. Dependency versions are recorded in provenance; widening
+this band requires a clean installed-wheel analysis smoke.
 
-## Naming honesty
+## Provenance and comparison boundary
 
-Names must reflect what the numbers actually measure. The historical case
-in this repo: the RMS timeline plot is `rms_timeline.png` and not a generic
-`loudness_timeline.png`, because it is RMS dBFS, not K-weighted short-term
-LUFS. Short-term LUFS has its own graph key and filename.
+Each one-track summary records a canonical analysis-config hash, measurement
+code hash, finding-rule code hash, dependency/decoder versions, named method
+details, and an environment block. `compatible_analysis_sha256` excludes the
+platform block; `exact_environment_sha256` includes it. This lets comparison
+code distinguish exact recorded environments from compatible measurement
+implementations without claiming bit-identical numerics.
 
-## Summary schema and stability
+`--track-id` is normalized and hashed before serialization. The digest omits
+plaintext but is not presented as a secret or an audio fingerprint. `revision_diff.py`
+accepts matching non-null digests automatically, requires an explicit
+`--confirm-same-track` assertion when identity is absent, and refuses conflicting
+digests. It then refuses missing/different compatible provenance unless
+`--allow-incomparable` is used. The resulting JSON, Markdown, and HTML preserve
+that override and the reasons. Finding-rule code/ruleset identity is assessed
+separately: scalar comparability may remain intact while prompt churn is labeled
+as potentially caused by source and/or rule changes. No diff path opens audio or
+produces a score.
 
-`summary.json` carries a `schema_version` field. v0.2-alpha still uses
-`"0.1.0"` because its summary changes are additive only. If you rename or
-remove a field, or change an existing field type, bump it and update
-`docs/SUMMARY_SCHEMA.md` in the same commit.
+## Calibration replay boundary
+
+The human-review worksheet freezes a digest of `summary.json`, `findings.json`,
+and the output manifest. Replay requires that ledger and the private anonymous
+asset map, verifies every digest, and invokes the current finding rules on the
+saved summary only. It records appeared/disappeared/changed/unchanged prompts.
+Because measurements are not rerun, replay isolates finding-rule churn from DSP
+or decoder changes; it does not validate the music or replace reviewer labels.
+
+## Accessible plot descriptions
+
+`alt_text.py` reads already-serialized summary values and emits bounded,
+nonjudgmental plot descriptions such as a measured RMS or LUFS range. HTML and
+Markdown use the same helper, and the HTML lightbox inherits the selected
+image's alt text. The helper never imports analysis or plotting code.
+
+## Adding a measurement slice
+
+1. Add a frozen result dataclass and pure `compute_*` function.
+2. Add synthetic positive, negative, silence/short-input, and counterexample
+   tests.
+3. Add a graph adapter/spec only when a visual map provides distinct value.
+4. Add a summary field whose name matches the measurement.
+5. Add report wording that states both supported and unsupported meaning.
+6. Add or update schema documentation.
+7. Add a default finding only when a stable rule ID, eligibility boundary,
+   counterexamples, graph association, and calibration rationale exist.
+
+## Serialized compatibility
+
+Release, summary-schema, findings-schema, catalog-schema, and finding-ruleset
+versions live in `src/audioatlas/release.py`. Precise new names are preferred;
+temporary aliases are explicitly marked deprecated. Removing an alias or
+changing a field type requires a schema decision and migration note.
+
+## Product boundary
+
+The architecture is intentionally optimized for static, inspectable reports.
+Scores, automated mastering advice, classifiers, cross-track reference
+ranking, hosted services, playback/DAW state, and a plugin platform are not
+incremental feature slices; they would be product redesigns governed by
+the public product boundary. Guarded descriptive comparison between user-asserted
+revisions of one track is the narrow exception documented above.
+
+## Public distribution and presentation
+
+The stewardship checkout is the complete project record.
+`scripts/export_public_tree.py` derives the friendly public tree by copying the
+same tracked implementation while excluding internal review, private
+calibration operations, and launcher-rehearsal records. This is a distribution
+projection, not a fork.
+
+Graph profiles remain rendering selection only. `compact` resolves to the same
+four graph set as the legacy `minimal` name. Focus and Studio presentation are
+implemented in `presentation.py` and injected into static HTML writers. They
+change CSS and local interaction only; they do not enter the analysis
+provenance signature or alter generated PNG pixels.

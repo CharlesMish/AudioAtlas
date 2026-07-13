@@ -9,6 +9,14 @@ from pathlib import Path
 from statistics import mean, median
 from typing import Any
 
+from audioatlas.presentation import (
+    presentation_controls_html,
+    presentation_css,
+    presentation_script,
+    skip_link_html,
+    validate_presentation_mode,
+)
+from audioatlas.release import CATALOG_SCHEMA_VERSION
 from audioatlas.theme import default_theme_name, theme_css_variables, validate_theme_name
 from audioatlas.utils import mmss
 
@@ -69,16 +77,21 @@ def build_catalog_summary(
     output_folder: Path,
     tracks: list[dict[str, Any]],
     skipped_files: list[dict[str, str]],
+    include_local_paths: bool = False,
 ) -> dict[str, Any]:
     """Build the JSON-safe catalog summary dictionary."""
 
     enriched_tracks = [dict(track, trait_tags=_trait_tags(track)) for track in tracks]
     common_patterns = detect_common_patterns(enriched_tracks)
+    input_label = _catalog_path_label(input_folder, include_local_paths)
+    output_label = _catalog_path_label(output_folder, include_local_paths)
     return {
-        "schema_version": "0.1.0",
+        "schema_version": CATALOG_SCHEMA_VERSION,
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
-        "input_folder": str(input_folder),
-        "output_folder": str(output_folder),
+        "input_folder": input_label,
+        "output_folder": output_label,
+        "path_kind": "absolute" if include_local_paths else "basename",
+        "local_paths_included": include_local_paths,
         "track_count": len(enriched_tracks),
         "skipped_files": skipped_files,
         "tracks": enriched_tracks,
@@ -159,18 +172,11 @@ def detect_common_patterns(tracks: list[dict[str, Any]]) -> list[dict[str, Any]]
             lambda track: _positive(track, "near_clipping_samples"),
         ),
         (
-            "low_rolloff_95",
-            "Median 95% rolloff sits below 8 kHz across many tracks",
-            "Many tracks concentrate most measured spectral energy below 8 kHz.",
-            "This does not mean the tracks lack useful high-frequency detail.",
-            lambda track: _below(track, "rolloff_95_median_hz", 8000.0),
-        ),
-        (
-            "bass_sub_strongest_band",
-            "Bass/sub is the strongest average-spectrum band across many tracks",
-            "The strongest long-term average-spectrum band is bass or sub on many tracks.",
+            "bass_sub_highest_mean_power_band",
+            "Bass/sub has the highest mean spectral power across many tracks",
+            "The broad band with the highest mean power per included FFT bin is bass or sub on many tracks.",
             "This does not mean the low end is excessive.",
-            lambda track: track.get("strongest_band") in {"sub", "bass"},
+            lambda track: _track_highest_band(track) in {"sub", "bass"},
         ),
         (
             "low_stereo_correlation",
@@ -189,7 +195,10 @@ def detect_common_patterns(tracks: list[dict[str, Any]]) -> list[dict[str, Any]]
         (
             "lufs_above_minus_10",
             "Integrated LUFS above -10 appears across many tracks",
-            "Many tracks sit above common streaming normalization reference levels.",
+            (
+                "Many tracks measure above -10 LUFS. A playback system using a lower "
+                "loudness reference may apply negative gain."
+            ),
             "This does not mean the tracks are too loud or unsuitable.",
             lambda track: _above(track, "integrated_lufs", -10.0),
         ),
@@ -265,6 +274,7 @@ def track_record_from_run(
     onset_density = (
         summary.get("onset_density") if isinstance(summary.get("onset_density"), dict) else {}
     )
+    highest_mean_power_band = _highest_mean_power_band(average_spectrum)
     shown = findings.get("findings_shown")
     if not isinstance(shown, list):
         shown = findings.get("findings")
@@ -288,7 +298,9 @@ def track_record_from_run(
         "near_clipping_samples": levels.get("near_clipping_samples"),
         "median_stereo_correlation": stereo.get("correlation_median"),
         "median_side_to_mid_ratio_db": mid_side.get("side_to_mid_ratio_db_median"),
-        "strongest_band": _strongest_band(average_spectrum),
+        "highest_mean_power_band": highest_mean_power_band,
+        # Deprecated compatibility alias retained for the 0.2 alpha line.
+        "strongest_band": highest_mean_power_band,
         "centroid_median_hz": spectral_shape.get("centroid_median_hz"),
         "rolloff_95_median_hz": spectral_shape.get("rolloff_95_median_hz"),
         "onset_density_median": onset_density.get("onset_density_median"),
@@ -334,7 +346,7 @@ def write_catalog_md(catalog: dict[str, Any], out_dir: str | Path) -> Path:
         "",
         (
             "| Filename | Duration | LUFS | True peak | PLR | Median correlation | "
-            "Side/mid | Strongest band | Traits | Shown findings | Report |"
+            "Side/mid | Highest mean-power band | Traits | Shown findings | Report |"
         ),
         "|---|---:|---:|---:|---:|---:|---:|---|---|---:|---|",
     ])
@@ -356,7 +368,7 @@ def write_catalog_md(catalog: dict[str, Any], out_dir: str | Path) -> Path:
                         "median_side_to_mid_ratio_db",
                         track.get("median_side_to_mid_ratio_db"),
                     ),
-                    _md_cell(track.get("strongest_band")),
+                    _md_cell(_track_highest_band(track)),
                     ", ".join(_trait_tags_for_display(track)) or "—",
                     _fmt(track.get("findings_shown_count"), digits=0),
                     f"[report.html]({_md_cell(track.get('report_path'))})",
@@ -453,9 +465,11 @@ def write_catalog_html(
     out_dir: str | Path,
     *,
     theme_name: str | None = None,
+    presentation_mode: str | None = None,
 ) -> Path:
     out = Path(out_dir) / "catalog.html"
     selected_theme = validate_theme_name(theme_name or default_theme_name())
+    selected_presentation = validate_presentation_mode(presentation_mode)
     folder_name = Path(str(catalog.get("input_folder", "folder"))).name
     stats = catalog.get("statistics") if isinstance(catalog.get("statistics"), dict) else {}
     lines = [
@@ -469,17 +483,27 @@ def write_catalog_html(
         _css(selected_theme),
         "</style>",
         "</head>",
-        "<body>",
+        f'<body data-presentation="{_h(selected_presentation)}">',
+        skip_link_html(),
         '<div class="container">',
         "<header>",
         f"<h1>{_h(folder_name)}</h1>",
         '<div class="subtitle">Folder-level technical fingerprints, not verdicts.</div>',
+        presentation_controls_html(selected_presentation),
         '<div class="meta-chips">',
         _chip("Tracks", catalog.get("track_count", 0)),
         _chip("Input", _short_path(catalog.get("input_folder", ""))),
         "</div>",
         "</header>",
-        '<section class="how-to-read">',
+        '<nav class="top-nav" aria-label="Catalog sections">',
+        '<a href="#summary">Summary</a><span aria-hidden="true">·</span>',
+        '<a href="#tracks">Tracks</a><span aria-hidden="true">·</span>',
+        '<a href="#distributions">Distributions</a><span aria-hidden="true">·</span>',
+        '<a href="#fingerprints">Fingerprints</a><span aria-hidden="true">·</span>',
+        '<a href="#context">Glossary</a>',
+        "</nav>",
+        '<main id="main-content" tabindex="-1">',
+        '<section class="how-to-read" id="how-to-read">',
         "<strong>How to read this catalog</strong>",
         (
             "<p>This catalog summarizes measurements across a folder of tracks. It shows "
@@ -489,7 +513,7 @@ def write_catalog_html(
         "</section>",
         _decoded_context_html(catalog),
         _common_patterns_html(catalog),
-        "<section>",
+        '<section id="summary">',
         "<h2>Summary</h2>",
         '<div class="metrics-grid">',
         _metric_card("Track count", catalog.get("track_count"), "", "Analyzed files in this folder"),
@@ -509,10 +533,10 @@ def write_catalog_html(
             "Middle side-energy relationship",
         ),
         _metric_card(
-            "Most common strongest band",
-            _most_common_strongest_band(catalog),
+            "Most common highest mean-power band",
+            _most_common_highest_mean_power_band(catalog),
             "",
-            "Most frequent long-term average-spectrum band",
+            "Most frequent band by mean spectral power per included FFT bin",
         ),
         "</div>",
         "</section>",
@@ -520,7 +544,9 @@ def write_catalog_html(
         _metric_distributions(catalog),
         _fingerprint_cards(catalog),
         _context_section(),
+        "</main>",
         "</div>",
+        presentation_script(selected_presentation),
         "</body>",
         "</html>",
         "",
@@ -578,18 +604,26 @@ def _common_patterns_html(catalog: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _strongest_band(average_spectrum: dict[str, Any]) -> Any:
-    value = average_spectrum.get("strongest_band")
+def _highest_mean_power_band(average_spectrum: dict[str, Any]) -> Any:
+    value = average_spectrum.get(
+        "highest_mean_power_band", average_spectrum.get("strongest_band")
+    )
     if isinstance(value, dict):
         return value.get("name") or value.get("band")
     if isinstance(value, str):
         return value
-    bands = average_spectrum.get("band_energies")
+    bands = average_spectrum.get("band_mean_power")
+    if not isinstance(bands, dict):
+        bands = average_spectrum.get("band_energies")
     if isinstance(bands, dict):
         best_name = None
         best_value = None
         for name, item in bands.items():
-            candidate = item.get("relative_db") if isinstance(item, dict) else item
+            candidate = (
+                item.get("mean_power_db", item.get("energy_db", item.get("relative_db")))
+                if isinstance(item, dict)
+                else item
+            )
             if (
                 isinstance(candidate, (int, float))
                 and not isinstance(candidate, bool)
@@ -599,6 +633,16 @@ def _strongest_band(average_spectrum: dict[str, Any]) -> Any:
                 best_value = candidate
         return best_name
     return None
+
+
+def _track_highest_band(track: dict[str, Any]) -> Any:
+    return track.get("highest_mean_power_band", track.get("strongest_band"))
+
+
+def _catalog_path_label(path: Path, include_local_paths: bool) -> str:
+    if include_local_paths:
+        return str(path.expanduser().resolve())
+    return path.name or path.as_posix()
 
 
 def _top_findings(findings: list[Any]) -> list[dict[str, Any]]:
@@ -623,9 +667,7 @@ def _trait_tags(track: dict[str, Any]) -> list[str]:
         tags.append("clipped samples")
     if _positive(track, "near_clipping_samples"):
         tags.append("near-clipping")
-    if _below(track, "rolloff_95_median_hz", 8000.0):
-        tags.append("low rolloff")
-    if track.get("strongest_band") in {"sub", "bass"}:
+    if _track_highest_band(track) in {"sub", "bass"}:
         tags.append("bass/sub")
     if _below(track, "median_stereo_correlation", 0.3):
         tags.append("wide/low-corr")
@@ -754,10 +796,10 @@ def _stat_card(stats: dict[str, Any], key: str, label: str, note: str = "") -> s
     )
 
 
-def _most_common_strongest_band(catalog: dict[str, Any]) -> str:
+def _most_common_highest_mean_power_band(catalog: dict[str, Any]) -> str:
     counts: dict[str, int] = {}
     for track in _track_list(catalog):
-        value = track.get("strongest_band")
+        value = _track_highest_band(track)
         if isinstance(value, str) and value:
             counts[value] = counts.get(value, 0) + 1
     if not counts:
@@ -769,8 +811,9 @@ def _track_table(catalog: dict[str, Any]) -> str:
     lines = [
         '<section id="tracks">',
         "<h2>Tracks</h2>",
-        '<div class="table-wrap">',
+        '<div class="table-wrap" role="region" aria-label="Analyzed tracks" tabindex="0">',
         '<table class="track-table">',
+        '<caption class="sr-only">Measurements and report links for analyzed tracks</caption>',
         "<thead><tr>",
     ]
     headers = [
@@ -781,13 +824,13 @@ def _track_table(catalog: dict[str, Any]) -> str:
         "PLR",
         "Median correlation",
         "Side/mid",
-        "Strongest band",
+        "Highest mean-power band",
         "Traits",
         "Shown findings",
         "Report",
     ]
     for header in headers:
-        lines.append(f"<th>{_h(header)}</th>")
+        lines.append(f'<th scope="col">{_h(header)}</th>')
     lines.append("</tr></thead><tbody>")
     for track in _track_list(catalog):
         lines.append("<tr>")
@@ -799,7 +842,7 @@ def _track_table(catalog: dict[str, Any]) -> str:
             _fmt_metric("plr_db", track.get("plr_db")),
             _fmt_metric("median_stereo_correlation", track.get("median_stereo_correlation")),
             _fmt_metric("median_side_to_mid_ratio_db", track.get("median_side_to_mid_ratio_db")),
-            _h(track.get("strongest_band", "—")),
+            _h(_track_highest_band(track) or "—"),
         ]
         for cell in cells:
             lines.append(f"<td>{cell}</td>")
@@ -907,7 +950,7 @@ def _fingerprint_cards(catalog: dict[str, Any]) -> str:
         lines.append(
             "<p>"
             f"Correlation {_h(_fmt(track.get('median_stereo_correlation')))} · "
-            f"Strongest band {_h(track.get('strongest_band', '—'))}"
+            f"Highest mean-power band {_h(_track_highest_band(track) or '—')}"
             "</p>"
         )
         lines.append(f'<a href="{_h(track.get("report_path", ""))}">Open track report</a>')
@@ -928,7 +971,7 @@ track reports are normalized within each track and are not calibrated dBFS.</p>
 <dt>Folder median</dt><dd>The middle measured value in this catalog.</dd>
 <dt>Folder range</dt><dd>The measured low-to-high span for tracks in this folder.</dd>
 <dt>Decoded audio</dt><dd>Audio after loading or decoding the source file, including lossy files such as MP3.</dd>
-<dt>Strongest band</dt><dd>The broad frequency band with the strongest long-term average-spectrum energy.</dd>
+<dt>Highest mean-power band</dt><dd>The broad frequency band with the highest mean spectral power per included FFT bin. It is not integrated total band energy.</dd>
 <dt>Stereo correlation</dt><dd>The measured left/right channel relationship.</dd>
 <dt>Side/mid ratio</dt><dd>The relationship between stereo-difference energy and center energy.</dd>
 </dl>
@@ -959,6 +1002,10 @@ h3 { margin: 0; }
 .meta-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .chip { display: inline-flex; gap: 6px; background: var(--chip-bg); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; color: var(--text-muted); }
 .chip strong { color: var(--text); font-weight: 550; }
+.top-nav { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 26px; padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.top-nav a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.top-nav a:hover { text-decoration: underline; }
+.top-nav span { color: var(--text-soft); }
 .how-to-read { background: var(--callout-bg); border: 1px solid var(--border); border-left: 4px solid var(--callout-border); padding: 16px 18px; border-radius: 8px; font-size: 14px; color: var(--text-muted); }
 .how-to-read strong { display: block; margin-bottom: 4px; color: var(--text); }
 .how-to-read p { margin: 4px 0; }
@@ -999,4 +1046,5 @@ h3 { margin: 0; }
   .glossary-list { grid-template-columns: 1fr; }
 }
 """
+        + presentation_css()
     )

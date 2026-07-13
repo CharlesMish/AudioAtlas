@@ -15,7 +15,7 @@ from audioatlas.analysis.levels import (
 from audioatlas.analysis.loudness import compute_short_term_lufs
 from audioatlas.analysis.spectral import (
     compute_average_spectrum,
-    compute_band_energy_timeline,
+    compute_band_power_timeline,
     compute_log_spectrogram,
     compute_spectral_shape,
 )
@@ -35,7 +35,7 @@ _COMPUTE: dict[str, AnalysisCompute] = {
     "spectrogram": compute_log_spectrogram,
     "average_spectrum": compute_average_spectrum,
     "spectral_shape": compute_spectral_shape,
-    "band_energy": compute_band_energy_timeline,
+    "band_power": compute_band_power_timeline,
     "onset": compute_onset_density,
     "chroma": compute_chroma_cqt,
     "stereo": compute_stereo_correlation,
@@ -52,11 +52,19 @@ class AnalysisBundle:
         self._cache: dict[str, object] = {}
 
     def get(self, name: str) -> object:
-        """Return a named analysis result, computing it on first access."""
+        """Return a named analysis result, computing it on first access.
 
-        if name not in _COMPUTE:
+        ``band_energy`` remains accepted as a deprecated alias for
+        ``band_power`` so graph configurations from the first alpha line keep
+        working without computing the result twice.
+        """
+
+        normalized_name = "band_power" if name == "band_energy" else name
+        if normalized_name not in _COMPUTE:
             raise KeyError(f"Unknown analysis result: {name}")
-        if name not in self._cache:
-            self._cache[name] = _COMPUTE[name](self.audio.y, self.audio.sr, self.config)
-        return self._cache[name]
+        if normalized_name not in self._cache:
+            self._cache[normalized_name] = _COMPUTE[normalized_name](
+                self.audio.y, self.audio.sr, self.config
+            )
+        return self._cache[normalized_name]
 

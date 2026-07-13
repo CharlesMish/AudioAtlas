@@ -1,0 +1,481 @@
+{
+  "files": [
+    {
+      "path": ".gitattributes",
+      "sha256": "be3991c751117095538a957f55cbdef7cc98863c93257aa30d5e94603e07fc4a"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "97c0d83063e4c5350b573e48f302eda47a9f2817c4a547741910798a0c9591d8"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "61362903d4c6c7a9b3fc29a1ea58810fcf7972f4fa3dce1d6da67dc38900d634"
+    },
+    {
+      "path": "AUDIO_RIGHTS.md",
+      "sha256": "d9b6445e2d83e9ebf9d7c8cc92964135c319c23fe06e4cd238484d1cc66b99eb"
+    },
+    {
+      "path": "DEMO_AUDIO_PROVENANCE.txt",
+      "sha256": "ba8f122b95f2d0c5a41e7e04553b68ebc0334c61f2eb95a8cb4d123a6a17f284"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "6713b8df08dc495e42ff6ef191ddf27fed5df984c4c24cd004517d90898d6eca"
+    },
+    {
+      "path": "Makefile",
+      "sha256": "e60ce0378e139e05cc994c7f290ff49d0019879957b7264c454d77ccb4fda81b"
+    },
+    {
+      "path": "README.md",
+      "sha256": "d2953742aaa78a7a6a0c436fac041456a850d6624e77147eef0cca609821a477"
+    },
+    {
+      "path": "README_EASY_RUN.md",
+      "sha256": "08136a08ffe00c17d622348a79d10a4117558ea31dfe3172b3f2a5a9c5e71cda"
+    },
+    {
+      "path": "docs/ALPHA_LIMITATIONS.md",
+      "sha256": "ca5c6a7919f575bb43277e9238d61b346feb5751009070ff0622a797d4d28ac5"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "f7db2c4331d73a8da9f2e844e7f7405c17251c4afc5379eae818ebd46945697a"
+    },
+    {
+      "path": "docs/CHANGELOG.md",
+      "sha256": "89f8028af4bc42b09d976a25f0f82bac53492948c111adf85de8daac2f3e840f"
+    },
+    {
+      "path": "docs/COMPATIBILITY.md",
+      "sha256": "06e2e6545d49bb1069decd850b749bf60c160c933b4fa918c4060fd7f7b2ae50"
+    },
+    {
+      "path": "docs/FINDING_RULES.md",
+      "sha256": "c421c6f0be88b69fe96f209d6897f9b473b1caaa65103d48a9d2781713bcdc4b"
+    },
+    {
+      "path": "docs/SUMMARY_SCHEMA.md",
+      "sha256": "ca133783f94bb4a792daf45c74dcc35690229d7b4e42613ffec7ea799c0cd360"
+    },
+    {
+      "path": "docs/USER_GUIDE.md",
+      "sha256": "7a2d73f2e834989e14a2fbf524ea362dbb4b69f82e1c7b1702866038d501ccc3"
+    },
+    {
+      "path": "docs/assets/readme/graph_examples.png",
+      "sha256": "5ff538c38d95ca0866bcad5f64f960a90c16b65105a088bff2f08e0255ae196c"
+    },
+    {
+      "path": "docs/assets/readme/report_graph_grid.png",
+      "sha256": "f9c5f3de73d85ccd7a600c6544261b01842032642cf43af328ec84a7f422a7f0"
+    },
+    {
+      "path": "docs/assets/readme/report_overview.png",
+      "sha256": "ca830dde204d93e52281fcadb64cbf635cac7fbaad2f39a23c5a0c0d00cc4c51"
+    },
+    {
+      "path": "docs/assets/readme/sections_comparison.png",
+      "sha256": "d1a37b6e8aacabb1d69c9bf195df1dc2fdc7a3035ac0320f14e28beb7b06b4d6"
+    },
+    {
+      "path": "examples/README.md",
+      "sha256": "48a4422b906b492d00d6ebb635029dcd4b5c4d5fbe76a0ece54c739db86a81b4"
+    },
+    {
+      "path": "examples/demo_audio/README.md",
+      "sha256": "641d1dd1f21207de14a5059ef48e2e10a1db056c82935f50d4a76ec60327b119"
+    },
+    {
+      "path": "examples/demo_audio/guitar.wav",
+      "sha256": "1ecba759cf090f06dc6446cba8ec392e2a10aeaa0dd2a6ad6e7b863a32ddc3b0"
+    },
+    {
+      "path": "examples/demo_audio/guitar_koto_cello_drums.wav",
+      "sha256": "3735e5a3bf10d6038811643a65b2c6fde0a1cc704810fd73e843d568fc3c9d84"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "18d1b4a31282418b4606b26ddb05f3c6b7f4472bd678ab95a69eb066fd7440e7"
+    },
+    {
+      "path": "scripts/run_audioatlas_mac.command",
+      "sha256": "6305236953e0a82b6ce6da89a231a000f3dba6a0bdc294d92da2d3c92fd10923"
+    },
+    {
+      "path": "scripts/run_audioatlas_windows.bat",
+      "sha256": "2e438b5b94d4afb202558f8872d4d59bf74a108aa17fc8d5c98e7a6aaaeee220"
+    },
+    {
+      "path": "src/audioatlas/__init__.py",
+      "sha256": "160e79d655e8832df44f1c0627b14d8e7c510f9f7a0885bc96b35ec1faac147c"
+    },
+    {
+      "path": "src/audioatlas/__main__.py",
+      "sha256": "59acae4894071df3d05bc01e7688846858b5ecfff480b00c6a4d71502e55f6ba"
+    },
+    {
+      "path": "src/audioatlas/alt_text.py",
+      "sha256": "d23dffeb98f5a8b5109b2bb0d42ca5aaa4bc078d06f3856a32e2a431641cc5eb"
+    },
+    {
+      "path": "src/audioatlas/analysis/__init__.py",
+      "sha256": "aa9d02c0f40208fe64df98277d9624d921547a2a965a64bf65139a4be8a03964"
+    },
+    {
+      "path": "src/audioatlas/analysis/bundle.py",
+      "sha256": "49b05833aee465c76c9fbd590c73341b2d6602c207f86f5bf1450417312a2c90"
+    },
+    {
+      "path": "src/audioatlas/analysis/dynamics.py",
+      "sha256": "afd272bde90439b26f53126b8548426da43b465e9b64feb659f696534da11463"
+    },
+    {
+      "path": "src/audioatlas/analysis/findings.py",
+      "sha256": "f34a03872ddaa3e5069b8dc04fab3d5e9efbbcde012df79a41fbb02ecc276d85"
+    },
+    {
+      "path": "src/audioatlas/analysis/levels.py",
+      "sha256": "1eb3b197350ee6fd48479f39671db38f5d519ca8a17af3e57428bc9f92aebb6a"
+    },
+    {
+      "path": "src/audioatlas/analysis/loudness.py",
+      "sha256": "5a7f6ddd6a2ca866eddeeb150b4057425bd97531096ef1d0f6c0bb4c07a905b4"
+    },
+    {
+      "path": "src/audioatlas/analysis/spectral.py",
+      "sha256": "f07b0293d6f2a2b709f9e42cf6afe9416393b1a578892f6371a4c8998c807b0c"
+    },
+    {
+      "path": "src/audioatlas/analysis/stereo.py",
+      "sha256": "cc76693c4ebd85547ad9ea9ad79d42db7a4c648a3832093df369cf4820438be6"
+    },
+    {
+      "path": "src/audioatlas/analysis/tonal.py",
+      "sha256": "e48b6ca04a53f3b2a64e15ad4c2a66316a67ddcd3ba9d3b94a0259dc14220fef"
+    },
+    {
+      "path": "src/audioatlas/batch.py",
+      "sha256": "80062c1a85fe23a63abdeed5a211a123a4d2cb9bfdc997fa16ef53246dc62a0c"
+    },
+    {
+      "path": "src/audioatlas/catalog_report.py",
+      "sha256": "7940120823a94b35f6bbb3823f1e9803b1fc889eef9f0b5d798031f8810eec92"
+    },
+    {
+      "path": "src/audioatlas/cli.py",
+      "sha256": "78005fc20fce6aa0555876a7ce3368bda2f013cbbbd0eea6b4480979d72bb1fd"
+    },
+    {
+      "path": "src/audioatlas/config.py",
+      "sha256": "118ec700bf7003499cc05986d7eb4047dce009c2cf3f49d30fe2ba589d2258c1"
+    },
+    {
+      "path": "src/audioatlas/errors.py",
+      "sha256": "bfd67e3d272e7b2190200f7af563c5ea8228e37e830b0d427a8f6d0a890c776d"
+    },
+    {
+      "path": "src/audioatlas/graph_profiles.py",
+      "sha256": "70195e66c45dc5e266ccd7c20c3e5a995764c531d537fbb649d738fce3bf6a37"
+    },
+    {
+      "path": "src/audioatlas/graphs/__init__.py",
+      "sha256": "d4b7a76c39bfaadc186811aeb56f3397c6eb4d455375d17c337c1c28a5da57f3"
+    },
+    {
+      "path": "src/audioatlas/graphs/adapters.py",
+      "sha256": "c74f3406720ee1d01481f058fcd1e34efb6b31ab7776fbc54bedc759d01da799"
+    },
+    {
+      "path": "src/audioatlas/graphs/registry.py",
+      "sha256": "e0f4ea3333be94d647784038d8bb763f153882e398ef3022cd38b7e2e8bbbab7"
+    },
+    {
+      "path": "src/audioatlas/graphs/selection.py",
+      "sha256": "e3d87ed0d9325c8258a2b6b360a559a9d0ce6e4434fbfee50f222d576a7eed6e"
+    },
+    {
+      "path": "src/audioatlas/html_report.py",
+      "sha256": "585dc99d544f705cdfc686a6cd728832657e4c9959705a429bd774497964d887"
+    },
+    {
+      "path": "src/audioatlas/io.py",
+      "sha256": "695f34c7e22854f04a16f60f528c03b346b1a31b1688ebcdf5c887043bfd5a77"
+    },
+    {
+      "path": "src/audioatlas/output.py",
+      "sha256": "ffb4c109bd1ff6a78dcddfa6a8598cc345982ad68420ba8c9753f40833db7eda"
+    },
+    {
+      "path": "src/audioatlas/pipeline.py",
+      "sha256": "6431fee9c7605ff37557a7caf88499d49feaeec7149b299449cfe9e0282428af"
+    },
+    {
+      "path": "src/audioatlas/presentation.py",
+      "sha256": "1979fe4c907ab5cb2c09a15db865c2d785a33ae6406e6ccdd94be02e0d7d72f6"
+    },
+    {
+      "path": "src/audioatlas/provenance.py",
+      "sha256": "85b5037b9a30e7fd9d5134a2cbc0e088823b6dfe61d15c2899782ff7c8c87c36"
+    },
+    {
+      "path": "src/audioatlas/release.py",
+      "sha256": "9a4185842f8b576bef077ecb378790d2c3abda7f44851ba16fb9f604d49cfd4c"
+    },
+    {
+      "path": "src/audioatlas/report.py",
+      "sha256": "bb4b7520303ffbea47161743c9e0ab605040a69c4141f8cf9020108f4ac3c6ae"
+    },
+    {
+      "path": "src/audioatlas/revision_diff.py",
+      "sha256": "d16b70ee72086438707422285c4f0495cb2b9e54a590f31e6f7277bbb9402e05"
+    },
+    {
+      "path": "src/audioatlas/theme.py",
+      "sha256": "502e20a8ce3f906fb932c26326486a42b19282c20f2eca40df64d5881c4d9a8a"
+    },
+    {
+      "path": "src/audioatlas/themes/__init__.py",
+      "sha256": "c4deb2e2d0d25af55507b6c2bf662d45b1f4ebd41fb51123d311fcab86d190d1"
+    },
+    {
+      "path": "src/audioatlas/themes/all_themes.json",
+      "sha256": "d441c7e8e9d8ed560e53d7b8517583ecbf07eb2c8770c1d95ccac7b3bb84708d"
+    },
+    {
+      "path": "src/audioatlas/utils.py",
+      "sha256": "71ff1594515ed20d293d94e86468962da5401aaa3932f75550a9d2f373637bdd"
+    },
+    {
+      "path": "src/audioatlas/visualize/__init__.py",
+      "sha256": "4a08e291bf995b1d72f54918895d2e4cf4f6695724c6cbaa53e21f8648198f67"
+    },
+    {
+      "path": "src/audioatlas/visualize/band_energy.py",
+      "sha256": "b133de302536401d2e7ba145f8b5debd2dfbe7e0ae61510ace1f1edac0046eb5"
+    },
+    {
+      "path": "src/audioatlas/visualize/chroma.py",
+      "sha256": "f5d57c76cdcbdaef14b7d5ea796a65f3768318ac8fcabcc11ffde953ccb5cd04"
+    },
+    {
+      "path": "src/audioatlas/visualize/histogram.py",
+      "sha256": "ad797b121ee62203d853eb90f1a219ae614a9d7af3e483e2e6dce109e03b7e58"
+    },
+    {
+      "path": "src/audioatlas/visualize/loudness.py",
+      "sha256": "2564406c6d926fb310e1e3a776a2d801d96ee571c6f4d0574faf96eb53ae7fde"
+    },
+    {
+      "path": "src/audioatlas/visualize/onset.py",
+      "sha256": "378acd495445d1f5fcb769bf5ee2790b74e9fdcea0afffecb1b8897c3ad3749b"
+    },
+    {
+      "path": "src/audioatlas/visualize/spectral_shape.py",
+      "sha256": "02e9823d8555281571753034292b65386f5d453a12a7e749614c392e39ed0387"
+    },
+    {
+      "path": "src/audioatlas/visualize/spectrogram.py",
+      "sha256": "85bd5cd2d07e7737d0ca9981c71261fd77e13b40c1bcfb5c63daf7b0274333b2"
+    },
+    {
+      "path": "src/audioatlas/visualize/spectrum.py",
+      "sha256": "d850cc3bdf537bf68556ad2b75fd0c2956f61ddae9cce173427a7c9619fab425"
+    },
+    {
+      "path": "src/audioatlas/visualize/stereo.py",
+      "sha256": "00c45db553b75852c8f4e8fcf14fa6a949e0c2f656a3ae2df3a45e80ea07ff8f"
+    },
+    {
+      "path": "src/audioatlas/visualize/waveform.py",
+      "sha256": "f77601fad21ba172c8d8bd4cc7a29940323cd1c5c463696ad65786e8fc754210"
+    },
+    {
+      "path": "starter_kit/PUT_AUDIO_HERE/.gitkeep",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "starter_kit/README_FOR_NON_CODERS.md",
+      "sha256": "7bacd2ed02d17d190210cfe805a0ed30ab6cab55aa8c17cf133d89ac72675492"
+    },
+    {
+      "path": "starter_kit/RUN_FULL.bat",
+      "sha256": "d2a4407ba28d80f7ee1b3e76be314eb6ddf2f5d97e98606e4a5f948865bfd788"
+    },
+    {
+      "path": "starter_kit/RUN_FULL.command",
+      "sha256": "09cab14e2c37b66adcb09f1fb15f4f727891db85421b77508736c24ae7afcebc"
+    },
+    {
+      "path": "starter_kit/RUN_MINIMAL.bat",
+      "sha256": "8afb14541a231a02938137bc4b25e32e31c08c817eee0eaead1a2096f48b44ad"
+    },
+    {
+      "path": "starter_kit/RUN_MINIMAL.command",
+      "sha256": "8a6c6db7aa30e33bbd7b09f14b46beb9312c8d6cef70d832870356ddf8fb93c2"
+    },
+    {
+      "path": "starter_kit/RUN_SECTIONS_PROMPTED.bat",
+      "sha256": "56c1623d6c5f0249a4fa730226d119ace2732eb91f5a3c1887c41f9968fbec1e"
+    },
+    {
+      "path": "starter_kit/RUN_SECTIONS_PROMPTED.command",
+      "sha256": "83cd5796d951f91dbbacc4ae28ba21759898c8e016af1d3460cda309e65a1c7c"
+    },
+    {
+      "path": "starter_kit/RUN_STANDARD.bat",
+      "sha256": "e76d7b451954adf01b9313d6e4c6eb7f97cb35c451b15eec0d013800616fe677"
+    },
+    {
+      "path": "starter_kit/RUN_STANDARD.command",
+      "sha256": "ff32aba27b474efa01eba5c026f70f9d8d6c2e209ae98cbfeb1441cddf28d2d0"
+    },
+    {
+      "path": "tests/conftest.py",
+      "sha256": "04266708d0f8e4bdcecfdb17d5c96b0f77e7a89d2be6dbaf8d9420e1325f7e3c"
+    },
+    {
+      "path": "tests/fixtures/_build_golden.py",
+      "sha256": "776572c96974b1ee3c1f732cfcbeabe46a1256bf7e1fe381bff703847af6989e"
+    },
+    {
+      "path": "tests/fixtures/malformed/invalid_data.wav",
+      "sha256": "d2673b8727f293c9ab40de663b286815ba4f5281fde0b0202201241b35dd52d3"
+    },
+    {
+      "path": "tests/fixtures/malformed/truncated.flac",
+      "sha256": "44f72457b38aa613ca07f49e0bb21765b7c6e999b53c91a159ac6c20e82744d8"
+    },
+    {
+      "path": "tests/fixtures/malformed/truncated.wav",
+      "sha256": "d8d8ecb8068ebfbce7048431259b18ca887b7c5de6ad8f6647c44fbf1ca6bec6"
+    },
+    {
+      "path": "tests/fixtures/sine_1k_-6dbfs_2s.expected.json",
+      "sha256": "14e568343d46c436963f9b7fba148a97734989cc7bba81fa75ee65a8e7000a6f"
+    },
+    {
+      "path": "tests/fixtures/sine_1k_-6dbfs_2s.wav",
+      "sha256": "f741b4cb7dbb952c0106031c69f37402c045072194eb2e1024e198402d72676e"
+    },
+    {
+      "path": "tests/test_alt_text.py",
+      "sha256": "c658fe4c617544d7fedb85ddb04692194c84006f166f3f5f7aa6fbcbc70b545a"
+    },
+    {
+      "path": "tests/test_batch.py",
+      "sha256": "1d9b7e0ea2b36004032d5039515d4b066af9220cd02300bd666e72f3631c34f2"
+    },
+    {
+      "path": "tests/test_cli.py",
+      "sha256": "627139aec1f3f7a2aa0ba4161d6079ab084d4bbdd0fee1e61192ec47f6e73a3b"
+    },
+    {
+      "path": "tests/test_cli_hardening.py",
+      "sha256": "425a9cc4bb7322f4df62c45466eaa03d25b7c27b550e1ac60097b8d61d75fffa"
+    },
+    {
+      "path": "tests/test_demo_audio.py",
+      "sha256": "7000f784106c3961b0588dd815322f78083be3f8da2489aeeae9a02f4cc69259"
+    },
+    {
+      "path": "tests/test_dynamics.py",
+      "sha256": "d85caf52d5a80771017c08fef62778374a97992becc0fe1203a8c74842884aae"
+    },
+    {
+      "path": "tests/test_findings.py",
+      "sha256": "aa3e69ba7890bd0c4b2d293a10b8daf7b969b063ed8e9aae2298948d7cfe2197"
+    },
+    {
+      "path": "tests/test_golden.py",
+      "sha256": "a4962e64a5baee46c97277961858c6fee3f36a98b1626e08a49e873742551d90"
+    },
+    {
+      "path": "tests/test_graph_registry.py",
+      "sha256": "d83fbd0ccb0537d4712dff861be41296c9d9f55c14cf6a45133be76386c2e9f9"
+    },
+    {
+      "path": "tests/test_graph_selection.py",
+      "sha256": "a7225ad0c7dfbd9e755b2de2b4e0eadadaa3b191b6a8b6d6fc0dff31630f4f2f"
+    },
+    {
+      "path": "tests/test_invariants.py",
+      "sha256": "6e65a84e9483886b043d1451abf35e355a84707dae2df4509da275aba6e5bbaa"
+    },
+    {
+      "path": "tests/test_io.py",
+      "sha256": "7dc4cdf54173a090b7a59ba30c3b18ee0b70d16efa23a9c8f8bc5fe293204cd2"
+    },
+    {
+      "path": "tests/test_levels.py",
+      "sha256": "857fe946cf379011e37aeac32c7f99227299129576db5008739a63e56369c49b"
+    },
+    {
+      "path": "tests/test_loudness.py",
+      "sha256": "873a54cd51af9f9ee877e8f689f52bdf5a79b7d3b49955629908734e333f2fe4"
+    },
+    {
+      "path": "tests/test_malformed_audio.py",
+      "sha256": "9b5085056ae1080ef386c3414645204f07a6bc236b4948d3dc1199106bfe3b14"
+    },
+    {
+      "path": "tests/test_output.py",
+      "sha256": "6009816a5f08387e0a9783f7b4aa0234648554f59de1d9434ebeefaed487e877"
+    },
+    {
+      "path": "tests/test_pipeline.py",
+      "sha256": "2b11c01315678963a9f935081264ba82184854b1d45c17d4195be2db5f98654a"
+    },
+    {
+      "path": "tests/test_presentation.py",
+      "sha256": "678a41b2db1b81793eb278f77b2a17efd375acc4148df1bc810c0b26a7fb14f1"
+    },
+    {
+      "path": "tests/test_provenance.py",
+      "sha256": "b7f2d9a143b232aee0daf2af11d1acbf6ebe85134a46d8c7a10ce59a02a380d7"
+    },
+    {
+      "path": "tests/test_release.py",
+      "sha256": "4a4e0b1847b9d76e8f8b460ac14eba30c52b2a448bfadb904be7b349d19252d0"
+    },
+    {
+      "path": "tests/test_report.py",
+      "sha256": "4cbb6c3d989fb6295694641b5274e6b482ee895140809fa5e17e81f94b164627"
+    },
+    {
+      "path": "tests/test_revision_diff.py",
+      "sha256": "5bbe659149e2b45444a0b5b21ebb54dbfa2a1f2025a874a62d25c4d93e31097d"
+    },
+    {
+      "path": "tests/test_spectral.py",
+      "sha256": "7f8cdf506abc5f06d99f438e3406d6fd5e92279ebc3d40be7e401ba0d1441686"
+    },
+    {
+      "path": "tests/test_stereo.py",
+      "sha256": "a66ceb19ddd90a9ce937d6dab1d2846ed6844c2c22bb91a23e2ec61de0baee91"
+    },
+    {
+      "path": "tests/test_theme.py",
+      "sha256": "240096b9468e3be64e41f1dc64a787bac75852938e292d79afafc013e7db46ca"
+    },
+    {
+      "path": "tests/test_tonal.py",
+      "sha256": "9a72bad832586c8bf14176d0a2a6319b7573490c031a52af28d139ec3dc2e7db"
+    },
+    {
+      "path": "tests/test_utils.py",
+      "sha256": "5a407c79ed87d03295a3edd4671df1447082da5e093283bc1b17341aec9615f6"
+    },
+    {
+      "path": "uv.lock",
+      "sha256": "7aef4f57ac22484cc3874ff639a1b729d152e4b104cb3460950e08a29e49307e"
+    }
+  ],
+  "format_version": 1,
+  "included_file_count": 118,
+  "package_version": "0.2.0a6",
+  "public_tree_sha256": "8da106fda805e783008f9f2bd497c3adf43a1ffd0ef621211ba411f22d64fead",
+  "source_commit": "ddb41c28dedcf3d076ad0e5ccd4292b5b1af3a4e"
+}

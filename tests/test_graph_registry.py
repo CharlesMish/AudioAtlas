@@ -8,6 +8,7 @@ from audioatlas.config import AnalysisConfig
 from audioatlas.graphs import all_graphs, graph_by_key
 from audioatlas.graphs.registry import validate_registry
 from audioatlas.graphs.selection import GraphSelection
+from audioatlas.output import PLOT_FILENAMES
 from audioatlas.pipeline import analyze_file
 
 EXPECTED_KEYS = [
@@ -87,6 +88,7 @@ def test_registry_integrity_and_current_contract():
     assert len(graphs) == 17
     assert keys == EXPECTED_KEYS
     assert filenames == EXPECTED_FILENAMES
+    assert frozenset(filenames) == PLOT_FILENAMES
     assert len(set(keys)) == len(keys)
     assert len(set(filenames)) == len(filenames)
     assert [graph.order for graph in graphs] == list(range(1, 18))

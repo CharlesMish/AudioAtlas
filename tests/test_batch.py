@@ -18,10 +18,19 @@ from audioatlas.catalog_report import (
     write_catalog_md,
 )
 from audioatlas.cli import main
+from audioatlas.output import OUTPUT_MARKER_FILENAME
+from audioatlas.release import CATALOG_SCHEMA_VERSION
 
 
-def _write_sine(path: Path, *, freq: float, amp: float = 0.2, sr: int = 48_000) -> None:
-    t = np.arange(int(sr * 1.0), dtype=np.float64) / sr
+def _write_sine(
+    path: Path,
+    *,
+    freq: float,
+    amp: float = 0.2,
+    sr: int = 48_000,
+    seconds: float = 1.0,
+) -> None:
+    t = np.arange(int(sr * seconds), dtype=np.float64) / sr
     y = (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
     sf.write(path, y, sr)
 
@@ -68,10 +77,27 @@ def test_batch_cli_creates_per_track_reports_and_catalog_outputs(tmp_path: Path)
     catalog = json.loads((out_dir / "catalog_summary.json").read_text(encoding="utf-8"))
     assert catalog["track_count"] == 2
     assert [track["filename"] for track in catalog["tracks"]] == ["alpha.wav", "beta.wav"]
+    assert catalog["schema_version"] == CATALOG_SCHEMA_VERSION
+    assert catalog["input_folder"] == input_dir.name
+    assert catalog["output_folder"] == out_dir.name
+    assert catalog["path_kind"] == "basename"
+    assert catalog["local_paths_included"] is False
+    assert str(tmp_path) not in (out_dir / "catalog_summary.json").read_text(
+        encoding="utf-8"
+    )
     assert catalog["skipped_files"] == [
-        {"filename": "notes.txt", "reason": "unsupported file extension"}
+        {
+            "filename": "notes.txt",
+            "reason": "unsupported file extension",
+            "status": "skipped",
+        }
     ]
     assert catalog["tracks"][0]["report_path"] == "alpha/report.html"
+    manifest = json.loads(
+        (out_dir / OUTPUT_MARKER_FILENAME).read_text(encoding="utf-8")
+    )
+    assert manifest["kind"] == "batch-catalog"
+    assert manifest["generated_directories"] == ["alpha", "beta"]
 
     html = (out_dir / "catalog.html").read_text(encoding="utf-8")
     track_html = (out_dir / "alpha" / "report.html").read_text(encoding="utf-8")
@@ -151,6 +177,7 @@ def test_catalog_track_record_extracts_spectral_shape_values():
         summary={
             "metadata": {"samplerate": 48_000, "channels": 2},
             "levels": {"duration_seconds": 1.0},
+            "average_spectrum": {"highest_mean_power_band": "mid"},
             "spectral_shape": {
                 "centroid_median_hz": 2345.0,
                 "rolloff_95_median_hz": 9876.0,
@@ -161,6 +188,8 @@ def test_catalog_track_record_extracts_spectral_shape_values():
 
     assert record["centroid_median_hz"] == 2345.0
     assert record["rolloff_95_median_hz"] == 9876.0
+    assert record["highest_mean_power_band"] == "mid"
+    assert record["strongest_band"] == "mid"
 
 
 def test_common_patterns_detect_traits_above_threshold_and_ignore_rare_traits():
@@ -218,6 +247,10 @@ def test_lossy_decoded_catalog_caveat_renders_for_mp3_heavy_folder(tmp_path: Pat
     assert "About these files" in html
     assert "decoded-audio delivery context" in html
     assert "do not establish whether the original master clipped" in html
+    assert '<body data-presentation="studio">' in html
+    assert 'class="skip-link" href="#main-content"' in html
+    assert '<nav class="top-nav" aria-label="Catalog sections">' in html
+    assert 'role="region" aria-label="Analyzed tracks" tabindex="0"' in html
     assert "decoded-audio delivery context" in md
 
 
@@ -234,7 +267,7 @@ def test_catalog_html_uses_trait_tags_and_distribution_median_ticks(tmp_path: Pa
             "median_stereo_correlation": 0.2,
             "median_side_to_mid_ratio_db": -5.0,
             "rolloff_95_median_hz": 7000.0,
-            "strongest_band": "bass",
+            "highest_mean_power_band": "bass",
             "clipped_samples": 2,
             "near_clipping_samples": 10,
             "findings_shown_count": 3,
@@ -250,7 +283,7 @@ def test_catalog_html_uses_trait_tags_and_distribution_median_ticks(tmp_path: Pa
             "median_stereo_correlation": 0.8,
             "median_side_to_mid_ratio_db": -12.0,
             "rolloff_95_median_hz": 11000.0,
-            "strongest_band": "mid",
+            "highest_mean_power_band": "mid",
             "clipped_samples": 0,
             "near_clipping_samples": 0,
             "findings_shown_count": 0,
@@ -264,8 +297,8 @@ def test_catalog_html_uses_trait_tags_and_distribution_median_ticks(tmp_path: Pa
     )
     html = write_catalog_html(catalog, tmp_path).read_text(encoding="utf-8")
 
-    assert "<th>Traits</th>" in html
-    assert "<th>Shown findings</th>" in html
+    assert '<th scope="col">Traits</th>' in html
+    assert '<th scope="col">Shown findings</th>' in html
     assert "decoded levels" in html
     assert "3 shown" in html
     assert "median-tick" in html
@@ -371,3 +404,106 @@ def test_catalog_html_language_avoids_scoring_terms(tmp_path: Path):
         assert phrase not in text
     assert "folder median" in text
     assert "technical fingerprints" in text
+
+
+def test_catalog_local_paths_are_only_included_by_explicit_opt_in(tmp_path: Path):
+    catalog = build_catalog_summary(
+        input_folder=tmp_path / "private-input",
+        output_folder=tmp_path / "private-output",
+        tracks=[],
+        skipped_files=[],
+        include_local_paths=True,
+    )
+
+    assert catalog["input_folder"] == str((tmp_path / "private-input").resolve())
+    assert catalog["output_folder"] == str((tmp_path / "private-output").resolve())
+    assert catalog["path_kind"] == "absolute"
+    assert catalog["local_paths_included"] is True
+
+
+def test_batch_continues_after_corrupt_supported_file_and_records_failure(tmp_path: Path):
+    input_dir = tmp_path / "private-user-name" / "audio"
+    input_dir.mkdir(parents=True)
+    (input_dir / "bad.wav").write_bytes(b"not audio")
+    _write_sine(input_dir / "good.wav", freq=440, seconds=0.25)
+    out_dir = tmp_path / "catalog"
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "batch",
+            str(input_dir),
+            "--out",
+            str(out_dir),
+            "--graphs-profile",
+            "minimal",
+            "--n-fft",
+            "512",
+            "--hop-length",
+            "128",
+            "--rms-frame-length",
+            "512",
+            "--true-peak-oversample",
+            "1",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Skipped files:   1" in result.output
+    catalog_text = (out_dir / "catalog_summary.json").read_text(encoding="utf-8")
+    catalog = json.loads(catalog_text)
+    assert catalog["track_count"] == 1
+    assert [track["filename"] for track in catalog["tracks"]] == ["good.wav"]
+    assert (out_dir / "good" / "report.html").exists()
+    assert len(catalog["skipped_files"]) == 1
+    skipped = catalog["skipped_files"][0]
+    assert skipped["filename"] == "bad.wav"
+    assert skipped["status"] == "analysis_failed"
+    assert "Could not read audio file 'bad.wav'" in skipped["reason"]
+    assert str(tmp_path) not in skipped["reason"]
+    assert str(input_dir) not in catalog_text
+    assert not (out_dir / "bad").exists()
+
+
+def test_batch_strict_failure_leaves_previous_catalog_untouched(tmp_path: Path):
+    input_dir = tmp_path / "audio"
+    input_dir.mkdir()
+    (input_dir / "bad.wav").write_bytes(b"not audio")
+    out_dir = tmp_path / "catalog"
+    out_dir.mkdir()
+    previous = '{"known_good": true}\n'
+    (out_dir / "catalog_summary.json").write_text(previous, encoding="utf-8")
+    (out_dir / "human-notes.txt").write_text("keep", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        main,
+        ["batch", str(input_dir), "--out", str(out_dir), "--strict"],
+    )
+
+    assert result.exit_code != 0
+    assert "Could not read audio file 'bad.wav'" in result.output
+    assert "Traceback" not in result.output
+    assert (out_dir / "catalog_summary.json").read_text(encoding="utf-8") == previous
+    assert (out_dir / "human-notes.txt").read_text(encoding="utf-8") == "keep"
+
+
+def test_batch_with_no_successes_writes_diagnostic_catalog_then_returns_nonzero(
+    tmp_path: Path,
+):
+    input_dir = tmp_path / "audio"
+    input_dir.mkdir()
+    (input_dir / "bad.wav").write_bytes(b"not audio")
+    out_dir = tmp_path / "catalog"
+
+    result = CliRunner().invoke(
+        main,
+        ["batch", str(input_dir), "--out", str(out_dir)],
+    )
+
+    assert result.exit_code != 0
+    assert "No audio files were analyzed" in result.output
+    catalog = json.loads((out_dir / "catalog_summary.json").read_text(encoding="utf-8"))
+    assert catalog["track_count"] == 0
+    assert catalog["skipped_files"][0]["status"] == "analysis_failed"
+    assert (out_dir / "catalog.html").exists()
+    assert (out_dir / "catalog.md").exists()

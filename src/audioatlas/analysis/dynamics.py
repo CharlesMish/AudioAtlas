@@ -24,6 +24,7 @@ class OnsetDensityResult:
     hop_length: int
     smoothing_window_seconds: float
     smoothing_window_frames: int
+    mel_bands: int
     warnings: list[str]
 
     def to_summary_dict(self) -> dict[str, object]:
@@ -33,6 +34,7 @@ class OnsetDensityResult:
                 "frames": 0,
                 "smoothing_window_seconds": self.smoothing_window_seconds,
                 "smoothing_window_frames": self.smoothing_window_frames,
+                "mel_bands": self.mel_bands,
                 "warnings": self.warnings,
             }
         median_density = float(np.median(self.smoothed_onset_density))
@@ -49,6 +51,7 @@ class OnsetDensityResult:
             "frames": int(len(self.times_seconds)),
             "smoothing_window_seconds": self.smoothing_window_seconds,
             "smoothing_window_frames": self.smoothing_window_frames,
+            "mel_bands": self.mel_bands,
             "onset_strength_mean": float(np.mean(self.onset_strength)),
             "onset_strength_median": float(np.median(self.onset_strength)),
             "onset_strength_max": float(np.max(self.onset_strength)),
@@ -79,11 +82,17 @@ def compute_onset_density(
     if len(mono) == 0:
         raise ValueError("audio has zero samples")
 
+    # Librosa defaults to 128 mel filters. At very small user-selected FFT
+    # sizes that can create empty filters and emit a raw library warning. Keep
+    # the default at normal AudioAtlas FFT sizes and scale it down only when
+    # frequency resolution is too coarse.
+    mel_bands = min(128, max(1, cfg.n_fft // 8))
     onset_strength = librosa.onset.onset_strength(
         y=mono,
         sr=sr,
         hop_length=cfg.hop_length,
         n_fft=cfg.n_fft,
+        n_mels=mel_bands,
     ).astype(np.float64)
     warnings: list[str] = []
     max_strength = float(np.max(onset_strength)) if len(onset_strength) else 0.0
@@ -113,5 +122,6 @@ def compute_onset_density(
         hop_length=cfg.hop_length,
         smoothing_window_seconds=float(cfg.onset_density_window_seconds),
         smoothing_window_frames=window_frames,
+        mel_bands=mel_bands,
         warnings=warnings,
     )

@@ -100,10 +100,10 @@ def plot_rms_timeline(
     *,
     title: str = "Frame RMS Timeline (dBFS)",
 ) -> Path:
-    """Save the v0.1 RMS dBFS timeline.
+    """Save the frame RMS dBFS timeline.
 
     This is RMS dBFS, not K-weighted short-term LUFS. The name reflects that
-    intentionally - per AGENT_BRIEF, AudioAtlas does not overclaim.
+    intentionally; AudioAtlas does not infer clipping from waveform shape alone.
     A short-term-LUFS timeline can be added later as a separate, named plot.
     """
 

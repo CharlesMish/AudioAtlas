@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from audioatlas.graphs.registry import GraphSpec
+from audioatlas.graph_profiles import VALID_PROFILES, selection_profile
 
-VALID_PROFILES = ("minimal", "standard", "full")
+if TYPE_CHECKING:
+    from audioatlas.graphs.registry import GraphSpec
 
 
 class GraphSelectionError(ValueError):
@@ -56,7 +58,10 @@ class GraphSelection:
                 f"Graph key(s) present in both enable and disable: {conflict_list}."
             )
 
-        selected_keys = {graph.key for graph in ordered_graphs if self.profile in graph.profiles}
+        resolved_profile = selection_profile(self.profile)
+        selected_keys = {
+            graph.key for graph in ordered_graphs if resolved_profile in graph.profiles
+        }
         selected_keys.update(enable)
         selected_keys.difference_update(disable)
         if not selected_keys:

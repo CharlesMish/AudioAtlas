@@ -35,6 +35,9 @@ def test_cli_analyze_accepts_start_and_end_section(tmp_path):
     summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
     assert summary["metadata"]["source_start_seconds"] == 1.0
     assert summary["metadata"]["source_end_seconds"] == 3.0
+    assert summary["metadata"]["path"] == "section.wav"
+    assert summary["metadata"]["path_kind"] == "basename"
+    assert str(tmp_path) not in json.dumps(summary)
     assert summary["levels"]["duration_seconds"] == 2.0
 
 
@@ -55,6 +58,7 @@ def test_cli_analyze_graphs_profile_minimal_renders_subset(tmp_path):
             str(out_dir),
             "--graphs-profile",
             "minimal",
+            "--include-local-paths",
         ],
     )
 
@@ -67,6 +71,9 @@ def test_cli_analyze_graphs_profile_minimal_renders_subset(tmp_path):
         "sample_histogram.png",
     ]
     assert summary["graphs"]["profile"] == "minimal"
+    assert summary["metadata"]["path"] == str(path.resolve())
+    assert summary["metadata"]["path_kind"] == "absolute"
+    assert summary["metadata"]["local_paths_included"] is True
     assert len(list(out_dir.glob("*.png"))) == 4
     assert "chroma_cqt" in summary
     assert "stereo_correlation" in summary
@@ -517,3 +524,26 @@ sections:
 
     assert result.exit_code != 0
     assert "greater than start" in result.output
+
+
+def test_cli_analyze_without_out_uses_friendly_default(tmp_path, monkeypatch):
+    path = tmp_path / "My Mix (v5).wav"
+    sr = 48_000
+    y = np.zeros((sr, 1), dtype=np.float32)
+    y[:, 0] = 0.05
+    sf.write(path, y, sr)
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        main,
+        ["analyze", str(path), "--graphs-profile", "compact"],
+    )
+
+    assert result.exit_code == 0, result.output
+    out_dir = tmp_path / "audioatlas-report-my-mix-v5"
+    assert out_dir.is_dir()
+    assert (out_dir / "report.html").is_file()
+    assert "No --out supplied" in result.output
+    summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["graphs"]["profile"] == "compact"
+    assert len(summary["plots"]) == 4

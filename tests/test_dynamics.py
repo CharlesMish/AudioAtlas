@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 
 from audioatlas.analysis.dynamics import compute_onset_density
@@ -88,3 +90,17 @@ def test_plot_onset_density_writes_png(tmp_path, sr):
 
     assert path.exists()
     assert path.stat().st_size > 0
+
+
+def test_small_fft_adapts_mel_bank_without_raw_empty_filter_warning(sr):
+    cfg = AnalysisConfig(n_fft=512, hop_length=128)
+    t = np.arange(sr // 4, dtype=np.float64) / sr
+    y = (0.2 * np.sin(2 * np.pi * 440 * t)).astype(np.float32)[:, None]
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = compute_onset_density(y, sr, cfg)
+
+    assert caught == []
+    assert result.mel_bands == 64
+    assert result.to_summary_dict()["mel_bands"] == 64
