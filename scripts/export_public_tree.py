@@ -200,8 +200,10 @@ def _write_zip(tree: Path, destination: Path) -> None:
             if path.is_file():
                 arcname = (Path(root_name) / path.relative_to(tree)).as_posix()
                 info = zipfile.ZipInfo(arcname, date_time=(1980, 1, 1, 0, 0, 0))
+                info.create_system = 3
                 info.compress_type = zipfile.ZIP_DEFLATED
-                info.external_attr = 0o100644 << 16
+                mode = 0o100755 if path.suffix.lower() == ".command" else 0o100644
+                info.external_attr = mode << 16
                 archive.writestr(info, path.read_bytes(), compresslevel=9)
 
 

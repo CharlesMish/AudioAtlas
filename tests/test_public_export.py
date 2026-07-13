@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,3 +48,32 @@ def test_public_export_excludes_stewardship_material_but_keeps_user_contracts():
 
     assert all(module._is_stewardship_only(Path(path)) for path in excluded)
     assert not any(module._is_stewardship_only(Path(path)) for path in included)
+
+
+def test_public_zip_preserves_mac_launcher_execute_permissions(tmp_path: Path):
+    module = _module()
+    tree = tmp_path / "AudioAtlas-public"
+    launchers = [
+        "scripts/run_audioatlas_mac.command",
+        "starter_kit/RUN_FULL.command",
+        "starter_kit/RUN_MINIMAL.command",
+        "starter_kit/RUN_SECTIONS_PROMPTED.command",
+        "starter_kit/RUN_STANDARD.command",
+    ]
+    regular_file = "starter_kit/README_FOR_NON_CODERS.md"
+    for relative in [*launchers, regular_file]:
+        path = tree / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(relative, encoding="utf-8")
+
+    destination = tmp_path / "AudioAtlas-public.zip"
+    module._write_zip(tree, destination)
+
+    with zipfile.ZipFile(destination) as archive:
+        for relative in launchers:
+            info = archive.getinfo(f"{tree.name}/{relative}")
+            assert info.create_system == 3
+            assert info.external_attr >> 16 == 0o100755
+        regular_info = archive.getinfo(f"{tree.name}/{regular_file}")
+        assert regular_info.create_system == 3
+        assert regular_info.external_attr >> 16 == 0o100644
