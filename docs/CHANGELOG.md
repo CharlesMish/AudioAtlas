@@ -5,7 +5,10 @@ tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
-No entries yet.
+- Published two rights-cleared real musical demo recordings for full report and
+  two-track catalog walkthroughs, with audio-specific CC BY 4.0 attribution and
+  a visible exception for embedded Native Instruments/Kontakt and possible
+  Splice content. Package builds continue to exclude the WAV files.
 
 ## `0.2.0a6` — 2026-07-11
 

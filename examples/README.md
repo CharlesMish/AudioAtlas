@@ -1,18 +1,55 @@
 # AudioAtlas examples
 
-This directory contains workflow documentation only. The repository includes a
-small generated sine-wave fixture under `tests/fixtures/`; it does not include
-third-party or copyrighted calibration music.
+This directory contains two kinds of example input:
 
-## Generate a compact example report
+- `demo_audio/` contains two intentionally public musical recordings. Read its
+  [recording notes](demo_audio/README.md) and the repository's
+  [audio rights notice](../AUDIO_RIGHTS.md).
+- `tests/fixtures/` contains project-generated signals for deterministic
+  mechanics tests.
+
+The musical recordings are demonstrations, not deterministic golden fixtures
+or threshold-calibration evidence.
+
+## Analyze one real recording
+
+```bash
+uv run audioatlas analyze examples/demo_audio/guitar.wav \
+  --out reports/demo-guitar \
+  --graphs-profile full
+python -m webbrowser reports/demo-guitar/report.html
+```
+
+The generated HTML opens in Studio and still offers the Focus/Studio switch.
+
+## Build a clean two-track catalog
+
+Batch catalogs record non-audio files as skipped. Make an audio-only working
+folder so the catalog contains exactly two tracks and zero skipped files:
+
+```bash
+rm -rf reports/demo-audio-input
+mkdir -p reports/demo-audio-input
+cp examples/demo_audio/*.wav reports/demo-audio-input/
+uv run audioatlas batch reports/demo-audio-input \
+  --out reports/demo-catalog \
+  --graphs-profile full
+
+python -m webbrowser reports/demo-catalog/catalog.html
+python -m webbrowser reports/demo-catalog/guitar/report.html
+python -m webbrowser reports/demo-catalog/guitar_koto_cello_drums/report.html
+```
+
+AudioAtlas safely refreshes files it owns when the same output directory is
+used again. Generated reports are ignored by Git.
+
+## Generate a compact fixture report
 
 ```bash
 uv run audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav \
-  --out reports/example_sine \
-  --graphs-profile minimal
+  --out reports/example-sine \
+  --graphs-profile compact
 ```
-
-Then open `reports/example_sine/report.html`.
 
 The sine fixture verifies deterministic mechanics; it is not evidence that
 finding thresholds generalize to music.
@@ -45,6 +82,5 @@ sections:
 
 Omit `end` to analyze through EOF. AudioAtlas does not detect sections.
 
-Generated reports are ignored by git. Keep personal and calibration audio
-private unless you own it and intentionally publish it under a compatible
-license.
+Keep personal and calibration audio private unless you own it and intentionally
+publish it under a compatible license.

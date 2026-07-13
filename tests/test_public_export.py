@@ -31,6 +31,7 @@ def test_public_export_excludes_stewardship_material_but_keeps_user_contracts():
         "tests/test_public_export.py",
     ]
     included = [
+        "AUDIO_RIGHTS.md",
         "README.md",
         "README_EASY_RUN.md",
         "docs/USER_GUIDE.md",
@@ -39,6 +40,9 @@ def test_public_export_excludes_stewardship_material_but_keeps_user_contracts():
         "src/audioatlas/pipeline.py",
         "tests/test_pipeline.py",
         ".github/workflows/ci.yml",
+        "examples/demo_audio/README.md",
+        "examples/demo_audio/guitar.wav",
+        "examples/demo_audio/guitar_koto_cello_drums.wav",
     ]
 
     assert all(module._is_stewardship_only(Path(path)) for path in excluded)
