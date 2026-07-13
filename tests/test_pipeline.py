@@ -8,6 +8,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 import soundfile as sf
+from matplotlib import image as matplotlib_image
+from matplotlib.colors import to_rgb
 
 import audioatlas.pipeline as pipeline_module
 from audioatlas.batch import analyze_folder
@@ -22,6 +24,7 @@ from audioatlas.release import (
     FINDINGS_SCHEMA_VERSION,
     SUMMARY_SCHEMA_VERSION,
 )
+from audioatlas.theme import get_theme
 
 
 def _small_config() -> AnalysisConfig:
