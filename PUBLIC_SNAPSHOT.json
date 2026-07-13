@@ -1,16 +1,24 @@
 {
   "files": [
     {
+      "path": ".gitattributes",
+      "sha256": "be3991c751117095538a957f55cbdef7cc98863c93257aa30d5e94603e07fc4a"
+    },
+    {
       "path": ".github/workflows/ci.yml",
       "sha256": "97c0d83063e4c5350b573e48f302eda47a9f2817c4a547741910798a0c9591d8"
     },
     {
       "path": ".gitignore",
-      "sha256": "d5ae35d1e69fafe36ab104bf7e217f68d52dbfa1713641b21b217b0ddcbab0f3"
+      "sha256": "61362903d4c6c7a9b3fc29a1ea58810fcf7972f4fa3dce1d6da67dc38900d634"
+    },
+    {
+      "path": "AUDIO_RIGHTS.md",
+      "sha256": "d9b6445e2d83e9ebf9d7c8cc92964135c319c23fe06e4cd238484d1cc66b99eb"
     },
     {
       "path": "DEMO_AUDIO_PROVENANCE.txt",
-      "sha256": "ef7ce34ada015ee449ff1b838f293265c9525f40fdd759d3a5a80b6383795544"
+      "sha256": "ba8f122b95f2d0c5a41e7e04553b68ebc0334c61f2eb95a8cb4d123a6a17f284"
     },
     {
       "path": "LICENSE",
@@ -22,7 +30,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "014ab3953231775074fe5dedd1163fbdbd1d84416c79e2f9a1c58b4e826d8d4e"
+      "sha256": "d2953742aaa78a7a6a0c436fac041456a850d6624e77147eef0cca609821a477"
     },
     {
       "path": "README_EASY_RUN.md",
@@ -38,7 +46,7 @@
     },
     {
       "path": "docs/CHANGELOG.md",
-      "sha256": "0699a5c2cd2536b30633f235c0777795e4c5fd646063f56074073b8bced398a9"
+      "sha256": "89f8028af4bc42b09d976a25f0f82bac53492948c111adf85de8daac2f3e840f"
     },
     {
       "path": "docs/COMPATIBILITY.md",
@@ -74,11 +82,23 @@
     },
     {
       "path": "examples/README.md",
-      "sha256": "a1a98a23692ce6ef244143d5124e28e13985552f6c85010fa99e0a3494d5c0c9"
+      "sha256": "48a4422b906b492d00d6ebb635029dcd4b5c4d5fbe76a0ece54c739db86a81b4"
+    },
+    {
+      "path": "examples/demo_audio/README.md",
+      "sha256": "641d1dd1f21207de14a5059ef48e2e10a1db056c82935f50d4a76ec60327b119"
+    },
+    {
+      "path": "examples/demo_audio/guitar.wav",
+      "sha256": "1ecba759cf090f06dc6446cba8ec392e2a10aeaa0dd2a6ad6e7b863a32ddc3b0"
+    },
+    {
+      "path": "examples/demo_audio/guitar_koto_cello_drums.wav",
+      "sha256": "3735e5a3bf10d6038811643a65b2c6fde0a1cc704810fd73e843d568fc3c9d84"
     },
     {
       "path": "pyproject.toml",
-      "sha256": "2a26984257b8faca51032332e1d92376e9814d45f687b10ccd6164213624db17"
+      "sha256": "18d1b4a31282418b4606b26ddb05f3c6b7f4472bd678ab95a69eb066fd7440e7"
     },
     {
       "path": "scripts/run_audioatlas_mac.command",
@@ -357,6 +377,10 @@
       "sha256": "425a9cc4bb7322f4df62c45466eaa03d25b7c27b550e1ac60097b8d61d75fffa"
     },
     {
+      "path": "tests/test_demo_audio.py",
+      "sha256": "7000f784106c3961b0588dd815322f78083be3f8da2489aeeae9a02f4cc69259"
+    },
+    {
       "path": "tests/test_dynamics.py",
       "sha256": "d85caf52d5a80771017c08fef62778374a97992becc0fe1203a8c74842884aae"
     },
@@ -450,8 +474,8 @@
     }
   ],
   "format_version": 1,
-  "included_file_count": 112,
+  "included_file_count": 118,
   "package_version": "0.2.0a6",
-  "public_tree_sha256": "0fc4fc5b905bd5d0c5eed7a7cd14fa60a4331e5e48e154884736475637663032",
-  "source_commit": "40b76ef3f413717786d454e7c23679649311a125"
+  "public_tree_sha256": "8da106fda805e783008f9f2bd497c3adf43a1ffd0ef621211ba411f22d64fead",
+  "source_commit": "4bae9d461b8654756cf44aebba8de8f7fa22708e"
 }

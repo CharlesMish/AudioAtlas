@@ -40,6 +40,35 @@ The first analysis in a fresh environment may take a little longer while the
 scientific libraries initialize. Lightweight commands such as `--version`,
 `--help`, and `themes` start without loading the analysis stack.
 
+## Try the real demo recordings
+
+The repository includes two intentionally public musical demos: a short solo
+guitar recording and a fuller guitar, koto, cello, and drums arrangement.
+
+```bash
+# One full Studio report
+uv run audioatlas analyze examples/demo_audio/guitar.wav \
+  --out reports/demo-guitar \
+  --graphs-profile full
+
+# Make a clean audio-only input folder, then build an exact two-track catalog
+rm -rf reports/demo-audio-input
+mkdir -p reports/demo-audio-input
+cp examples/demo_audio/*.wav reports/demo-audio-input/
+uv run audioatlas batch reports/demo-audio-input \
+  --out reports/demo-catalog \
+  --graphs-profile full
+
+# Open the solo report, catalog, and arrangement report
+python -m webbrowser reports/demo-guitar/report.html
+python -m webbrowser reports/demo-catalog/catalog.html
+python -m webbrowser reports/demo-catalog/guitar_koto_cello_drums/report.html
+```
+
+See the [recording notes](examples/demo_audio/README.md) and
+[audio rights notice](AUDIO_RIGHTS.md). These musical demos are not golden test
+fixtures or threshold-calibration evidence.
+
 ## Choose how much you want to see
 
 AudioAtlas has one analysis engine. The choices below change report depth and
@@ -191,4 +220,6 @@ The temporary Numba compatibility range is documented in
 
 ## License
 
-[MIT](LICENSE)
+AudioAtlas software and software documentation use the [MIT License](LICENSE).
+The published demo recordings have a separate [audio rights notice](AUDIO_RIGHTS.md),
+including CC BY 4.0 attribution terms and a third-party sound exception.
