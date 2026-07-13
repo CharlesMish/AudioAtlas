@@ -883,12 +883,37 @@ def test_write_report_html_keeps_polished_visual_structure(tmp_path: Path):
     text = path.read_text(encoding="utf-8")
 
     assert "--shadow-card:" in text
-    assert ".metric-card { min-height:" in text
-    assert ".finding-card { padding:" in text
+    assert ".container { max-width: 1120px;" in text
+    assert "h2 {\n  font-size: 21px;" in text
+    assert "h2::before" in text
+    assert ".metric-card { min-height: 124px; padding: 20px 18px 18px;" in text
+    assert ".finding-card { padding: 20px 22px;" in text
+    assert ".plot-card h3 { font-size: 15px; margin-bottom: 10px; color: var(--text);" in text
     assert ".plot-image-wrapper { appearance: none; display: block; width: 100%; background: var(--surface-muted)" in text
     assert ".priority-warning { background: var(--warning-bg)" in text
     assert "--warning-bg:" in text
     assert "letter-spacing: 0;" in text
+    assert "border-left: 5px solid var(--callout-border);" in text
+    assert ".note-box textarea:focus { outline: 2px solid var(--accent-muted); border-color: var(--accent);" in text
+    assert "#5eead4" not in text
+    assert "background: #fff;" not in text
+
+
+def test_write_report_html_keeps_typography_improvements_in_dark_mode(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(
+        summary,
+        summary["plots"],
+        tmp_path,
+        _html_findings(),
+        theme_name="midnight_studio",
+    )
+    text = path.read_text(encoding="utf-8")
+
+    assert ".how-to-read {\n  background: var(--callout-bg);" in text
+    assert "h2::before" in text
+    assert ".section-intro {\n  font-size: 13.6px;\n  color: var(--text-muted);" in text
+    assert ".metric-card { min-height: 124px; padding: 20px 18px 18px;" in text
 
 
 def test_write_report_html_renders_default_and_non_default_themes(tmp_path: Path):
@@ -932,7 +957,7 @@ def test_dark_report_theme_uses_theme_variables_for_report_text_sections(tmp_pat
         "color: #94a3b8",
     ]:
         assert leaked_color not in text
-    assert ".plot-card h3 { font-size: 14.5px; margin-bottom: 10px; color: var(--text);" in text
+    assert ".plot-card h3 { font-size: 15px; margin-bottom: 10px; color: var(--text);" in text
     assert ".plot-desc { font-size: 12.5px; color: var(--text-muted);" in text
     assert "details summary { padding: 12px 15px;" in text
     assert "details summary { padding: 12px 15px; font-weight: 600; cursor: pointer; user-select: none; font-size: 14px; color: var(--text);" in text

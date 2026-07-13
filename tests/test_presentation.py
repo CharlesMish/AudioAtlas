@@ -47,6 +47,9 @@ def test_presentation_shell_is_accessible_local_and_data_preserving():
     assert "Skip to report content" in skip_link
     assert 'body[data-presentation="studio"]' in css
     assert ".plot-image-wrapper img" in css
+    assert 'body[data-presentation="focus"] .plot-image-wrapper:focus-visible' in css
+    assert 'body[data-presentation="focus"] .presentation-controls' in css
+    assert "plot-card h3::before" in css
     assert "filter:" not in css
     assert "window.localStorage" in script
     assert "fetch(" not in script

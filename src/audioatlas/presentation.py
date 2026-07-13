@@ -141,18 +141,38 @@ textarea:focus-visible,
   outline-offset: 2px;
 }
 
+body[data-presentation="focus"] .container {
+  max-width: 1120px;
+}
+body[data-presentation="focus"] .presentation-controls {
+  margin: 0 0 12px;
+  background: var(--surface-muted);
+  border-color: var(--border-soft);
+  box-shadow: none;
+}
+body[data-presentation="focus"] .presentation-controls button {
+  min-height: 34px;
+  padding: 6px 12px;
+}
+body[data-presentation="focus"] .presentation-controls button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-soft);
+  box-shadow: none;
+}
+
 body[data-presentation="studio"] {
   background:
     radial-gradient(circle at 9% 2%, var(--accent-muted), transparent 28rem),
     radial-gradient(circle at 92% 11%, var(--pattern-accent), transparent 32rem),
     var(--bg);
 }
-body[data-presentation="studio"] .container { max-width: 1240px; }
+body[data-presentation="studio"] .container { max-width: 1260px; }
 body[data-presentation="studio"] header {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  margin: 12px 0 30px;
+  margin: 14px 0 32px;
   padding: 34px 34px 20px;
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -242,6 +262,14 @@ body[data-presentation="studio"] .plot-card h3::before {
   background: var(--accent);
   box-shadow: 0 0 0 4px var(--accent-muted);
 }
+body[data-presentation="focus"] .plot-card h3::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-muted);
+}
 body[data-presentation="studio"] .plot-image-wrapper {
   padding: 10px;
   border-radius: 11px;
@@ -252,6 +280,15 @@ body[data-presentation="studio"] .plot-image-wrapper img { border-radius: 7px; }
 body[data-presentation="studio"] .how-to-read {
   border-radius: 14px;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.055);
+}
+body[data-presentation="focus"] .how-to-read,
+body[data-presentation="studio"] .how-to-read {
+  border-top: 1px solid var(--border-soft);
+}
+body[data-presentation="studio"] .plot-image-wrapper:focus-visible,
+body[data-presentation="focus"] .plot-image-wrapper:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 
 @media (max-width: 640px) {
