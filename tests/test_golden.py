@@ -16,6 +16,7 @@ import pytest
 
 from audioatlas.config import AnalysisConfig
 from audioatlas.pipeline import analyze_file
+from audioatlas.release import SUMMARY_SCHEMA_VERSION
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 GOLDEN_WAV = FIXTURES / "sine_1k_-6dbfs_2s.wav"
@@ -87,4 +88,4 @@ def test_pipeline_summary_carries_schema_version(tmp_path: Path):
     )
     result = analyze_file(GOLDEN_WAV, tmp_path / "out", config=cfg)
     assert "schema_version" in result.summary
-    assert result.summary["schema_version"] == "0.1.0"
+    assert result.summary["schema_version"] == SUMMARY_SCHEMA_VERSION

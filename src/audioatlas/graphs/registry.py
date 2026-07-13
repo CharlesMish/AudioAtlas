@@ -186,21 +186,27 @@ GRAPHS: tuple[GraphSpec, ...] = (
     ),
     GraphSpec(
         key="band_energy_timeline",
-        display_name="Frequency Band Energy Timeline",
+        display_name="Relative Mean Band Power Timeline",
         filename="band_energy_timeline.png",
         order=10,
-        requires=("band_energy",),
-        render=adapters.render_band_energy_timeline,
+        requires=("band_power",),
+        render=adapters.render_band_power_timeline,
         cost_tier=CostTier.MEDIUM,
         enabled_by_default=True,
         profiles=_DEFAULT_PROFILES,
-        report_note=RELATIVE_DB_NOTE,
+        report_note=(
+            "Each band is the mean STFT power per included FFT bin, then normalized "
+            "within this track. It is not total energy integrated across differently "
+            "sized bands. "
+            + RELATIVE_DB_NOTE
+        ),
         html_caption=(
-            "What this shows: broad frequency-band energy movement within the track. "
+            "What this shows: relative mean spectral power per FFT bin in broad "
+            "frequency bands over time. It is not integrated band energy. "
             + RELATIVE_DB_NOTE
         ),
         wide=True,
-        summary_key="band_energy_timeline",
+        summary_key="band_power_timeline",
     ),
     GraphSpec(
         key="onset_density",

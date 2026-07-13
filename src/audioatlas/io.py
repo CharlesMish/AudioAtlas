@@ -13,6 +13,7 @@ import numpy as np
 import soundfile as sf
 from numpy.typing import NDArray
 
+from audioatlas.errors import AudioLoadError
 from audioatlas.utils import ensure_2d_audio
 
 
@@ -32,6 +33,8 @@ class AudioMetadata:
     source_start_seconds: float | None = None
     source_end_seconds: float | None = None
     source_duration_seconds: float | None = None
+    path_kind: str = "basename"
+    local_paths_included: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -59,29 +62,39 @@ def load_audio(
     max_duration_seconds: float | None = None,
     start_seconds: float | None = None,
     end_seconds: float | None = None,
+    include_local_paths: bool = False,
 ) -> AudioData:
     """Load audio without auto-normalizing level.
 
     Args:
         path: WAV/FLAC/OGG/etc. path supported by libsndfile. MP3 support depends on
-            local libsndfile/ffmpeg availability and is intentionally not guaranteed
-            in the v0.1 framework.
+            the local decoder build and is not guaranteed on every platform.
         max_duration_seconds: Optional truncation for development or quick testing,
             applied after ``start_seconds``.
         start_seconds: Optional source offset where analysis should begin.
         end_seconds: Optional source end time. If omitted, analysis continues to
             the end of the file or until ``max_duration_seconds`` is reached.
+        include_local_paths: Store the resolved machine-local path in metadata.
+            Disabled by default so report JSON can be shared without disclosing
+            usernames or local directory layouts.
 
     Returns:
         AudioData with internal shape (n_samples, n_channels).
     """
 
-    p = Path(path)
+    p = Path(path).expanduser()
     if not p.exists():
-        raise FileNotFoundError(p)
+        raise AudioLoadError(p, "file does not exist")
+    if not p.is_file():
+        raise AudioLoadError(p, "path is not a regular file")
 
-    info = sf.info(str(p))
+    try:
+        info = sf.info(str(p))
+    except (OSError, sf.SoundFileError) as exc:
+        raise AudioLoadError(p, f"audio metadata could not be decoded ({exc})") from exc
     source_duration = float(info.frames / info.samplerate) if info.samplerate else 0.0
+    if info.frames <= 0 or info.samplerate <= 0:
+        raise AudioLoadError(p, "the file contains no decodable audio frames")
 
     if start_seconds is not None and start_seconds < 0:
         raise ValueError("start_seconds must be non-negative")
@@ -113,16 +126,22 @@ def load_audio(
     if frames <= 0:
         raise ValueError("Selected audio section is empty")
 
-    y, sr = sf.read(
-        str(p),
-        start=start_frame,
-        frames=frames,
-        dtype="float32",
-        always_2d=True,
-    )
+    try:
+        y, sr = sf.read(
+            str(p),
+            start=start_frame,
+            frames=frames,
+            dtype="float32",
+            always_2d=True,
+        )
+    except (OSError, sf.SoundFileError) as exc:
+        raise AudioLoadError(p, f"audio samples could not be decoded ({exc})") from exc
     y = ensure_2d_audio(y)
+    if y.shape[0] == 0:
+        raise AudioLoadError(p, "the selected range contains no decodable audio frames")
+    metadata_path = str(p.resolve()) if include_local_paths else p.name
     metadata = AudioMetadata(
-        path=str(p),
+        path=metadata_path,
         filename=p.name,
         samplerate=int(sr),
         channels=int(y.shape[1]),
@@ -134,5 +153,7 @@ def load_audio(
         source_start_seconds=float(start_frame / sr),
         source_end_seconds=float((start_frame + y.shape[0]) / sr),
         source_duration_seconds=source_duration,
+        path_kind="absolute" if include_local_paths else "basename",
+        local_paths_included=include_local_paths,
     )
     return AudioData(y=y, sr=int(sr), metadata=metadata)

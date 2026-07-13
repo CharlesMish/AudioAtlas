@@ -1,46 +1,72 @@
-# AudioAtlas Examples
+# AudioAtlas examples
 
-This directory intentionally contains documentation only for v0.1-alpha. It
-does not include copyrighted, third-party, or calibration audio.
+This directory contains two kinds of example input:
 
-## Run the Committed Test Fixture
+- `demo_audio/` contains two intentionally public musical recordings. Read its
+  [recording notes](demo_audio/README.md) and the repository's
+  [audio rights notice](../AUDIO_RIGHTS.md).
+- `tests/fixtures/` contains project-generated signals for deterministic
+  mechanics tests.
 
-The repository includes a small generated sine-wave fixture for tests:
+The musical recordings are demonstrations, not deterministic golden fixtures
+or threshold-calibration evidence.
 
-```bash
-uv run audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav --out reports/example_sine
-```
-
-Or with an activated virtualenv:
-
-```bash
-audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav --out reports/example_sine
-```
-
-Then open:
-
-```text
-reports/example_sine/report.html
-```
-
-## Run Your Own Audio
+## Analyze one real recording
 
 ```bash
-uv run audioatlas analyze /path/to/your/song.wav --out reports/your_song
-uv run audioatlas analyze /path/to/your/song.wav --out reports/your_verse --start 30 --end 62
-uv run audioatlas sections /path/to/your/song.wav --out reports/your_sections \
+uv run audioatlas analyze examples/demo_audio/guitar.wav \
+  --out reports/demo-guitar \
+  --graphs-profile full
+python -m webbrowser reports/demo-guitar/report.html
+```
+
+The generated HTML opens in Studio and still offers the Focus/Studio switch.
+
+## Build a clean two-track catalog
+
+Batch catalogs record non-audio files as skipped. Make an audio-only working
+folder so the catalog contains exactly two tracks and zero skipped files:
+
+```bash
+rm -rf reports/demo-audio-input
+mkdir -p reports/demo-audio-input
+cp examples/demo_audio/*.wav reports/demo-audio-input/
+uv run audioatlas batch reports/demo-audio-input \
+  --out reports/demo-catalog \
+  --graphs-profile full
+
+python -m webbrowser reports/demo-catalog/catalog.html
+python -m webbrowser reports/demo-catalog/guitar/report.html
+python -m webbrowser reports/demo-catalog/guitar_koto_cello_drums/report.html
+```
+
+AudioAtlas safely refreshes files it owns when the same output directory is
+used again. Generated reports are ignored by Git.
+
+## Generate a compact fixture report
+
+```bash
+uv run audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav \
+  --out reports/example-sine \
+  --graphs-profile compact
+```
+
+The sine fixture verifies deterministic mechanics; it is not evidence that
+finding thresholds generalize to music.
+
+## Analyze your own audio
+
+```bash
+uv run audioatlas analyze /path/to/song.wav --out reports/song
+uv run audioatlas analyze /path/to/song.wav --out reports/verse --start 30 --end 62
+uv run audioatlas sections /path/to/song.wav --out reports/sections \
   --section intro:0:30 \
   --section verse:30:62 \
   --section ending:62:
-uv run audioatlas sections /path/to/your/song.wav --out reports/your_sections \
-  --config sections.yaml
-uv run audioatlas batch /path/to/your/folder --out reports/your_catalog
+uv run audioatlas batch /path/to/folder --out reports/catalog
 ```
 
-Section scans are manually defined. Use them when one song has distinct parts
-and the whole-song averages are less useful for a specific listening question.
-
-Example `sections.yaml`:
+Manual section ranges may also come from YAML:
 
 ```yaml
 sections:
@@ -54,13 +80,7 @@ sections:
     start: 62
 ```
 
-Omit `end` on a section to analyze through EOF. `--config` and repeated
-`--section` flags can be combined; both feed the same section parser.
+Omit `end` to analyze through EOF. AudioAtlas does not detect sections.
 
-Generated reports are ignored by git. Keep example audio private unless it is
-original material you intend to publish with a compatible license.
-
-## Example Reports
-
-No committed example reports ship in v0.1-alpha. Local reports under `reports/`
-are generated artifacts and are intentionally excluded from the release.
+Keep personal and calibration audio private unless you own it and intentionally
+publish it under a compatible license.

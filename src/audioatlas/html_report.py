@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
+import re
 from html import escape
 from pathlib import Path
 from typing import Any
 
-from audioatlas.graphs.registry import graph_by_filename
+from audioatlas.alt_text import plot_alt_text
+from audioatlas.graphs.registry import graph_by_filename, graph_by_key
+from audioatlas.presentation import (
+    presentation_controls_html,
+    presentation_css,
+    presentation_script,
+    skip_link_html,
+    validate_presentation_mode,
+)
+from audioatlas.release import RELEASE_LABEL
 from audioatlas.report import (
     RELATIVE_DB_NOTE,
     SEVERITY_DISPLAY,
@@ -21,91 +31,111 @@ from audioatlas.report import (
 from audioatlas.theme import default_theme_name, theme_css_variables, validate_theme_name
 from audioatlas.utils import mmss
 
-GLOSSARY: list[tuple[str, str]] = [
+GLOSSARY: list[tuple[str, str, str]] = [
     (
+        "lufs",
         "LUFS",
         "Integrated LUFS is a whole-track loudness measurement weighted toward human hearing. "
         "It gives delivery context, not a quality judgment.",
     ),
     (
+        "short-term-lufs",
         "Short-term LUFS",
         "Short-term LUFS is a time-varying K-weighted loudness measurement using 3 s windows. "
         "It shows where this track is louder or quieter over time and is distinct from RMS.",
     ),
     (
+        "true-peak",
         "True peak",
         "True peak estimates reconstructed peaks between samples. Values above 0 dBTP can matter "
         "for playback, conversion, or encoding headroom.",
     ),
     (
+        "sample-peak",
         "Sample peak",
         "Sample peak is the largest stored sample value in the file. It is not loudness or density.",
     ),
     (
+        "rms",
         "RMS",
         "RMS is average signal energy. The RMS timeline is useful for seeing where energy rises "
         "or falls across the track.",
     ),
     (
+        "crest-factor",
         "Crest factor",
         "Crest factor is peak-to-RMS contrast in dB. It describes measured peak contrast, "
         "not punch, quality, or dynamic range.",
     ),
     (
+        "plr",
         "PLR",
-        "PLR is the relationship between true peak and integrated loudness. Higher PLR means "
-        "more peak headroom relative to loudness; lower PLR means the track is more consistently loud.",
+        "PLR is approximate true peak minus integrated loudness. It describes the measured "
+        "distance between those two values; it does not by itself identify compression, "
+        "transient quality, or a delivery problem.",
     ),
     (
+        "clipping",
         "Clipping / near-clipping",
         "Clipping counts samples at the configured ceiling; near-clipping counts samples close to it. "
         "Use the waveform and histogram to inspect where these samples occur.",
     ),
     (
+        "stereo-correlation",
         "Stereo correlation",
         "Stereo correlation describes the L/R relationship. +1 means nearly identical channels; "
         "0 means loosely related; negative values indicate opposite-polarity/decorrelated content.",
     ),
     (
+        "side-mid-ratio",
         "Side/mid ratio",
         "Side/mid ratio compares stereo-difference energy with center energy. 0 dB means side "
         "and mid energy are similar; more negative means mid-dominant; closer to 0 means more side energy.",
     ),
     (
+        "spectral-centroid",
         "Spectral centroid",
         "Spectral centroid is the spectrum's center-of-mass frequency. It moves higher when "
         "energy shifts upward in frequency, and lower when energy is weighted toward lows/mids.",
     ),
     (
+        "rolloff",
         "Rolloff",
         "Spectral rolloff marks the frequency below which most measured spectral energy sits.",
     ),
     (
+        "spectral-bandwidth",
         "Spectral bandwidth",
         "Spectral bandwidth describes how spread out the spectrum is around the centroid.",
     ),
     (
+        "average-spectrum",
         "Average spectrum",
         "Average spectrum is the long-term frequency profile of the track. Relative values show "
         "shape within the file.",
     ),
     (
-        "Band energy",
-        "Band energy summarizes broad frequency ranges. Relative band values do not indicate "
-        "absolute dBFS level.",
+        "relative-band-power",
+        "Relative mean band power",
+        "This view averages spectral power per included FFT bin in each broad frequency "
+        "band, then normalizes values within the file. It is not integrated total band "
+        "energy and does not indicate absolute dBFS level.",
     ),
     (
+        "onset-density",
         "Onset density",
         "Onset density is an attack/activity map for this track. It is not punch, groove quality, "
         "drum hits per second, or mix quality. Absolute onset-density values are not reliable "
         "quality comparisons across songs.",
     ),
     (
+        "chroma-cqt",
         "Chroma CQT",
         "Chroma CQT shows pitch-class energy within this track. It is not key detection, "
         "chord detection, or harmonic-quality analysis.",
     ),
     (
+        "relative-db",
         "Relative dB",
         "Relative dB plots show shape within this track. They are useful for shape within this "
         "track; not comparable to dBFS values from meters or other songs.",
@@ -118,11 +148,12 @@ TECHNICAL_BLOCKS: list[tuple[str, str]] = [
     ("Stereo metrics", "stereo_correlation"),
     ("Spectrum metrics", "average_spectrum"),
     ("Spectral shape", "spectral_shape"),
-    ("Band energy timeline", "band_energy_timeline"),
+    ("Relative mean band power timeline", "band_power_timeline"),
     ("Onset density", "onset_density"),
     ("Chroma CQT", "chroma_cqt"),
     ("Short-term LUFS", "short_term_lufs"),
     ("Analysis config", "analysis_config"),
+    ("Analysis provenance", "analysis_provenance"),
 ]
 
 
@@ -133,10 +164,12 @@ def write_report_html(
     findings: dict[str, Any] | None = None,
     *,
     theme_name: str | None = None,
+    presentation_mode: str | None = None,
 ) -> Path:
     """Write a static, local report.html."""
 
     selected_theme = validate_theme_name(theme_name or default_theme_name())
+    selected_presentation = validate_presentation_mode(presentation_mode)
     metadata = summary.get("metadata") if isinstance(summary.get("metadata"), dict) else {}
     levels = summary.get("levels") if isinstance(summary.get("levels"), dict) else {}
     stereo = (
@@ -174,11 +207,13 @@ def write_report_html(
         _css(selected_theme),
         "</style>",
         "</head>",
-        "<body>",
+        f'<body data-presentation="{_h(selected_presentation)}">',
+        skip_link_html(),
         '<div class="container">',
         "<header>",
         f"<h1>{_h(filename)}</h1>",
         '<div class="subtitle">Measurement-based findings, not quality judgments.</div>',
+        presentation_controls_html(selected_presentation),
         '<div class="meta-chips">',
         _chip("Duration", duration_label),
         _chip("Source range", source_range) if source_range is not None else "",
@@ -188,20 +223,22 @@ def write_report_html(
         _chip("Generated", build_metadata["generated_at"]),
         _chip("AudioAtlas", build_metadata["audioatlas_version"]),
         _chip("Git", build_metadata.get("git_hash", "unavailable")),
-        _chip("Release", "public early alpha"),
+        _chip("Release", RELEASE_LABEL),
         "</div>",
+        "</header>",
         '<nav class="top-nav" aria-label="Report sections">',
-        '<a href="#findings">Findings</a><span>.</span>',
-        '<a href="#plots">Plots</a><span>.</span>',
-        '<a href="#glossary">Understanding these numbers</a><span>.</span>',
-        '<a href="#technical">Technical details</a><span>.</span>',
+        '<a href="#metrics">Key metrics</a><span aria-hidden="true">·</span>',
+        '<a href="#findings">Findings</a><span aria-hidden="true">·</span>',
+        '<a href="#plots">Plots</a><span aria-hidden="true">·</span>',
+        '<a href="#glossary">Understanding these numbers</a><span aria-hidden="true">·</span>',
+        '<a href="#technical">Technical details</a><span aria-hidden="true">·</span>',
         '<a href="#notes">Human notes</a>',
         "</nav>",
-        "</header>",
+        '<main id="main-content" tabindex="-1">',
         '<section class="how-to-read" id="how-to-read">',
         "<strong>How to read this report</strong>",
         "<p>Use this alpha report as a workflow: review Delivery / headroom context, "
-        "scan Findings for checks worth prioritizing, then inspect the referenced plots "
+        "scan Findings for checks worth prioritizing, then inspect the relevant plots "
         "and verify by listening.</p>",
         f"<p>{_h(RELATIVE_DB_NOTE)}</p>",
         "<p>Check before delivery / worth a listen / for reference indicate priority, not quality.</p>",
@@ -210,26 +247,39 @@ def write_report_html(
         '<section id="metrics">',
         "<h2>Key metrics</h2>",
         '<div class="metrics-grid">',
-        _metric_card("Integrated LUFS", levels.get("integrated_lufs"), "LUFS"),
-        _metric_card("True peak", levels.get("true_peak_dbtp"), "dBTP"),
-        _metric_card("Sample peak", levels.get("sample_peak_dbfs"), "dBFS"),
-        _metric_card("RMS", levels.get("rms_dbfs"), "dBFS"),
-        _metric_card("PLR", levels.get("plr_db"), "dB"),
-        _metric_card("Clipped samples", levels.get("clipped_samples"), ""),
-        _metric_card("Near-clipping samples", levels.get("near_clipping_samples"), ""),
-        _metric_card("Median stereo correlation", stereo.get("correlation_median"), "Pearson r"),
-        _metric_card("Median side/mid ratio", mid_side.get("side_to_mid_ratio_db_median"), "dB"),
+        _metric_card("Integrated LUFS", levels.get("integrated_lufs"), "LUFS", "lufs"),
+        _metric_card("True peak", levels.get("true_peak_dbtp"), "dBTP", "true-peak"),
+        _metric_card("Sample peak", levels.get("sample_peak_dbfs"), "dBFS", "sample-peak"),
+        _metric_card("RMS", levels.get("rms_dbfs"), "dBFS", "rms"),
+        _metric_card("PLR", levels.get("plr_db"), "dB", "plr"),
+        _metric_card("Clipped samples", levels.get("clipped_samples"), "", "clipping"),
+        _metric_card("Near-clipping samples", levels.get("near_clipping_samples"), "", "clipping"),
+        _metric_card(
+            "Median stereo correlation",
+            stereo.get("correlation_median"),
+            "Pearson r",
+            "stereo-correlation",
+        ),
+        _metric_card(
+            "Median side/mid ratio",
+            mid_side.get("side_to_mid_ratio_db_median"),
+            "dB",
+            "side-mid-ratio",
+        ),
         "</div>",
         _delivery_context_html(levels),
         "</section>",
-        _findings_section(findings, report_max_time_ranges),
-        _plots_section(plot_files),
+        _findings_section(findings, report_max_time_ranges, plot_files),
+        _plots_section(plot_files, summary, findings),
         _glossary_section(),
         _technical_section(summary),
         _notes_section(),
         '<p class="footer-note">AudioAtlas reports measured facts and visual maps. The listener decides what matters for the track.</p>',
+        "</main>",
         "</div>",
         _lightbox_overlay(),
+        _notes_script(),
+        presentation_script(selected_presentation),
         "</body>",
         "</html>",
         "",
@@ -249,13 +299,13 @@ def _chip(label: str, value: Any) -> str:
     return f'<div class="chip"><strong>{_h(label)}</strong> {_h(value)}</div>'
 
 
-def _metric_card(label: str, value: Any, unit: str) -> str:
+def _metric_card(label: str, value: Any, unit: str, glossary_id: str) -> str:
     value_text = _fmt_value(value)
     unit_html = f'<div class="metric-note">{_h(unit)}</div>' if unit else ""
     return (
         '<div class="metric-card">'
         f'<div class="metric-value">{_h(value_text)}</div>'
-        f'<div class="metric-label">{_h(label)}</div>'
+        f'<div class="metric-label"><a href="#glossary-{_h(glossary_id)}">{_h(label)}</a></div>'
         f"{unit_html}</div>"
     )
 
@@ -272,13 +322,17 @@ def _delivery_context_html(levels: dict[str, Any]) -> str:
         '<div class="context-card">'
         "<h3>Delivery / headroom context</h3>"
         f"<p>Integrated loudness: {_h(_fmt_value(integrated_lufs))} LUFS. "
-        "This is above many streaming normalization reference levels; platforms that "
-        "normalize playback may reduce level.</p>"
+        "A playback system using a lower loudness reference may apply negative gain; "
+        "the exact adjustment depends on its measurement, mode, and policy.</p>"
         "</div>"
     )
 
 
-def _findings_section(findings: dict[str, Any] | None, max_display: int) -> str:
+def _findings_section(
+    findings: dict[str, Any] | None,
+    max_display: int,
+    plot_files: list[str],
+) -> str:
     lines = [
         '<section id="findings">',
         "<h2>Findings</h2>",
@@ -291,13 +345,6 @@ def _findings_section(findings: dict[str, Any] | None, max_display: int) -> str:
         lines.append("</section>")
         return "\n".join(lines)
 
-    suppressed = findings.get("findings_suppressed_count")
-    if isinstance(suppressed, int) and suppressed > 0:
-        lines.append(
-            f'<p class="suppressed-note">{suppressed} lower-priority finding(s) suppressed; '
-            "see findings.json for details.</p>"
-        )
-
     items = findings.get("findings_shown")
     if not isinstance(items, list):
         items = findings.get("findings")
@@ -309,20 +356,48 @@ def _findings_section(findings: dict[str, Any] | None, max_display: int) -> str:
         lines.append("</section>")
         return "\n".join(lines)
 
+    available_graphs = {_plot_graph_key(filename) for filename in plot_files}
     lines.append('<div class="findings-list">')
     for item in items:
         if isinstance(item, dict):
-            lines.append(_finding_card(item, max_display))
+            lines.append(_finding_card(item, max_display, available_graphs))
     lines.append("</div>")
+
+    all_items = findings.get("all_findings")
+    if isinstance(all_items, list):
+        shown_ids = {
+            str(item.get("rule_id"))
+            for item in items
+            if isinstance(item, dict) and item.get("rule_id")
+        }
+        additional = [
+            item
+            for item in all_items
+            if isinstance(item, dict) and str(item.get("rule_id")) not in shown_ids
+        ]
+        if additional:
+            lines.append('<details class="additional-findings">')
+            lines.append(
+                f"<summary>Show {len(additional)} more lower-priority observation(s)</summary>"
+            )
+            lines.append('<div class="findings-list details-body">')
+            for item in additional:
+                lines.append(_finding_card(item, max_display, available_graphs))
+            lines.extend(["</div>", "</details>"])
     lines.append("</section>")
     return "\n".join(lines)
 
 
-def _finding_card(item: dict[str, Any], max_display: int) -> str:
+def _finding_card(
+    item: dict[str, Any],
+    max_display: int,
+    available_graphs: set[str],
+) -> str:
     severity = str(item.get("severity", "info"))
     priority = SEVERITY_DISPLAY.get(severity, severity)
+    finding_id = _finding_dom_id(item)
     lines = [
-        '<article class="finding-card">',
+        f'<article class="finding-card" id="{_h(finding_id)}">',
         '<div class="finding-header">',
         f'<span class="priority priority-{_h(severity)}">{_h(priority)}</span>',
         f'<span class="category">{_h(item.get("category", "unknown"))}</span>',
@@ -334,7 +409,7 @@ def _finding_card(item: dict[str, Any], max_display: int) -> str:
         lines.append('<div class="evidence"><strong>Evidence:</strong></div>')
         lines.append('<ul class="evidence-list">')
         for evidence_item in evidence_items:
-            lines.append(f"<li>{_h(evidence_item)}</li>")
+            lines.append(f"<li>{_h(_evidence_item_text(evidence_item))}</li>")
         lines.append("</ul>")
     else:
         lines.append(
@@ -355,11 +430,38 @@ def _finding_card(item: dict[str, Any], max_display: int) -> str:
             lines.append(f"<li>{_h(check)}</li>")
         lines.append("</ul>")
 
+    associated_graphs = item.get("associated_graphs")
+    if isinstance(associated_graphs, list):
+        valid_graphs = [
+            key
+            for value in associated_graphs
+            for key in [str(value)]
+            if key in available_graphs
+        ]
+        if valid_graphs:
+            lines.append('<nav class="related-links" aria-label="Related plots">')
+            lines.append("<strong>Related plots:</strong>")
+            for key in valid_graphs:
+                lines.append(
+                    f'<a href="#plot-{_h(key)}">{_h(_graph_display_name(key))}</a>'
+                )
+            lines.append("</nav>")
+
     time_ranges = item.get("time_ranges")
     if isinstance(time_ranges, list):
         lines.extend(_html_time_ranges(time_ranges, max_display))
     lines.append("</article>")
     return "\n".join(lines)
+
+
+def _evidence_item_text(value: Any) -> str:
+    """Return a human-facing line from legacy or structured evidence."""
+
+    if isinstance(value, dict):
+        label = value.get("label")
+        if isinstance(label, str) and label:
+            return label
+    return str(value)
 
 
 def _html_time_ranges(time_ranges: list[Any], max_display: int) -> list[str]:
@@ -386,7 +488,11 @@ def _html_time_ranges(time_ranges: list[Any], max_display: int) -> list[str]:
     return lines
 
 
-def _plots_section(plot_files: list[str]) -> str:
+def _plots_section(
+    plot_files: list[str],
+    summary: dict[str, Any],
+    findings: dict[str, Any] | None,
+) -> str:
     lines = [
         '<section id="plots">',
         "<h2>Plots</h2>",
@@ -397,17 +503,22 @@ def _plots_section(plot_files: list[str]) -> str:
     wide = [name for name in plot_files if _plot_is_wide(name)]
     for filename in [*normal, *wide]:
         title = _plot_display_name(filename)
+        graph_key = _plot_graph_key(filename)
         class_name = "plot-card plot-card-wide" if _plot_is_wide(filename) else "plot-card"
         caption = _plot_caption(filename)
+        alt_text = plot_alt_text(filename, summary)
         lines.extend(
             [
-                f'<article class="{class_name}">',
+                f'<article class="{class_name}" id="plot-{_h(graph_key)}">',
                 f"<h3>{_h(title)}</h3>",
-                f'<div class="plot-image-wrapper" data-title="{_h(title)}" data-filename="{_h(filename)}">',
-                f'<img src="{_h(filename)}" alt="{_h(title)}">',
-                "</div>",
+                f'<button type="button" class="plot-image-wrapper" '
+                f'aria-label="Open enlarged {_h(title)}" '
+                f'data-title="{_h(title)}" data-filename="{_h(filename)}">',
+                f'<img src="{_h(filename)}" alt="{_h(alt_text)}">',
+                "</button>",
                 f'<div class="plot-filename">{_h(filename)}</div>',
                 f'<p class="plot-desc">{_h(caption)}</p>',
+                _related_findings_html(graph_key, findings),
                 "</article>",
             ]
         )
@@ -421,6 +532,60 @@ def _plot_display_name(filename: str) -> str:
         return graph_by_filename(filename).display_name
     except KeyError:
         return filename.rsplit(".", maxsplit=1)[0].replace("_", " ").title()
+
+
+def _plot_graph_key(filename: str) -> str:
+    try:
+        return graph_by_filename(filename).key
+    except KeyError:
+        return _safe_dom_fragment(filename.rsplit(".", maxsplit=1)[0])
+
+
+def _graph_display_name(key: str) -> str:
+    try:
+        return graph_by_key(key).display_name
+    except KeyError:
+        return key.replace("_", " ").title()
+
+
+def _safe_dom_fragment(value: str) -> str:
+    fragment = re.sub(r"[^a-zA-Z0-9_-]+", "-", value).strip("-").lower()
+    return fragment or "item"
+
+
+def _finding_dom_id(item: dict[str, Any]) -> str:
+    rule_id = str(item.get("rule_id") or item.get("title") or "finding")
+    return f"finding-{_safe_dom_fragment(rule_id)}"
+
+
+def _related_findings_html(
+    graph_key: str,
+    findings: dict[str, Any] | None,
+) -> str:
+    if not isinstance(findings, dict):
+        return ""
+    items = findings.get("all_findings")
+    if not isinstance(items, list):
+        items = findings.get("findings_shown")
+    if not isinstance(items, list):
+        return ""
+    related = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        graph_keys = item.get("associated_graphs")
+        if isinstance(graph_keys, list) and graph_key in graph_keys:
+            related.append(item)
+    if not related:
+        return ""
+    links = "".join(
+        f'<a href="#{_h(_finding_dom_id(item))}">{_h(item.get("title", "Finding"))}</a>'
+        for item in related
+    )
+    return (
+        '<nav class="related-links related-findings" aria-label="Related findings">'
+        f"<strong>Related prompts:</strong>{links}</nav>"
+    )
 
 
 def _plot_caption(filename: str) -> str:
@@ -446,9 +611,10 @@ def _glossary_section() -> str:
         "<summary>Metric glossary</summary>",
         '<div class="details-body glossary-grid">',
     ]
-    for term, text in GLOSSARY:
+    for glossary_id, term, text in GLOSSARY:
         lines.append(
-            f'<div class="glossary-item"><h3>{_h(term)}</h3><p>{_h(text)}</p></div>'
+            f'<div class="glossary-item" id="glossary-{_h(glossary_id)}">'
+            f'<h3>{_h(term)}</h3><p>{_h(text)}</p></div>'
         )
     lines.extend(["</div>", "</details>", "</section>"])
     return "\n".join(lines)
@@ -461,6 +627,8 @@ def _technical_section(summary: dict[str, Any]) -> str:
     ]
     for label, key in TECHNICAL_BLOCKS:
         block = summary.get(key)
+        if key == "band_power_timeline" and not isinstance(block, dict):
+            block = summary.get("band_energy_timeline")
         if isinstance(block, dict):
             lines.append("<details>")
             lines.append(f"<summary>{_h(label)}</summary>")
@@ -473,7 +641,10 @@ def _technical_section(summary: dict[str, Any]) -> str:
 
 
 def _dict_table(block: dict[str, Any]) -> str:
-    rows = ['<table class="metrics-table">']
+    rows = [
+        '<div class="table-scroll" role="region" aria-label="Technical measurements" tabindex="0">',
+        '<table class="metrics-table">',
+    ]
     for key, value in block.items():
         if key == "warnings" and not value:
             continue
@@ -481,7 +652,7 @@ def _dict_table(block: dict[str, Any]) -> str:
         rows.append(f"<td>{_h(key)}</td>")
         rows.append(f"<td>{_h(_compact_value(value))}</td>")
         rows.append("</tr>")
-    rows.append("</table>")
+    rows.extend(["</table>", "</div>"])
     return "\n".join(rows)
 
 
@@ -500,16 +671,51 @@ def _notes_section() -> str:
     lines = [
         '<section id="notes">',
         "<h2>Human notes</h2>",
-        '<p class="section-intro">Notes typed here are temporary in this browser page and are not saved into the report files.</p>',
+        '<p class="section-intro">Notes stay in this browser for this report path. '
+        "They are never written into the report files or sent over a network.</p>",
+        '<div class="note-actions" role="group" aria-label="Human notes actions">',
+        '<button type="button" id="notes-copy">Copy all notes</button>',
+        '<button type="button" id="notes-export">Export .txt</button>',
+        '<button type="button" id="notes-clear">Clear notes</button>',
+        "</div>",
+        '<p class="notes-status" id="notes-status" role="status" aria-live="polite">'
+        "Notes are saved locally as you type.</p>",
         '<div class="notes-grid">',
     ]
     for index, label in enumerate(labels):
         lines.append('<div class="note-box">')
         lines.append(f'<label for="note-{index}">{_h(label)}</label>')
-        lines.append(f'<textarea id="note-{index}"></textarea>')
+        lines.append(
+            f'<textarea id="note-{index}" data-note-label="{_h(label)}"></textarea>'
+        )
         lines.append("</div>")
     lines.extend(["</div>", "</section>"])
     return "\n".join(lines)
+
+
+def _notes_script() -> str:
+    """Return the private, local-only human-notes behavior."""
+
+    return r'''<script>(function(){"use strict";
+var fields=document.querySelectorAll("textarea[data-note-label]");
+if(!fields.length)return;
+var status=document.getElementById("notes-status");
+var copyButton=document.getElementById("notes-copy");
+var exportButton=document.getElementById("notes-export");
+var clearButton=document.getElementById("notes-clear");
+var key="audioatlas:notes:"+(window.location.pathname||document.title||"report");
+var storageAvailable=true;
+function setStatus(message){if(status)status.textContent=message;}
+function payload(){var values={};for(var i=0;i<fields.length;i++){values[fields[i].id]=fields[i].value;}return values;}
+function noteText(){var title=document.querySelector("h1");var lines=["AudioAtlas notes",title?title.textContent:"Report",""];for(var i=0;i<fields.length;i++){lines.push(fields[i].getAttribute("data-note-label")||fields[i].id);lines.push(fields[i].value||"");lines.push("");}return lines.join("\n");}
+function save(){try{window.localStorage.setItem(key,JSON.stringify(payload()));setStatus("Notes saved locally.");}catch(error){storageAvailable=false;setStatus("Local saving is unavailable. Copy or export notes before closing this page.");}}
+function restore(){var stored=null;try{stored=window.localStorage.getItem(key);}catch(error){storageAvailable=false;}if(stored){try{var values=JSON.parse(stored);for(var i=0;i<fields.length;i++){if(typeof values[fields[i].id]==="string")fields[i].value=values[fields[i].id];}}catch(error){setStatus("Saved notes could not be restored. New notes can still be copied or exported.");return;}}if(!storageAvailable)setStatus("Local saving is unavailable. Copy or export notes before closing this page.");}
+for(var i=0;i<fields.length;i++){fields[i].addEventListener("input",save);}
+if(copyButton)copyButton.addEventListener("click",function(){var text=noteText();if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){setStatus("Notes copied to the clipboard.");},function(){setStatus("Clipboard access is unavailable. Use Export .txt instead.");});}else{setStatus("Clipboard access is unavailable. Use Export .txt instead.");}});
+if(exportButton)exportButton.addEventListener("click",function(){var title=document.querySelector("h1");var base=(title?title.textContent:"report").replace(/[^a-z0-9._-]+/gi,"-").replace(/^-+|-+$/g,"")||"report";var blob=new Blob([noteText()],{type:"text/plain;charset=utf-8"});var url=URL.createObjectURL(blob);var link=document.createElement("a");link.href=url;link.download=base+"-audioatlas-notes.txt";document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);setStatus("Notes exported as a text file.");});
+if(clearButton)clearButton.addEventListener("click",function(){if(!window.confirm("Clear all locally saved notes for this report?"))return;for(var i=0;i<fields.length;i++){fields[i].value="";}try{window.localStorage.removeItem(key);}catch(error){storageAvailable=false;}setStatus("Notes cleared.");fields[0].focus();});
+restore();
+})();</script>'''
 
 
 def _css(theme_name: str | None = None) -> str:
@@ -551,6 +757,8 @@ section { margin-top: 34px; }
 .context-card p { margin: 0; color: var(--text-muted); }
 .metric-value { font-size: 24px; font-weight: 700; line-height: 1.05; margin-bottom: 8px; color: var(--text); }
 .metric-label { font-size: 12.5px; color: var(--text-muted); font-weight: 560; }
+.metric-label a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.metric-label a:hover { color: var(--accent); }
 .metric-note { font-size: 11.5px; color: var(--text-soft); margin-top: 2px; }
 .findings-list { display: flex; flex-direction: column; gap: 14px; }
 .finding-card { padding: 18px 20px; font-size: 13.5px; }
@@ -570,11 +778,17 @@ section { margin-top: 34px; }
 .time-ranges { font-size: 12.5px; background: var(--surface-muted); padding: 10px 12px; border-radius: 6px; margin-top: 12px; border: 1px solid var(--border-soft); border-left: 3px solid var(--callout-border); color: var(--text-muted); }
 .range-list { margin: 6px 0 0; padding-left: 18px; }
 .suppressed-note, .empty { font-size: 13px; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; box-shadow: var(--shadow-card); }
+.additional-findings { margin-top: 14px; }
+.related-links { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 13px; font-size: 12.5px; }
+.related-links strong { color: var(--text); margin-right: 2px; }
+.related-links a { color: var(--accent); border: 1px solid var(--border); border-radius: 999px; padding: 4px 9px; background: var(--surface-muted); text-decoration: none; }
+.related-links a:hover { text-decoration: underline; }
 .plots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 18px; }
 .plot-card { padding: 16px 16px 15px; }
+.plot-card:target, .finding-card:target, .glossary-item:target { outline: 3px solid var(--accent); outline-offset: 4px; }
 .plot-card-wide { grid-column: 1 / -1; }
 .plot-card h3 { font-size: 14.5px; margin-bottom: 10px; color: var(--text); }
-.plot-image-wrapper { background: var(--surface-muted); border: 1px solid var(--border-soft); border-radius: 6px; padding: 8px; margin-bottom: 10px; overflow: hidden; }
+.plot-image-wrapper { appearance: none; display: block; width: 100%; background: var(--surface-muted); color: inherit; font: inherit; border: 1px solid var(--border-soft); border-radius: 6px; padding: 8px; margin-bottom: 10px; overflow: hidden; text-align: inherit; }
 .plot-image-wrapper img { width: 100%; height: auto; display: block; border-radius: 4px; }
 .plot-filename { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-soft); text-align: center; }
 .plot-desc { font-size: 12.5px; color: var(--text-muted); margin: 8px 0 0; }
@@ -594,6 +808,10 @@ details[open] summary { border-bottom: 1px solid var(--border); }
 .note-box label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 7px; color: var(--text-muted); }
 .note-box textarea { width: 100%; min-height: 96px; border: 1px solid var(--border); border-radius: 6px; padding: 9px; font-family: inherit; font-size: 13px; resize: vertical; background: var(--surface-muted); color: var(--text); }
 .note-box textarea:focus { outline: 2px solid var(--accent-muted); border-color: #5eead4; }
+.note-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+.note-actions button { min-height: 38px; padding: 7px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.note-actions button:hover { border-color: var(--accent); background: var(--accent-muted); }
+.notes-status { min-height: 1.5em; margin: 0 0 12px; color: var(--text-muted); font-size: 12.5px; }
 .footer-note { margin-top: 48px; font-size: 11.5px; color: var(--text-soft); border-top: 1px solid var(--border); padding-top: 16px; }
 @media (max-width: 520px) {
   .plots-grid { grid-template-columns: 1fr; }
@@ -762,6 +980,7 @@ details[open] summary { border-bottom: 1px solid var(--border); }
   .lightbox-title { font-size: 14px; }
 }
 """
+        + presentation_css()
     )
 
 
@@ -774,13 +993,13 @@ def _lightbox_overlay() -> str:
     - Matches the design prototype behavior and requirements.
     """
     html = (
-        '<div id="lightbox" class="lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Plot image viewer">'
+        '<div id="lightbox" class="lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="lb-title">'
         '<div class="lightbox-content" role="document">'
         '<div class="lightbox-header">'
         '<div class="lightbox-nav">'
         '<button id="lb-prev" type="button" aria-label="Previous image" title="Previous (left arrow)">←</button>'
         '<button id="lb-next" type="button" aria-label="Next image" title="Next (right arrow)">→</button>'
-        '<span class="lightbox-counter" id="lb-counter">1 / 1</span>'
+        '<span class="lightbox-counter" id="lb-counter" aria-live="polite">1 / 1</span>'
         '</div>'
         '<div class="lightbox-meta">'
         '<div class="lightbox-title" id="lb-title">Plot</div>'
@@ -808,7 +1027,7 @@ def _lightbox_overlay() -> str:
         'btnNext=document.getElementById("lb-next"),'
         'btnClose=document.getElementById("lb-close"),'
         'imageWrap=document.getElementById("lb-image-wrap");'
-        'var items=[],currentIndex=0,isOpen=false;'
+        'var items=[],currentIndex=0,isOpen=false,activeOpener=null;'
         'function collectItems(){'
         'items=[];'
         'var wrappers=document.querySelectorAll(".plots-grid .plot-image-wrapper");'
@@ -817,25 +1036,26 @@ def _lightbox_overlay() -> str:
         'items.push({'
         'title:w.getAttribute("data-title")||"Plot",'
         'filename:w.getAttribute("data-filename")||"",'
-        'src:img.getAttribute("src")||""'
+        'src:img.getAttribute("src")||"",'
+        'alt:img.getAttribute("alt")||"Enlarged plot image"'
         '});'
         '}'
         '}'
         'function updateCounter(){if(!items.length)return;lbCounter.textContent=(currentIndex+1)+" / "+items.length;}'
-        'function showItem(idx){if(!items.length)return;currentIndex=((idx%items.length)+items.length)%items.length;var it=items[currentIndex];lbImg.src=it.src;lbTitle.textContent=it.title;lbFilename.textContent=it.filename;updateCounter();}'
-        'function openLightbox(startIndex){if(!items.length)collectItems();if(!items.length)return;currentIndex=startIndex||0;showItem(currentIndex);lb.classList.add("open");lb.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";isOpen=true;setTimeout(function(){btnClose&&btnClose.focus();},30);}'
-        'function closeLightbox(){lb.classList.remove("open");lb.setAttribute("aria-hidden","true");document.body.style.overflow="";isOpen=false;}'
+        'function showItem(idx){if(!items.length)return;currentIndex=((idx%items.length)+items.length)%items.length;var it=items[currentIndex];lbImg.src=it.src;lbImg.alt=it.alt;lbTitle.textContent=it.title;lbFilename.textContent=it.filename;updateCounter();}'
+        'function openLightbox(startIndex,opener){if(!items.length)collectItems();if(!items.length)return;activeOpener=opener||document.activeElement;currentIndex=startIndex||0;showItem(currentIndex);lb.classList.add("open");lb.setAttribute("aria-hidden","false");document.body.style.overflow="hidden";isOpen=true;setTimeout(function(){btnClose&&btnClose.focus();},30);}'
+        'function closeLightbox(){lb.classList.remove("open");lb.setAttribute("aria-hidden","true");document.body.style.overflow="";isOpen=false;if(activeOpener&&activeOpener.focus)activeOpener.focus();activeOpener=null;}'
         'function goPrev(){if(!items.length)return;showItem(currentIndex-1);}'
         'function goNext(){if(!items.length)return;showItem(currentIndex+1);}'
         'function attachClickHandlers(){'
         'var wrappers=document.querySelectorAll(".plots-grid .plot-image-wrapper");'
-        'for(var i=0;i<wrappers.length;i++){(function(index){wrappers[index].addEventListener("click",function(e){openLightbox(index);});})(i);}'
+        'for(var i=0;i<wrappers.length;i++){(function(index){wrappers[index].addEventListener("click",function(){openLightbox(index,wrappers[index]);});})(i);}'
         '}'
         'if(lb){lb.addEventListener("click",function(e){if(e.target===lb)closeLightbox();});}'
         'if(btnPrev)btnPrev.addEventListener("click",function(e){e.stopPropagation();goPrev();});'
         'if(btnNext)btnNext.addEventListener("click",function(e){e.stopPropagation();goNext();});'
         'if(btnClose)btnClose.addEventListener("click",function(e){e.stopPropagation();closeLightbox();});'
-        'document.addEventListener("keydown",function(e){if(!isOpen)return;if(e.key==="Escape"||e.key==="Esc"){e.preventDefault();closeLightbox();}else if(e.key==="ArrowLeft"){e.preventDefault();goPrev();}else if(e.key==="ArrowRight"){e.preventDefault();goNext();}});'
+        'document.addEventListener("keydown",function(e){if(!isOpen)return;if(e.key==="Escape"||e.key==="Esc"){e.preventDefault();closeLightbox();}else if(e.key==="ArrowLeft"){e.preventDefault();goPrev();}else if(e.key==="ArrowRight"){e.preventDefault();goNext();}else if(e.key==="Tab"){var controls=[btnPrev,btnNext,btnClose];var enabled=[];for(var i=0;i<controls.length;i++){if(controls[i]&&!controls[i].disabled)enabled.push(controls[i]);}if(!enabled.length)return;var first=enabled[0],last=enabled[enabled.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});'
         'if(imageWrap&&lbImg)imageWrap.addEventListener("click",function(e){if(e.target===lbImg)goNext();});'
         'if(lbImg)lbImg.addEventListener("dragstart",function(e){e.preventDefault();});'
         'function init(){collectItems();attachClickHandlers();}'

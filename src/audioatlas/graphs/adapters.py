@@ -14,14 +14,14 @@ from audioatlas.analysis.levels import (
 from audioatlas.analysis.loudness import ShortTermLufsResult
 from audioatlas.analysis.spectral import (
     AverageSpectrumResult,
-    BandEnergyTimelineResult,
+    BandPowerTimelineResult,
     SpectralShapeResult,
     SpectrogramResult,
 )
 from audioatlas.analysis.stereo import MidSideEnergyResult, StereoCorrelationResult
 from audioatlas.analysis.tonal import ChromaCqtResult
 from audioatlas.config import AnalysisConfig
-from audioatlas.visualize.band_energy import plot_band_energy_timeline
+from audioatlas.visualize.band_energy import plot_band_power_timeline
 from audioatlas.visualize.chroma import plot_chroma_cqt
 from audioatlas.visualize.histogram import plot_sample_histogram
 from audioatlas.visualize.loudness import plot_short_term_lufs
@@ -122,13 +122,21 @@ def render_spectral_shape(
     return plot_spectral_shape(spectral_shape, out_path)
 
 
-def render_band_energy_timeline(
+def render_band_power_timeline(
     bundle: AnalysisBundle, out_path: Path, config: AnalysisConfig
 ) -> Path:
     del config
-    band_energy = bundle.get("band_energy")
-    assert isinstance(band_energy, BandEnergyTimelineResult)
-    return plot_band_energy_timeline(band_energy, out_path)
+    band_power = bundle.get("band_power")
+    assert isinstance(band_power, BandPowerTimelineResult)
+    return plot_band_power_timeline(band_power, out_path)
+
+
+def render_band_energy_timeline(
+    bundle: AnalysisBundle, out_path: Path, config: AnalysisConfig
+) -> Path:
+    """Deprecated adapter alias for the stable graph key and filename."""
+
+    return render_band_power_timeline(bundle, out_path, config)
 
 
 def render_onset_density(

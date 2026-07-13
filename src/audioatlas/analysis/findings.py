@@ -5,18 +5,40 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Literal
 
+from audioatlas.release import FINDING_RULESET_VERSION, FINDINGS_SCHEMA_VERSION
+
 Severity = Literal["info", "warning", "issue"]
 Category = Literal["levels", "dynamics", "stereo", "spectrum", "metadata"]
 Confidence = Literal["low", "medium", "high"]
+Comparator = Literal[">", ">=", "<", "<=", "=="]
+
+
+@dataclass(frozen=True)
+class EvidenceItem:
+    """One machine-readable measurement supporting a finding.
+
+    ``label`` remains suitable for direct report display. The other fields make
+    the trigger auditable without parsing prose.
+    """
+
+    metric: str
+    label: str
+    value: float | int
+    unit: str
+    comparator: Comparator | None = None
+    threshold: float | int | None = None
+    time_ranges: list[dict[str, float]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
 class Finding:
+    rule_id: str
+    rule_version: int
     severity: Severity
     category: Category
     title: str
-    measured_value: float | int
-    threshold: float | int
+    measured_value: float | int | None
+    threshold: float | int | None
     unit: str
     evidence: str
     why_it_matters: str
@@ -24,7 +46,8 @@ class Finding:
     suggested_checks: list[str]
     confidence: Confidence
     time_ranges: list[dict[str, float]] = field(default_factory=list)
-    evidence_items: list[str] = field(default_factory=list)
+    evidence_items: list[EvidenceItem] = field(default_factory=list)
+    associated_graphs: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
@@ -40,6 +63,8 @@ class FindingsResult:
     def to_dict(self) -> dict[str, object]:
         all_findings = self.all_findings or self.findings
         return {
+            "schema_version": FINDINGS_SCHEMA_VERSION,
+            "ruleset_version": FINDING_RULESET_VERSION,
             "count": len(self.findings),
             "all_count": len(all_findings),
             "max_findings": self.max_findings,
@@ -83,9 +108,6 @@ def generate_findings(summary: dict) -> FindingsResult:
     mid_side = (
         summary.get("mid_side_energy") if isinstance(summary.get("mid_side_energy"), dict) else {}
     )
-    spectral_shape = (
-        summary.get("spectral_shape") if isinstance(summary.get("spectral_shape"), dict) else {}
-    )
     findings: list[Finding] = []
     track_duration = _number(levels, "duration_seconds")
     is_lossy = _is_lossy_metadata(metadata)
@@ -121,6 +143,16 @@ def generate_findings(summary: dict) -> FindingsResult:
         true_peak_evidence = (
             f"Approximate true peak measured {_fmt_measure(true_peak)} dBTP."
         )
+        true_peak_evidence_items = [
+            EvidenceItem(
+                metric="levels.true_peak_dbtp",
+                label=true_peak_evidence,
+                value=true_peak,
+                unit="dBTP",
+                comparator=">",
+                threshold=0.0,
+            )
+        ]
         if (
             near_clipping is not None
             and 0 < near_clipping <= 10
@@ -136,8 +168,22 @@ def generate_findings(summary: dict) -> FindingsResult:
             true_peak_evidence += (
                 f" Near-clipping count measured {near_clip_count} {near_clip_label}."
             )
+            true_peak_evidence_items.append(
+                EvidenceItem(
+                    metric="levels.near_clipping_samples",
+                    label=(
+                        f"Near-clipping count measured {near_clip_count} {near_clip_label}."
+                    ),
+                    value=near_clip_count,
+                    unit="samples",
+                    comparator=">",
+                    threshold=0,
+                )
+            )
         findings.append(
             Finding(
+                rule_id="levels.true_peak_above_zero",
+                rule_version=1,
                 severity="warning",
                 category="levels",
                 title="Approximate true peak is above 0 dBTP",
@@ -155,6 +201,8 @@ def generate_findings(summary: dict) -> FindingsResult:
                     "Inspect the loudest passage for inter-sample peak behavior.",
                 ],
                 confidence="medium",
+                evidence_items=true_peak_evidence_items,
+                associated_graphs=["peak_timeline", "waveform_rms"],
             )
         )
 
@@ -181,6 +229,8 @@ def generate_findings(summary: dict) -> FindingsResult:
     if near_clipping is not None and near_clipping > 0 and near_clipping_severity is not None:
         findings.append(
             Finding(
+                rule_id="levels.near_full_scale_samples",
+                rule_version=1,
                 severity=near_clipping_severity,
                 category="levels",
                 title="Near-full-scale samples detected",
@@ -202,12 +252,29 @@ def generate_findings(summary: dict) -> FindingsResult:
                 ],
                 confidence="high",
                 time_ranges=near_clip_ranges,
+                evidence_items=[
+                    EvidenceItem(
+                        metric="levels.near_clipping_samples",
+                        label=(
+                            f"Near-clipping count measured {int(near_clipping)} "
+                            f"{near_clip_sample_label}."
+                        ),
+                        value=int(near_clipping),
+                        unit="samples",
+                        comparator=">",
+                        threshold=0,
+                        time_ranges=near_clip_ranges,
+                    )
+                ],
+                associated_graphs=["peak_timeline", "sample_histogram", "waveform_rms"],
             )
         )
 
     if clipped is not None and clipped > 0:
         findings.append(
             Finding(
+                rule_id="levels.sample_clipping",
+                rule_version=1,
                 severity="issue",
                 category="levels",
                 title="Sample clipping detected",
@@ -225,38 +292,109 @@ def generate_findings(summary: dict) -> FindingsResult:
                     "Check whether clipping is intentional source material or processing.",
                 ],
                 confidence="high",
+                evidence_items=[
+                    EvidenceItem(
+                        metric="levels.clipped_samples",
+                        label=(
+                            f"Sample clipping count measured {int(clipped)} in {sample_label}."
+                        ),
+                        value=int(clipped),
+                        unit="samples",
+                        comparator=">",
+                        threshold=0,
+                    )
+                ],
+                associated_graphs=["peak_timeline", "waveform_rms", "sample_histogram"],
             )
         )
 
     plr = _number(levels, "plr_db")
-    if plr is not None and plr < 8.0:
-        plr_severity: Severity = "info"
-        if (
-            (true_peak is not None and true_peak > 0.0)
-            or (near_clipping is not None and near_clipping >= 100)
-            or (clipped is not None and clipped > 0)
-        ):
-            plr_severity = "warning"
+    plr_has_independent_level_context = (
+        (true_peak is not None and true_peak > 0.0)
+        or (near_clipping is not None and near_clipping >= 100)
+        or (clipped is not None and clipped > 0)
+    )
+    if plr is not None and plr < 8.0 and plr_has_independent_level_context:
+        plr_evidence_items = [
+            EvidenceItem(
+                metric="levels.plr_db",
+                label=f"Peak-to-loudness ratio measured {_fmt_measure(plr)} dB.",
+                value=plr,
+                unit="dB",
+                comparator="<",
+                threshold=8.0,
+            )
+        ]
+        if true_peak is not None and true_peak > 0.0:
+            plr_evidence_items.append(
+                EvidenceItem(
+                    metric="levels.true_peak_dbtp",
+                    label=f"Approximate true peak measured {_fmt_measure(true_peak)} dBTP.",
+                    value=true_peak,
+                    unit="dBTP",
+                    comparator=">",
+                    threshold=0.0,
+                )
+            )
+        if near_clipping is not None and near_clipping >= 100:
+            plr_evidence_items.append(
+                EvidenceItem(
+                    metric="levels.near_clipping_samples",
+                    label=(
+                        f"Near-clipping count measured {int(near_clipping)} "
+                        f"{near_clip_sample_label}."
+                    ),
+                    value=int(near_clipping),
+                    unit="samples",
+                    comparator=">=",
+                    threshold=100,
+                )
+            )
+        if clipped is not None and clipped > 0:
+            plr_evidence_items.append(
+                EvidenceItem(
+                    metric="levels.clipped_samples",
+                    label=f"Sample clipping count measured {int(clipped)} in {sample_label}.",
+                    value=int(clipped),
+                    unit="samples",
+                    comparator=">",
+                    threshold=0,
+                )
+            )
         findings.append(
             Finding(
-                severity=plr_severity,
+                rule_id="dynamics.low_plr_with_level_pressure",
+                rule_version=2,
+                severity="warning",
                 category="dynamics",
-                title="Peak-to-loudness ratio is below 8 dB",
+                title="Low peak-to-loudness ratio accompanies a high-level footprint",
                 measured_value=plr,
                 threshold=8.0,
                 unit="dB",
-                evidence=f"Peak-to-loudness ratio measured {_fmt_measure(plr)} dB.",
+                evidence=" ".join(item.label for item in plr_evidence_items),
                 why_it_matters=(
-                    "When peak levels sit close to the track average loudness, there is reduced "
-                    "margin for transients and dynamic contrast once loudness normalization is "
-                    "applied during playback or distribution."
+                    "Low PLR means the highest reconstructed peak sits relatively close to "
+                    "integrated loudness. Alongside the separate high-level measurement, it is "
+                    "useful context for inspecting dense, limited, clipped, or intentionally "
+                    "distorted passages."
                 ),
-                does_not_mean="This does not mean the track is over-compressed by itself.",
+                does_not_mean=(
+                    "This does not identify compression, transient quality, audibility, or a "
+                    "delivery problem by itself. Loudness normalization changes both measurements "
+                    "by the same gain and does not change PLR."
+                ),
                 suggested_checks=[
-                    "Inspect the frame RMS timeline alongside peak metrics.",
+                    "Inspect the crest-factor, frame-RMS, and peak timelines together.",
                     "Listen for whether dense sections and transient sections feel distinct enough for the intent.",
                 ],
                 confidence="medium",
+                evidence_items=plr_evidence_items,
+                associated_graphs=[
+                    "crest_factor_timeline",
+                    "rms_timeline",
+                    "peak_timeline",
+                    "waveform_rms",
+                ],
             )
         )
 
@@ -280,10 +418,9 @@ def generate_findings(summary: dict) -> FindingsResult:
 
     corr_min = _number(stereo, "correlation_min")
     stereo_evidence: list[str] = []
+    stereo_evidence_items: list[EvidenceItem] = []
     stereo_severity: Severity | None = None
     stereo_confidence: Confidence = "medium"
-    stereo_measured_value: float | int = 0
-    stereo_threshold: float | int = 0
     side_ratio_ranges: list[dict[str, float]] = []
 
     if corr_min is not None and corr_min < 0.0 and negative_ranges:
@@ -305,52 +442,106 @@ def generate_findings(summary: dict) -> FindingsResult:
     else:
         negative_severity = None
     if corr_min is not None and corr_min < 0.0 and negative_ranges and negative_severity:
-        stereo_evidence.append(
-            f"Minimum frame correlation: {_fmt_measure(corr_min)}."
-        )
-        stereo_evidence.append(
+        corr_min_label = f"Minimum frame correlation: {_fmt_measure(corr_min)}."
+        negative_duration_label = (
             f"Total time below 0 correlation: {_fmt_measure(negative_duration)} seconds "
             f"across {len(negative_ranges)} region(s)."
         )
+        stereo_evidence.extend([corr_min_label, negative_duration_label])
+        stereo_evidence_items.extend(
+            [
+                EvidenceItem(
+                    metric="stereo_correlation.correlation_min",
+                    label=corr_min_label,
+                    value=corr_min,
+                    unit="correlation",
+                    comparator="<",
+                    threshold=0.0,
+                    time_ranges=negative_ranges,
+                ),
+                EvidenceItem(
+                    metric="stereo_correlation.correlation_below_0_total_duration_seconds",
+                    label=negative_duration_label,
+                    value=negative_duration,
+                    unit="seconds",
+                    comparator=">",
+                    threshold=0.0,
+                    time_ranges=negative_ranges,
+                ),
+            ]
+        )
         stereo_severity = _max_severity(stereo_severity, negative_severity)
-        stereo_measured_value = corr_min
-        stereo_threshold = 0.0
 
     low_corr_is_brief = _is_brief_stereo_duration(low_corr_duration, low_corr_percent)
     if low_corr_ranges and not (healthy_stereo_context and low_corr_is_brief):
-        stereo_evidence.append(
+        low_corr_label = (
             f"Total time below 0.3 correlation: {_fmt_measure(low_corr_duration)} seconds "
             f"across {len(low_corr_ranges)} region(s)."
         )
+        stereo_evidence.append(low_corr_label)
+        stereo_evidence_items.append(
+            EvidenceItem(
+                metric="stereo_correlation.correlation_below_0_3_total_duration_seconds",
+                label=low_corr_label,
+                value=low_corr_duration,
+                unit="seconds",
+                comparator=">",
+                threshold=0.0,
+                time_ranges=low_corr_ranges,
+            )
+        )
         stereo_severity = _max_severity(stereo_severity, "info")
-        if stereo_measured_value == 0:
-            stereo_measured_value = len(low_corr_ranges)
-            stereo_threshold = 0.3
 
     if corr_median is not None and corr_median < 0.5:
-        stereo_evidence.append(
-            f"Median L/R correlation: {_fmt_measure(corr_median)}."
+        corr_median_label = f"Median L/R correlation: {_fmt_measure(corr_median)}."
+        stereo_evidence.append(corr_median_label)
+        stereo_evidence_items.append(
+            EvidenceItem(
+                metric="stereo_correlation.correlation_median",
+                label=corr_median_label,
+                value=corr_median,
+                unit="correlation",
+                comparator="<",
+                threshold=0.5,
+            )
         )
         stereo_severity = _max_severity(stereo_severity, "warning")
-        stereo_measured_value = corr_median
-        stereo_threshold = 0.5
 
     side_ratio = _number(mid_side, "side_to_mid_ratio_db_median")
     if side_ratio is not None and side_ratio > -6.0:
         side_ratio_ranges = _ranges_at_least(
             mid_side, "side_to_mid_ratio_above_minus_6_time_ranges", min_range_duration
         )
-        stereo_evidence.append(
-            f"Median side/mid ratio: {_fmt_measure(side_ratio)} dB."
+        side_ratio_label = f"Median side/mid ratio: {_fmt_measure(side_ratio)} dB."
+        stereo_evidence.append(side_ratio_label)
+        stereo_evidence_items.append(
+            EvidenceItem(
+                metric="mid_side_energy.side_to_mid_ratio_db_median",
+                label=side_ratio_label,
+                value=side_ratio,
+                unit="dB",
+                comparator=">",
+                threshold=-6.0,
+                time_ranges=side_ratio_ranges,
+            )
         )
         if side_ratio_ranges:
-            stereo_evidence.append(
+            side_ratio_regions_label = (
                 f"Side/mid ratio above -6 dB: {len(side_ratio_ranges)} region(s)."
             )
+            stereo_evidence.append(side_ratio_regions_label)
+            stereo_evidence_items.append(
+                EvidenceItem(
+                    metric="mid_side_energy.side_to_mid_ratio_above_minus_6_regions",
+                    label=side_ratio_regions_label,
+                    value=len(side_ratio_ranges),
+                    unit="regions",
+                    comparator=">",
+                    threshold=0,
+                    time_ranges=side_ratio_ranges,
+                )
+            )
         stereo_severity = _max_severity(stereo_severity, "info")
-        if stereo_measured_value == 0:
-            stereo_measured_value = side_ratio
-            stereo_threshold = -6.0
 
     if stereo_evidence and stereo_severity is not None:
         unique_checks = [
@@ -368,14 +559,25 @@ def generate_findings(summary: dict) -> FindingsResult:
             if low_corr_ranges
             else negative_ranges if negative_ranges else side_ratio_ranges
         )
+        if len(stereo_evidence_items) == 1:
+            primary = stereo_evidence_items[0]
+            primary_value: float | int | None = primary.value
+            primary_threshold: float | int | None = primary.threshold
+            primary_unit = primary.unit
+        else:
+            primary_value = None
+            primary_threshold = None
+            primary_unit = ""
         findings.append(
             Finding(
+                rule_id="stereo.low_correlation_or_side_heavy",
+                rule_version=1,
                 severity=stereo_severity,
                 category="stereo",
                 title=stereo_title,
-                measured_value=stereo_measured_value,
-                threshold=stereo_threshold,
-                unit="mixed stereo metrics",
+                measured_value=primary_value,
+                threshold=primary_threshold,
+                unit=primary_unit,
                 evidence="; ".join(stereo_evidence),
                 why_it_matters=(
                     "Low correlation and higher side energy can point to passages where mono "
@@ -388,37 +590,8 @@ def generate_findings(summary: dict) -> FindingsResult:
                 suggested_checks=unique_checks,
                 confidence=stereo_confidence,
                 time_ranges=_dedupe_ranges(stereo_display_ranges),
-                evidence_items=stereo_evidence,
-            )
-        )
-
-    rolloff_95_median = _number(spectral_shape, "rolloff_95_median_hz")
-    if rolloff_95_median is not None and rolloff_95_median < 7000.0:
-        findings.append(
-            Finding(
-                severity="info",
-                category="spectrum",
-                title="Median 95% spectral rolloff is below 7 kHz",
-                measured_value=rolloff_95_median,
-                threshold=7000.0,
-                unit="Hz",
-                evidence=(
-                    "Median 95% spectral rolloff measured "
-                    f"{_fmt_measure(rolloff_95_median)} Hz."
-                ),
-                why_it_matters=(
-                    "Tracks with 95% of spectral energy below 7 kHz typically carry less "
-                    "high-frequency content, which can reduce the impression of air, cymbal "
-                    "detail or vocal presence on full-range listening systems."
-                ),
-                does_not_mean=(
-                    "This does not mean the track is dull or that high-frequency content is missing."
-                ),
-                suggested_checks=[
-                    "Inspect the spectral shape timeline and log spectrogram.",
-                    "Check whether instrumentation, cymbals, distortion, or vocal presence explain the measured rolloff.",
-                ],
-                confidence="medium",
+                evidence_items=stereo_evidence_items,
+                associated_graphs=["stereo_correlation", "mid_side_energy"],
             )
         )
 

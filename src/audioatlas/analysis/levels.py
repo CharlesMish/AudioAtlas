@@ -42,8 +42,8 @@ class ScalarLevelsResult:
           arrays are always in input channel order. Per-channel true-peak is
           ``None`` exactly when global true-peak is ``None``.
 
-    LRA (Loudness Range) is intentionally not exposed in v0.1. See
-    ``docs/AGENT_TASKS.md`` for the planned task and constraints.
+    LRA (Loudness Range) is not exposed. AudioAtlas reports integrated and
+    short-term loudness without presenting LRA as an implemented measurement.
     """
 
     duration_seconds: float

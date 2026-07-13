@@ -1,270 +1,225 @@
 # AudioAtlas
 
-AudioAtlas is a local, single-track audio analysis tool for music production,
-mix review, mastering checks, and deep listening. It turns an audio file into
-measurement-based reports: level metrics, stereo context, spectral shape,
-activity maps, PNG plots, `summary.json`, `findings.json`, `report.md`, and a
-static offline `report.html`.
+## See your track. Keep the judgment yours.
 
-## Status: v0.2-alpha
+AudioAtlas turns one audio file into a private, portable listening map: key
+measurements, clear plots, and a short list of places that may be worth checking
+by ear.
 
-This is a public early-alpha release target. The core reports are usable, but findings
-are heuristic, wording and thresholds may change, and the project is not a
-mastering system. Treat reports as structured listening prompts and technical
-context, not final decisions.
+It runs on your computer. There is no account, upload, server, telemetry, or
+quality score. The result is a folder you can open in any browser and keep with
+the track.
 
-## What AudioAtlas Does
+![AudioAtlas report overview](docs/assets/readme/report_overview.png)
 
-- Preserves original levels; it does not normalize input audio.
-- Analyzes one file with scalar level metrics, approximate true peak, clipping
-  and near-clipping counts, RMS timeline, stereo correlation, mid/side energy,
-  spectral shape, band energy, and onset/activity density.
-- Writes local static reports that work without a server, CDN, external CSS, or
-  external JavaScript.
-- Provides factual findings such as true-peak overs, clipping, substantial
-  near-clipping, and grouped stereo observations.
-- Supports batch/catalog reports for folders of supported files.
+## Make your first report
 
-## What AudioAtlas Does Not Do
-
-- No mix score, loudness score, or automated pass/fail verdict.
-- No automated mastering advice.
-- No reference-track comparison.
-- No source separation, instrument detection, or section segmentation.
-- No real-time playback cursor or DAW integration.
-- No claim that a finding is audible, bad, or musically wrong.
-
-## What the Reports Look Like
-
-AudioAtlas writes local static HTML/Markdown reports plus JSON summaries and PNG
-plots. The generated files can be opened directly from disk; they do not require
-a server or hosted dashboard.
-
-![AudioAtlas multi-graph report cards](docs/assets/readme/report_graph_grid.png)
-
-Graph depth is selectable: minimal renders 4 plots for a quick pass, standard
-renders the default 14-plot report, and full renders 17 plots with additional
-distribution/detail views.
-
-![Representative AudioAtlas graph examples](docs/assets/readme/graph_examples.png)
-
-Sections are optional named time ranges. They can be used to compare regions of
-one track with the same summary metrics.
-
-![AudioAtlas section comparison table](docs/assets/readme/sections_comparison.png)
-
-## Install
-
-With `uv` from a source checkout:
+AudioAtlas supports Python 3.11 or newer.
 
 ```bash
-uv sync --extra dev
+python -m pip install .
+audioatlas analyze song.wav
 ```
 
-With `pip`:
+When `--out` is omitted, AudioAtlas creates a friendly folder such as:
 
-```bash
-python -m venv .venv
-source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
+```text
+audioatlas-report-song/
 ```
 
-## Run
+Open `report.html` inside that folder.
 
-With `uv`:
+From a source checkout using `uv`:
 
 ```bash
-uv run audioatlas analyze /path/to/song.wav --out reports/song
-uv run audioatlas analyze /path/to/song.wav --out reports/verse --start 30 --end 62
-uv run audioatlas sections /path/to/song.wav --out reports/song_sections \
-  --section intro:0:30 \
-  --section verse:30:62 \
-  --section ending:62:
-uv run audioatlas sections /path/to/song.wav --out reports/song_sections \
-  --config sections.yaml
-uv run audioatlas batch /path/to/folder --out reports/catalog
-uv run audioatlas themes
+uv sync
+uv run audioatlas analyze song.wav
 ```
 
-With an activated virtualenv:
+The first analysis in a fresh environment may take a little longer while the
+scientific libraries initialize. Lightweight commands such as `--version`,
+`--help`, and `themes` start without loading the analysis stack.
+
+## Try the real demo recordings
+
+The repository includes two intentionally public musical demos: a short solo
+guitar recording and a fuller guitar, koto, cello, and drums arrangement.
 
 ```bash
-audioatlas analyze /path/to/song.wav --out reports/song
-audioatlas analyze /path/to/song.wav --out reports/verse --start 30 --end 62
-audioatlas sections /path/to/song.wav --out reports/song_sections \
-  --section intro:0:30 \
-  --section verse:30:62 \
-  --section ending:62:
-audioatlas sections /path/to/song.wav --out reports/song_sections \
-  --config sections.yaml
-audioatlas batch /path/to/folder --out reports/catalog
-audioatlas analyze /path/to/song.wav --out reports/song_dark --theme midnight_studio
+# One full Studio report
+uv run audioatlas analyze examples/demo_audio/guitar.wav \
+  --out reports/demo-guitar \
+  --graphs-profile full
+
+# Make a clean audio-only input folder, then build an exact two-track catalog
+rm -rf reports/demo-audio-input
+mkdir -p reports/demo-audio-input
+cp examples/demo_audio/*.wav reports/demo-audio-input/
+uv run audioatlas batch reports/demo-audio-input \
+  --out reports/demo-catalog \
+  --graphs-profile full
+
+# Open the solo report, catalog, and arrangement report
+python -m webbrowser reports/demo-guitar/report.html
+python -m webbrowser reports/demo-catalog/catalog.html
+python -m webbrowser reports/demo-catalog/guitar_koto_cello_drums/report.html
+```
+
+See the [recording notes](examples/demo_audio/README.md) and
+[audio rights notice](AUDIO_RIGHTS.md). These musical demos are not golden test
+fixtures or threshold-calibration evidence.
+
+## Choose how much you want to see
+
+AudioAtlas has one analysis engine. The choices below change report depth and
+presentation, not the underlying measurements.
+
+| Experience | Command | What changes |
+|---|---|---|
+| **Compact** | `--graphs-profile compact` | Four essential plots; complete JSON remains available |
+| **Standard** | no extra flag | Fourteen plots and the normal first-read experience |
+| **Full** | `--graphs-profile full` | All seventeen registered plots |
+
+Every HTML report opens in **Studio** and includes a **Focus / Studio** switch:
+
+- **Studio** is the polished default, with richer framing, hierarchy, and atmosphere.
+- **Focus** is restrained and information-first.
+
+Both views wrap the same text and PNG plots.
+
+Choose the restrained opening view when generating a report:
+
+```bash
+audioatlas analyze song.wav --presentation focus
+```
+
+The switch remains available inside the finished report, works offline, and
+never filters or alters the measured plot images.
+
+A separate “lite” build is intentionally not maintained. Compact reports use
+the same trusted analysis engine, which avoids two editions slowly disagreeing
+about the same track.
+
+## Useful recipes
+
+```bash
+# Pick an output folder
+audioatlas analyze song.wav --out reports/song
+
+# Compact first read
+audioatlas analyze song.wav --graphs-profile compact
+
+# Restrained opening presentation
+audioatlas analyze song.wav --presentation focus
+
+# All plots with a built-in theme
+audioatlas analyze song.wav --graphs-profile full --theme midnight_studio
+
+# Analyze one source range
+audioatlas analyze song.wav --start 30 --end 62 --out reports/verse
+
+# List themes
 audioatlas themes
 ```
 
-From a checkout without installing the console script:
+## What you receive
+
+A normal report folder contains:
+
+- `report.html` — the friendly browser report;
+- `report.md` — a portable text version;
+- `summary.json` — the complete measurement summary;
+- `findings.json` — bounded review prompts and their evidence;
+- PNG plots;
+- `.audioatlas-output.json` — a manifest that lets AudioAtlas update its own
+  files without deleting unrelated files.
+
+Local absolute paths are excluded by default, so shared reports do not normally
+reveal usernames or folder structures.
+
+The HTML report also provides keyboard-accessible plot zoom, direct links between
+review prompts and their plots, and private Human notes. Notes autosave in local
+browser storage for that report path and can be copied or exported as text; they
+are never written into report JSON or sent over a network.
+
+## Compare two revisions of the same track
+
+Give related exports the same private revision token when you analyze them:
 
 ```bash
-python -m audioatlas analyze /path/to/song.wav --out reports/song
+audioatlas analyze mix-v3.wav --out reports/mix-v3 --track-id "unique-private-token"
+audioatlas analyze mix-v4.wav --out reports/mix-v4 --track-id "unique-private-token"
+audioatlas diff reports/mix-v3 reports/mix-v4 --out reports/v3-to-v4
 ```
 
-CLI flags:
+The diff reports descriptive `B - A` changes and which review prompts appeared,
+disappeared, or changed. It does not choose a winner. AudioAtlas stores only the
+token's SHA-256 digest; matching digests mean the same token was supplied, not
+that AudioAtlas recognized the music.
 
-| Flag | Default | Meaning |
-|---|---|---|
-| `--out PATH` | required | Output directory. |
-| `--max-duration FLOAT` | none | Truncate input for quick dev runs. |
-| `--start FLOAT` | none | Start analysis at this source time in seconds. |
-| `--end FLOAT` | none | End analysis at this source time in seconds. |
-| `--n-fft INT` | 4096 | FFT size for spectrogram. |
-| `--hop-length INT` | 1024 | Hop size for time-axis analyses. |
-| `--rms-frame-length INT` | = `--n-fft` | RMS window length. |
-| `--db-floor FLOAT` | -100 | Floor for displayed dBFS / dBTP / dB metrics. |
-| `--true-peak-oversample INT` | 4 | Polyphase factor; 1 disables oversampling. |
-| `--theme THEME` | `default` | Built-in static HTML theme. |
-| `--graphs-profile minimal\|standard\|full` | `standard` | Select which graph set to render. `standard` renders the current 13 core graphs plus `peak_timeline`; `full` renders all 17 registered graphs; `minimal` renders the first-read subset. |
-| `--enable KEYS` | none | Comma-separated graph keys to add to the selected profile. May be repeated. |
-| `--disable KEYS` | none | Comma-separated graph keys to remove from the selected profile. May be repeated. |
-| `--graphs-config PATH` | none | YAML file with a top-level `graphs:` block. |
+## Analyze sections or a folder
 
-Graph selection controls rendered PNGs only. `summary.json`, findings, catalog
-summaries, and section comparisons still include the full analysis data. The
-minimal profile renders `waveform_rms`, `rms_timeline`, `log_spectrogram`, and
-`sample_histogram`; `full` also includes `peak_vs_rms`, `rms_histogram`, and
-`stereo_correlation_histogram`.
+Manual sections:
 
-Example graph-selection YAML:
-
-```yaml
-graphs:
-  profile: minimal
-  enable: [chroma_cqt]
-  disable: []
+```bash
+audioatlas sections song.wav --out reports/sections \
+  --section intro:0:30 \
+  --section verse:30:62 \
+  --section ending:62:
 ```
 
-## Example Output
+Folder catalog:
 
-Single-track output:
-
-```text
-reports/song/
-├── summary.json
-├── findings.json
-├── report.md
-├── report.html
-├── waveform_rms.png
-├── rms_timeline.png
-├── crest_factor_timeline.png
-├── log_spectrogram.png
-├── average_spectrum.png
-├── sample_histogram.png
-├── stereo_correlation.png
-├── mid_side_energy.png
-├── spectral_shape.png
-├── band_energy_timeline.png
-├── onset_density.png
-├── chroma_cqt.png
-├── short_term_lufs.png
-└── peak_timeline.png
+```bash
+audioatlas batch /path/to/audio --out reports/catalog
 ```
 
-Open `report.html` in a browser. Start with the short workflow near the top,
-review Delivery & headroom context, scan Findings, then inspect plots and listen
-to the referenced regions.
+AudioAtlas does not infer song structure. Folder catalogs remain descriptive
+and do not rank tracks.
 
-Manual section output:
+## What AudioAtlas measures
 
-```text
-reports/song_sections/
-├── section_index.md
-├── 000p000_030p000_intro/
-│   ├── report.html
-│   └── ...
-├── 030p000_062p000_verse/
-│   ├── report.html
-│   └── ...
-└── 062p000_EOF_ending/
-    └── ...
-```
+AudioAtlas currently includes level and loudness context, approximate true
+peak, clipping and near-clipping counts, RMS and crest timelines, short-term
+LUFS, stereo correlation, mid/side energy, spectral shape, relative mean band
+power, onset activity, and chroma pitch-class energy.
 
-Section scans are manual. AudioAtlas does not detect song parts; it analyzes
-the source ranges you provide. This is useful when a whole-song average hides
-distinct intros, drops, bridges, endings, or other intentional changes.
+Review prompts are checks worth making, not diagnoses. A report may correctly
+surface no prioritized prompts at all.
 
-Save section ranges in YAML and pass `--config sections.yaml` to
-`audioatlas sections`, or repeat `--section name:start:end` on the command
-line. Omit `end` in YAML (or leave the end blank in `--section`) to analyze
-through EOF. Both forms use the same parser and produce identical folder names.
+## What it does not do
 
-Batch mode writes the same per-track folders plus:
+- No mix, mastering, loudness, or quality score.
+- No automatic EQ, compression, or mastering prescription.
+- No cross-track ranking or reference-track winner.
+- No genre, instrument, source, key, or automatic section detection.
+- No source separation, cloud dashboard, playback engine, or DAW integration.
+- No claim that a threshold crossing is audible, bad, or musically wrong.
 
-```text
-reports/catalog/
-├── catalog_summary.json
-├── catalog.md
-├── catalog.html
-├── track_a/
-│   └── report.html
-└── track_b/
-    └── report.html
-```
+## Alpha status
 
-## Interpretation Cautions
+AudioAtlas `0.2.0a6` is a public alpha. The report pipeline and comparison tools
+are usable, but the default review prompts are still being calibrated on real
+music. Native double-click launchers also remain convenience wrappers for an
+already installed AudioAtlas environment, not a standalone desktop installer.
 
-- Findings are heuristic prompts derived from measured thresholds and time
-  ranges. They are not proof of audible problems.
-- Relative dB in spectrum and band-energy plots is not dBFS. It shows shape
-  within the analyzed track and should not be compared directly to meter levels
-  or other songs.
-- Onset density means measured attack/activity over time. It is not punch,
-  groove quality, drum-hit count, or production quality.
-- Integrated loudness above -10 LUFS is shown as Delivery & headroom context,
-  not as a Finding.
-- AudioAtlas does not produce a mix score and does not give automated mastering
-  advice.
-- Manual section scans require user-supplied ranges. They are not automatic
-  song-section detection.
+The temporary Numba compatibility range is documented in
+[Compatibility](docs/COMPATIBILITY.md).
 
-## Docs
+## Learn more
 
+- [Friendly user guide](docs/USER_GUIDE.md)
+- [Easy-run launchers](README_EASY_RUN.md)
+- [Examples](examples/README.md)
+- [Finding rules](docs/FINDING_RULES.md)
 - [Alpha limitations](docs/ALPHA_LIMITATIONS.md)
-- [Summary schema](docs/SUMMARY_SCHEMA.md)
+- [Compatibility](docs/COMPATIBILITY.md)
+- [Schemas](docs/SUMMARY_SCHEMA.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Changelog](docs/CHANGELOG.md)
-- [Examples](examples/README.md)
-
-## Roadmap
-
-- Batch/catalog mode refinements.
-- Report UX improvements.
-- Optional interactive report view.
-- Optional simple editor workflow for saved section definitions.
-- More calibration testing across formats and musical material.
-
-## Tests
-
-```bash
-PATH=.venv/bin:$PATH make check
-```
-
-Equivalent direct commands:
-
-```bash
-pytest
-ruff check .
-```
-
-## Design Principles
-
-1. Preserve original levels. Do not normalize unless the user explicitly asks.
-2. Use internal audio shape `(n_samples, n_channels)` everywhere.
-3. Keep analysis and visualization separate.
-4. Analysis functions are pure: arrays in, dataclasses out.
-5. Visualization functions never re-run analysis.
-6. Use measured facts and visualizations, not automated judgment.
-7. Add features one slice at a time: dataclass -> analysis function -> test ->
-   plot -> summary entry -> report entry -> pipeline wiring.
 
 ## License
 
-MIT.
+AudioAtlas software and software documentation use the [MIT License](LICENSE).
+The published demo recordings have a separate [audio rights notice](AUDIO_RIGHTS.md),
+including CC BY 4.0 attribution terms and a third-party sound exception.

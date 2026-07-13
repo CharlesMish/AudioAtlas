@@ -1,224 +1,210 @@
 # Changelog
 
-All notable changes to AudioAtlas are recorded here. Format roughly
-follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-
-## v0.2-alpha
-
-### Added
-- Added the first graph extension pack: `peak_timeline` in the `standard` and
-  `full` profiles, plus `peak_vs_rms`, `rms_histogram`, and
-  `stereo_correlation_histogram` in the `full` profile. The peak timeline
-  summary now includes additive `frame_peak_linear` and `frame_peak_dbfs`
-  arrays for per-frame sample peaks; existing summary fields are unchanged.
-
-### Changed
-- Introduced a behavior-preserving graph registry as the single source of
-  truth for the existing 13 report plots and their report metadata. This keeps
-  the same filenames, render order, and `summary["plots"]` output; graph
-  selection, stable-key filenames, and new graphs remain future slices.
-- Migrated plot output filenames from numbered names to stable graph-key names
-  while preserving render order and the 13-plot set. `summary["plots"]` now
-  lists stable filenames such as `waveform_rms.png` and
-  `short_term_lufs.png`; graph selection and new graphs remain future slices.
-- Added graph selection profiles and enable/disable controls for rendered plots
-  only, available through CLI flags and a top-level YAML `graphs:` block.
-  `summary["graphs"]` records the resolved selection while analysis blocks,
-  findings, catalog data, and section comparisons remain complete.
-- Kept `schema_version` at `0.1.0` because v0.2-alpha schema changes are
-  additive: `summary["graphs"]` and per-frame sample-peak arrays under
-  `peak_timeline`; no existing summary fields were removed or renamed.
+AudioAtlas follows semantic versioning while in alpha. Schema versions are
+tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
-### Added
-- Short-term LUFS timeline: new `short_term_lufs` summary block,
-  `short_term_lufs.png` plot, and `compute_short_term_lufs` in
-  `src/audioatlas/analysis/loudness.py`. Uses pyloudnorm blockwise
-  processing with 3 s K-weighted windows (high overlap) to provide a
-  perceptually-weighted time-varying loudness view. Distinct from RMS.
-  Empty result + warning for files < 3 s. Integrated reference included.
-- Chroma CQT pitch-class energy: `chroma_cqt` summary block and
-  `chroma_cqt.png` plot (12-bin chromagram over time from
-  `librosa.feature.chroma_cqt` on a mono downmix). Descriptive only — not key
-  detection.
-- Per-frame crest factor timeline: `crest_factor_timeline` summary block and
-  `crest_factor_timeline.png` plot (`20 * log10(frame_sample_peak / frame_rms)`
-  per frame, all channels).
-- YAML section definitions: `audioatlas sections --config sections.yaml` loads
-  a top-level `sections` list (`name`, `start`, optional `end`) and runs the same
-  manual section pipeline as repeated `--section name:start:end` flags.
-- Manual section scans: `audioatlas analyze --start/--end` can analyze a
-  source time range, and `audioatlas sections --section name:start:end` writes
-  one report folder per supplied section plus a `section_index.md`.
-- Section reports now show their original source range in `report.md` and
-  `report.html`, so sliced reports are not mistaken for whole-song analyses.
-- Public alpha release documentation: clearer README framing,
-  `docs/ALPHA_LIMITATIONS.md`, `examples/README.md`, and roadmap notes.
-- Single-track reports now include generation timestamp, AudioAtlas version,
-  git hash when available, and a public early-alpha release label.
-- `report.html` includes a short workflow near the top explaining how to use
-  Delivery & headroom context, Findings, plots, and listening checks together.
-- Built-in static HTML theme support for single-track and catalog reports,
-  including `--theme` on `analyze`/`batch` and `audioatlas themes` for
-  listing the 25 local theme IDs. Theme choice affects presentation only.
-- Catalog reports now include common folder patterns, MP3/decoded-audio
-  delivery context when lossy files dominate a folder, neutral per-track
-  trait tags, and distribution bars with median and per-track markers.
-- Batch/catalog mode via `audioatlas batch FOLDER --out OUT_DIR`, which
-  reuses the single-track pipeline for each supported audio file and
-  writes `catalog_summary.json`, `catalog.md`, and `catalog.html` with
-  neutral folder-level ranges, medians, and technical fingerprints.
-- Static `report.html` output with embedded CSS, escaped dynamic content,
-  key metric cards, findings, plot cards, glossary explanations,
-  technical details, and blank human-note fields.
-- Clickable plot images in `report.html` open a calm, dependency-free
-  lightbox overlay (Esc / backdrop / arrows / buttons, real PNG srcs,
-  title + filename + counter, wraps, aria basics, all offline file:// safe).
-- Time-range summarization in `report.md` findings: long range lists now
-  show counts, total duration, first/last range, longest range, and a
-  capped preview while preserving full ranges in `findings.json`.
-- Onset-strength based transient density analysis with `onset_density`
-  summary output, `onset_density.png`, and factual relative-to-track
-  dynamics findings with suggested checks.
-- Finding prioritization and display capping with `findings_shown`,
-  `all_findings`, and `findings_suppressed_count` in `findings.json`.
-- Time-varying frequency band energy analysis with
-  `band_energy_timeline` summary output, `band_energy_timeline.png`,
-  and factual relative-to-track band findings.
-- Spectral shape timeline analysis with centroid, 85%/95% rolloff, and
-  bandwidth summaries, `spectral_shape.png`, and factual
-  spectral-shape findings based on relative-to-track heuristics.
-- Time-ranged findings for near-clipping, low stereo correlation, and
-  high side-to-mid ratio observations.
-- `peak_timeline` summary block with frame-wise clipping and
-  near-clipping counts plus near-clipping time ranges.
-- Named average-spectrum band energy summaries and strongest-band
-  findings using factual suggested-check wording.
-- First-pass `findings.json` and `## Findings` report section generated
-  from existing summary metrics, using factual evidence and suggested
-  checks rather than mix scores or advice.
-- Stereo correlation timeline analysis with `stereo_correlation` summary
-  output, a Markdown report section, and `stereo_correlation.png`.
-  Undefined zero-variance frames remain `NaN` internally and are excluded
-  from summary statistics.
-- Mid/side RMS energy timeline analysis with `mid_side_energy` summary
-  output, a Markdown report section, and `mid_side_energy.png`.
-- `docs/AGENT_START_PROMPT.md` with a ready-to-paste first prompt for
-  Codex/Grok Build, defaulting to the stereo-correlation feature slice.
-- `true_peak_linear_per_channel` and `true_peak_dbtp_per_channel` fields
-  on `ScalarLevelsResult` and in `summary.json`. Closes an asymmetry
-  where the global true-peak was exposed but no per-channel breakdown
-  existed (unlike `peak_dbfs_per_channel` and `rms_dbfs_per_channel`).
-- Dedicated `## Per-channel breakdown` section in `report.md` listing all
-  per-channel arrays as one column per channel.
-- `PER_CHANNEL_METRIC_DISPLAY` registry in `report.py` so adding new
-  per-channel metrics is a single-line change.
-- Tests covering per-channel true-peak symmetry (asymmetric L/R stereo
-  reflects channel amplitudes correctly; global equals max-of-channels;
-  nullability tracks the global value) and the new report section.
+- Published two rights-cleared real musical demo recordings for full report and
+  two-track catalog walkthroughs, with audio-specific CC BY 4.0 attribution and
+  a visible exception for embedded Native Instruments/Kontakt and possible
+  Splice content. Package builds continue to exclude the WAV files.
 
-### Changed
-- Findings hygiene: small rule tweak (rolloff 95% threshold lowered from 8 kHz
-  to 7 kHz for fewer generic triggers on typical material) + reworded
-  `why_it_matters` for PLR and rolloff findings so they describe practical
-  audible or post-normalization delivery consequences rather than restating
-  metric relations or heuristics. Updated focused tests. No new measurements,
-  no verdicts.
-- User-facing finding evidence avoids raw internal field names such as
-  `true_peak_dbtp`, `near_clipping_samples`, and `plr_db`.
-- Integrated loudness above -10 LUFS is kept in Delivery & headroom context
-  rather than Findings.
-- Catalog report dark themes now avoid hard-coded light-theme colors in common
-  pattern, distribution, table, and glossary UI elements.
-- Repo hygiene rules now ignore generated reports, archives, calibration audio,
-  review packages, caches, and virtualenvs for public-alpha preparation.
-- Locked the single-track report UX as the regression baseline with
-  structural tests for friendly empty states, delivery/headroom context,
-  grouped stereo findings, near-clipping grouping, glossary wording, and
-  local relative plot links.
-- Report language keeps generated observations under `Findings`, includes
-  explicit `does_not_mean` caveats, maps internal severity values to
-  friendlier prompt labels, and repeats relative-dB context near relative
-  spectrum/band sections.
-- Relative-to-track centroid, band-energy, and onset-density movement now
-  stays in summaries and plots instead of producing default findings for
-  normal within-song movement.
-- Calibrated stereo and near-clipping finding severity from real-run
-  reports: brief low-correlation events in otherwise high-correlation,
-  mid-dominant tracks are downgraded or suppressed, while sustained
-  low correlation, high side energy, true-peak overs, and actual clipping
-  remain prominent.
-- Level findings for lossy decoded files now refer to decoded samples or
-  decoded audio instead of implying the original source master clipped.
-- Technical report summary sections now show time-range counts instead
-  of raw Python-style range lists.
-- Non-severe time-ranged findings now filter tiny ranges by
-  `finding_min_time_range_seconds`.
-- Findings are less eager by default: floor-level and very short
-  band-energy observations are suppressed, repeated band observations are
-  grouped, and strongest-frame/strongest-band facts stay in summaries
-  rather than default findings.
-- Report plot headings now use curated display names instead of title
-  casing filenames.
-- Relabeled spectrogram and average-spectrum wording to avoid implying
-  calibrated dBFS where the plotted STFT/Welch values are relative.
-- Normalized spectrogram and average-spectrum dB displays to the track
-  maximum so the strongest displayed bin is 0 dB.
-- Stereo correlation now treats frames below `correlation_min_rms_dbfs`
-  as undefined so low-energy fade-outs do not dominate plot or summary
-  readings.
-- Mid/side energy plot now includes a side-to-mid ratio panel.
-- RMS timeline plot title now says "Frame RMS Timeline" to avoid implying
-  a loudness model.
-- Sample histogram x-axis now expands beyond ±1.0 for float WAV or other
-  over-nominal-full-scale input.
-- Reprioritized the agent backlog so stereo correlation is the recommended
-  first feature slice; true-peak refinement is marked as advanced.
-- Moved `dc_offset_per_channel` from the main `## Level metrics` table
-  into the new `## Per-channel breakdown` section. The main table is now
-  globals-only, which makes the per-channel block read consistently for
-  every per-channel metric.
+## `0.2.0a6` — 2026-07-11
 
----
+### Accessible interactive reports
 
-## 0.1.0 — initial framework
+- Made Studio the default opening presentation across single-track, catalog,
+  section, and revision-diff HTML while preserving explicit Focus selection.
+- Added skip links, report landmarks, consistent keyboard focus treatment,
+  responsive table regions, reduced-motion behavior, and print cleanup across
+  all static report types.
+- Made plot enlargement keyboard-operable and completed dialog focus trapping,
+  counter announcements, Escape/arrow controls, and focus restoration.
+- Linked metrics to glossary definitions and used existing finding graph keys
+  for reciprocal prompt/plot navigation; lower-priority observations now expand
+  inline instead of requiring JSON inspection.
+- Added private per-report Human note autosave with accessible status, copy,
+  text export, and clear controls. Notes remain local and outside report files.
+- Audited normal-size semantic text pairs across all 25 built-in themes and
+  repaired combinations below the WCAG AA contrast ratio.
+- Added project URLs and package keywords for distribution-page discoverability.
+- Kept all measurement, finding, graph, provenance, and JSON schema behavior
+  unchanged.
 
-### Added
-- Python package skeleton under `src/audioatlas/`.
-- `audioatlas analyze` CLI with `--out`, `--max-duration`, `--n-fft`,
-  `--hop-length`, `--rms-frame-length`, `--db-floor`,
-  `--true-peak-oversample`.
-- `python -m audioatlas ...` entry point.
-- Audio loading via `soundfile` with internal shape
-  `(n_samples, n_channels)`. No auto-normalization.
-- `AnalysisConfig` frozen dataclass with `validate()`.
-- `compute_scalar_levels` (sample peak, true-peak approximation, RMS,
-  crest factor, integrated LUFS, PLR, clipping & near-clipping counts,
-  per-channel breakdowns, DC offset, warnings).
-- `compute_rms_envelope` (RMS dBFS timeline).
-- `compute_log_spectrogram` (STFT magnitude in dB, log freq axis).
-- `compute_average_spectrum` (Welch).
-- Initial plot set covered waveform/RMS, RMS timeline, log spectrogram,
-  average spectrum, and sample histogram. Current v0.2-alpha output uses
-  stable graph-key filenames documented in `docs/SUMMARY_SCHEMA.md`.
-- `summary.json` (with `schema_version`) and `report.md`.
-- 39 tests including a golden-fixture end-to-end snapshot.
-- Documentation: `AGENT_BRIEF.md`, `docs/ARCHITECTURE.md`,
-  `docs/SUMMARY_SCHEMA.md`, `docs/AGENT_TASKS.md`.
-- Stub modules for v0.2 features:
-  `analysis/stereo.py`, `analysis/spectral_features.py`,
-  `analysis/tonal.py`.
-- `Makefile` with `test`, `check`, `lint`, `demo`, `clean`.
-- GitHub Actions CI workflow.
+## `0.2.0a5` — 2026-07-11
 
-### Design decisions baked in
-- All user-visible dB-style values clamp to `cfg.db_floor` (default
-  `-100`).
-- Spectral result dataclasses carry `sample_rate` so visualization
-  functions don't need an extra `sr` argument.
-- The v0.1 "timeline" plot is named `rms_timeline`, not
-  `loudness_timeline`. A real short-term-LUFS timeline is deferred to
-  `T-006` in `docs/AGENT_TASKS.md`.
-- `lra_lu` is deliberately not present in v0.1 — added in `T-007`.
-- Markdown report only; HTML report deferred to `T-008`.
+### Friendly public distribution
+
+- Rewrote the root README around the first user journey and moved detailed
+  operation guidance into `docs/USER_GUIDE.md`.
+- Added a deterministic public-tree exporter and documented a two-branch model:
+  a user-facing `main` branch and a full `stewardship` branch containing review,
+  calibration, and operating records without maintaining a second codebase.
+- Removed stewardship-only material from the Python source distribution while
+  keeping code, tests, user documentation, schemas, compatibility notes, and
+  launchers available to public users.
+- Kept the public Makefile focused on normal install, test, lint, demo, and
+  golden-fixture tasks; stewardship export and calibration operations remain in
+  their owner-side runbooks and scripts.
+- Made `audioatlas analyze song.wav` useful without `--out`; it now chooses a
+  predictable `audioatlas-report-<filename>` folder.
+
+### Report experience profiles
+
+- Added an accessible Focus/Studio switch to single-track, catalog, and
+  revision-diff HTML reports. Focus preserves the restrained report; Studio
+  adds richer static framing without filtering or changing plot pixels.
+- Added `--presentation focus|studio` to choose the opening view. Reports remain
+  local and dependency-free and remember the selection per report path when
+  local storage is available.
+- Added `compact` as the preferred public name for the four-plot graph profile.
+  The legacy `minimal` name remains an equivalent compatibility alias.
+- Kept one analysis engine rather than introducing a separate lite package;
+  compact/full depth and Focus/Studio presentation are delivery choices only.
+- Kept summary, findings, catalog, comparison, and finding-ruleset schemas
+  unchanged because this pass does not alter measurement or interpretation
+  semantics.
+
+## `0.2.0a4` — 2026-07-11
+
+### Comparable same-track revisions
+
+- Added a guarded `audioatlas diff` workflow for two revisions of the same
+  track. It emits static JSON, Markdown, and HTML containing descriptive
+  `B - A` measurement deltas, broad-band median shifts, and finding-rule churn.
+- Added optional `--track-id` support for single-track and manual-section
+  reports. AudioAtlas stores only the token's SHA-256 digest; conflicting
+  identities are a hard error, while missing identities require an explicit
+  `--confirm-same-track` assertion.
+- Added strict comparability checks. Exact-environment and compatible-analysis
+  signatures are distinguished, materially different analysis signatures are
+  refused by default, and an explicit override remains visibly caveated.
+- Refused diff output paths that would overwrite either source report folder.
+- Kept cross-track ranking, reference matching, preference language, and
+  better/worse judgments outside the product contract.
+
+### Provenance, calibration durability, and inspectability
+
+- Added an `analysis_provenance` block to `summary.json`, including canonical
+  analysis-configuration, measurement-code, dependency/decoder, compatible
+  analysis, and exact-environment hashes. Summary schema is now `0.2.1`.
+- Added a calibration ruleset replay tool that verifies a frozen anonymous
+  review ledger against report evidence hashes, reruns the candidate finding
+  rules on saved summaries, and reports appeared/disappeared/changed/unchanged
+  prompt churn without opening or copying audio.
+- Prevented replay output paths from replacing the frozen asset map or review
+  ledger, even under `--force`.
+- Extended calibration worksheets with provenance signatures so mixed analysis
+  conditions cannot be merged silently.
+- Added measured-value plot alt text to both HTML and Markdown reports and kept
+  lightbox alternatives synchronized with the selected image.
+
+### Regression and error-boundary hardening
+
+- Added deterministic property-based invariants for gain/PLR behavior, channel
+  swap symmetry, silence/sub-second degradation, and DC offset behavior.
+- Added committed malformed WAV and FLAC fixtures plus CLI, loader, and mixed
+  batch tests that assert path-safe domain errors at the decoder boundary.
+- Added an explicit `numba>=0.65.1,<0.66` runtime compatibility band after
+  a clean Python 3.13 installation selected Numba 0.66.0 / llvmlite 0.48.0
+  and stalled inside LLVM code generation; the same wheel completed its report
+  smoke after resolving Numba 0.65.1 / llvmlite 0.47.0.
+- Extended output ownership to revision-diff artifacts while keeping unrelated
+  human files protected during report-kind switches.
+- Archived the independent Fable `0.2.0a3` review that motivated this bounded
+  pass. The finding ruleset remains `0.2.0a2`; no default trigger semantics or
+  interpretive thresholds changed.
+
+## `0.2.0a3` — 2026-07-11
+
+### Calibration and review readiness
+
+- Added a project-specific Hopeful Skeptic edition for recurring AudioAtlas
+  reviews, release gates, and implementation handoffs.
+- Added a concrete private musical-calibration runbook, expanded anonymous
+  corpus/rule-decision templates, and a privacy-conscious worksheet generator.
+- The worksheet generator captures displayed and report-cap-suppressed findings,
+  records package/schema/ruleset versions, report/per-finding hashes, exact
+  prompt and non-claim wording, keeps filenames in an optional private map, and
+  preflights both outputs before replacing human labels.
+- Added a native macOS/Windows launcher rehearsal protocol and fillable log.
+- Archived the independent `0.2.0a2` Hopeful Skeptic audit that motivated this
+  bounded follow-up pass.
+
+### Workflow polish and release truth
+
+- Made `--version`, `--help`, and `themes` lightweight by deferring DSP, decoder,
+  graph-registry, and plotting imports until an analysis command is selected.
+- Added immediate preparation feedback before heavy single-track, batch, and
+  section initialization.
+- Formalized package/schema/ruleset/output-manifest version axes and the
+  compatibility-alias lifecycle. JSON aliases remain through `0.2.x`; removal
+  may occur no earlier than `0.3.0` with an explicit schema migration.
+- Kept the finding ruleset at `0.2.0a2`: no trigger, priority, or interpretive
+  rule semantics changed in this release.
+- Removed stale active `v0.1` docstring/comment references without rewriting
+  intentionally archived history.
+- Added Makefile helpers for deterministic fixtures and calibration-sheet
+  preparation.
+
+## `0.2.0a2` — 2026-07-11
+
+### Interpretation integrity
+
+- Corrected the PLR explanation: normalization applies the same gain to peak and
+  integrated loudness and does not change PLR.
+- Narrowed low-PLR prompting to cases with independent high-level evidence.
+- Removed the context-blind absolute low-rolloff finding.
+- Renamed broad-band presentation to **relative mean band power per included FFT
+  bin**; retained temporary compatibility aliases for earlier alpha JSON and the
+  stable plot filename.
+- Added stable finding rule IDs, per-rule versions, typed evidence items, graph
+  associations, and a documented rule ledger.
+
+### Failure handling, privacy, and output safety
+
+- Added concise domain errors for unreadable audio instead of raw decoder
+  tracebacks.
+- Removed machine-local absolute paths from report and catalog metadata by
+  default; added explicit `--include-local-paths` opt-in.
+- Made batch mode continue after unreadable files by default and added `--strict`.
+- Expanded batch discovery to WAV/WAVE, FLAC, OGG, AIFF/AIF, and MP3, subject to
+  local decoder support.
+- Added staged report/catalog publication, output ownership manifests,
+  stale-plot cleanup, child-verified previous batch-track cleanup, collision
+  prevalidation, rollback to the previous generated set after a publication
+  failure, clean switching between single-report and catalog output modes, and
+  preservation of unknown user files.
+- Converted expected short-input CQT/tuning warnings into structured report
+  caveats, adapted onset mel filters for tiny FFTs, and preserved unexpected
+  library warnings.
+- Added an explicit post-report collection boundary so renderer reference
+  cycles do not accumulate across album-sized in-process batch runs.
+
+### Release truth and calibration
+
+- Added the actual MIT `LICENSE` file.
+- Added `PROJECT_CHARTER.md`, `docs/FINDING_RULES.md`, and a deterministic
+  calibration-fixture generator with review templates.
+- Reconciled version/release labels, onboarding commands, launcher claims,
+  architecture documentation, and schema documentation.
+- Archived superseded reviews, design notes, task ledgers, and changelog source
+  rather than presenting them as current operating instructions.
+- Added broader Python/platform CI, package build checks, and clean-wheel smoke
+  coverage.
+
+## `0.2.0a1` — 2026-06-29
+
+- Added a static local HTML report, graph registry and render profiles, expanded
+  spectral/dynamics/stereo/tonal measurements, manual sections, batch catalogs,
+  themes, launchers, and an extended test suite.
+- Established the no-score/no-mastering-verdict product boundary.
+
+## `0.1.0` — initial public framework
+
+- Added local single-track loading, core level/RMS/spectrum measurements, PNG
+  plots, JSON/Markdown reports, CLI, fixtures, and baseline tests.
+
+Historical pre-reconciliation detail is preserved in
+`docs/archive/CHANGELOG_PRE_0_2_0a2.md`.

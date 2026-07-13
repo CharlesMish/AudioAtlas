@@ -12,7 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from audioatlas import __version__
+from audioatlas.alt_text import plot_alt_text
 from audioatlas.graphs.registry import RELATIVE_DB_NOTE, graph_by_filename
+from audioatlas.release import RELEASE_LABEL
 from audioatlas.utils import mmss
 
 # Human-friendly labels and units for the level-metrics block of report.md.
@@ -97,6 +99,16 @@ def _fmt_value(value: Any) -> str:
         return "—"
     if isinstance(value, float):
         return f"{value:.3f}"
+    return str(value)
+
+
+def _evidence_item_text(value: Any) -> str:
+    """Return a human-facing line from legacy or structured evidence."""
+
+    if isinstance(value, dict):
+        label = value.get("label")
+        if isinstance(label, str) and label:
+            return label
     return str(value)
 
 
@@ -210,8 +222,8 @@ def _delivery_context_lines(levels: dict[str, Any]) -> list[str]:
         "## Delivery / headroom context\n",
         (
             f"- Integrated loudness: {_fmt_value(integrated_lufs)} LUFS. "
-            "This is above many streaming normalization reference levels; platforms that "
-            "normalize playback may reduce level."
+            "A playback system using a lower loudness reference may apply negative gain; "
+            "the exact adjustment depends on its measurement, mode, and policy."
         ),
         "",
     ]
@@ -239,21 +251,43 @@ def report_timestamp() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def git_short_hash() -> str | None:
-    """Return the current git short hash when the report is generated from a repo."""
+def git_revision_label(repo_root: str | Path | None = None) -> str | None:
+    """Return the AudioAtlas source revision, including a dirty-worktree marker.
 
+    The repository is resolved from the installed module rather than the caller's
+    current working directory. This prevents a report generated from an installed
+    wheel inside an unrelated Git project from claiming that project's revision.
+    """
+
+    root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[2]
+    if not (root / ".git").exists():
+        return None
     try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
+        revision = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--short", "HEAD"],
             check=True,
             capture_output=True,
             text=True,
             timeout=2,
-        )
+        ).stdout.strip()
+        status = subprocess.run(
+            ["git", "-C", str(root), "status", "--porcelain", "--untracked-files=normal"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        ).stdout.strip()
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return None
-    value = result.stdout.strip()
-    return value or None
+    if not revision:
+        return None
+    return f"{revision}+dirty" if status else revision
+
+
+def git_short_hash() -> str | None:
+    """Deprecated compatibility wrapper for :func:`git_revision_label`."""
+
+    return git_revision_label()
 
 
 def report_build_metadata() -> dict[str, str]:
@@ -263,7 +297,7 @@ def report_build_metadata() -> dict[str, str]:
         "generated_at": report_timestamp(),
         "audioatlas_version": __version__,
     }
-    git_hash = git_short_hash()
+    git_hash = git_revision_label()
     if git_hash:
         metadata["git_hash"] = git_hash
     return metadata
@@ -279,7 +313,7 @@ def write_report_md(
 
     The report's job is to lay out measured facts and the generated plots.
     It must not produce verdicts ("your mix is muddy", "this is well mastered").
-    See AGENT_BRIEF.md for the rationale.
+    See docs/ALPHA_LIMITATIONS.md for the rationale.
     """
 
     metadata = summary.get("metadata", {})
@@ -294,7 +328,9 @@ def write_report_md(
     crest_timeline = summary.get("crest_factor_timeline", {})
     spectrum = summary.get("average_spectrum", {})
     spectral_shape = summary.get("spectral_shape", {})
-    band_energy_timeline = summary.get("band_energy_timeline", {})
+    band_power_timeline = summary.get("band_power_timeline")
+    if not isinstance(band_power_timeline, dict):
+        band_power_timeline = summary.get("band_energy_timeline", {})
     onset_density = summary.get("onset_density", {})
     chroma_cqt = summary.get("chroma_cqt", {})
     short_term_lufs = summary.get("short_term_lufs", {})
@@ -326,7 +362,19 @@ def write_report_md(
     lines.append(f"- AudioAtlas: {build_metadata['audioatlas_version']}")
     if "git_hash" in build_metadata:
         lines.append(f"- Git: {build_metadata['git_hash']}")
-    lines.append("- Release label: public early alpha\n")
+    lines.append(f"- Release label: {RELEASE_LABEL}")
+    provenance = (
+        summary.get("analysis_provenance")
+        if isinstance(summary.get("analysis_provenance"), dict)
+        else {}
+    )
+    config_hash = provenance.get("analysis_config_sha256")
+    compatible_hash = provenance.get("compatible_analysis_sha256")
+    if isinstance(config_hash, str):
+        lines.append(f"- Analysis config SHA-256: `{config_hash}`")
+    if isinstance(compatible_hash, str):
+        lines.append(f"- Comparable-analysis SHA-256: `{compatible_hash}`")
+    lines.append("")
 
     lines.append("## Level metrics\n")
     lines.append("| Metric | Value | Unit |")
@@ -389,24 +437,32 @@ def write_report_md(
     lines.append("## Average spectrum summary\n")
     lines.append(f"{RELATIVE_DB_NOTE}\n")
     for key, value in spectrum.items():
-        if key == "band_energies":
+        if key in {"band_energies", "band_mean_power"}:
             continue
         lines.append(f"- {key}: {_fmt_value(value)}")
     lines.append("")
 
-    band_energies = spectrum.get("band_energies")
-    if isinstance(band_energies, dict) and band_energies:
-        lines.append("## Band energy summary\n")
+    band_mean_power = spectrum.get("band_mean_power")
+    if not isinstance(band_mean_power, dict):
+        band_mean_power = spectrum.get("band_energies")
+    if isinstance(band_mean_power, dict) and band_mean_power:
+        lines.append("## Relative mean band power summary\n")
+        lines.append(
+            "Each value is mean spectral power per included FFT bin, normalized within "
+            "this file. It is not integrated total energy for the differently sized bands.\n"
+        )
         lines.append(f"{RELATIVE_DB_NOTE}\n")
-        lines.append("| Band | Range | Energy |")
+        lines.append("| Band | Range | Mean relative power |")
         lines.append("|---|---|---|")
-        for band, values in band_energies.items():
+        for band, values in band_mean_power.items():
             if not isinstance(values, dict):
                 continue
             low = _fmt_value(values.get("low_hz"))
             high = _fmt_value(values.get("high_hz"))
-            energy = _fmt_value(values.get("energy_db"))
-            lines.append(f"| {band} | {low}-{high} Hz | {energy} dB relative |")
+            mean_power = values.get("mean_power_db", values.get("energy_db"))
+            lines.append(
+                f"| {band} | {low}-{high} Hz | {_fmt_value(mean_power)} dB relative |"
+            )
         lines.append("")
 
     if spectral_shape:
@@ -420,13 +476,21 @@ def write_report_md(
             lines.append(f"- warning: {warning}")
         lines.append("")
 
-    if band_energy_timeline:
-        lines.append("## Band energy timeline summary\n")
+    if band_power_timeline:
+        lines.append("## Relative mean band power timeline summary\n")
+        lines.append(
+            "Each frame averages spectral power per included FFT bin. This is not "
+            "integrated total energy for the differently sized bands.\n"
+        )
         lines.append(f"{RELATIVE_DB_NOTE}\n")
-        lines.append(f"- frames: {_fmt_value(band_energy_timeline.get('frames'))}")
-        lines.append(f"- valid_frames: {_fmt_value(band_energy_timeline.get('valid_frames'))}")
-        lines.append(f"- strongest_band_by_median: {_fmt_value(band_energy_timeline.get('strongest_band_by_median'))}")
-        bands = band_energy_timeline.get("bands")
+        lines.append(f"- frames: {_fmt_value(band_power_timeline.get('frames'))}")
+        lines.append(f"- valid_frames: {_fmt_value(band_power_timeline.get('valid_frames'))}")
+        highest_band = band_power_timeline.get(
+            "highest_mean_power_band_by_median",
+            band_power_timeline.get("strongest_band_by_median"),
+        )
+        lines.append(f"- highest_mean_power_band_by_median: {_fmt_value(highest_band)}")
+        bands = band_power_timeline.get("bands")
         if isinstance(bands, dict) and bands:
             lines.append("")
             lines.append("| Band | Median | Mean | Min | Max |")
@@ -439,7 +503,7 @@ def write_report_md(
                     f"{_fmt_value(values.get('mean_db'))} | {_fmt_value(values.get('min_db'))} | "
                     f"{_fmt_value(values.get('max_db'))} |"
                 )
-        warnings = band_energy_timeline.get("warnings") or []
+        warnings = band_power_timeline.get("warnings") or []
         for warning in warnings:
             lines.append(f"- warning: {warning}")
         lines.append("")
@@ -547,16 +611,23 @@ def write_report_md(
                 severity = str(item.get("severity", "unknown"))
                 lines.append(f"- Prompt level: {SEVERITY_DISPLAY.get(severity, severity)}")
                 lines.append(f"- Category: {item.get('category', 'unknown')}")
-                lines.append(
-                    f"- Measured value: {_fmt_value(item.get('measured_value'))} "
-                    f"{item.get('unit', '')}".rstrip()
-                )
-                lines.append(f"- Threshold: {_fmt_value(item.get('threshold'))}")
+                rule_id = item.get("rule_id")
+                rule_version = item.get("rule_version")
+                if isinstance(rule_id, str) and rule_id:
+                    version_suffix = f" v{rule_version}" if isinstance(rule_version, int) else ""
+                    lines.append(f"- Rule: `{rule_id}`{version_suffix}")
+                if item.get("measured_value") is not None:
+                    lines.append(
+                        f"- Measured value: {_fmt_value(item.get('measured_value'))} "
+                        f"{item.get('unit', '')}".rstrip()
+                    )
+                if item.get("threshold") is not None:
+                    lines.append(f"- Threshold: {_fmt_value(item.get('threshold'))}")
                 evidence_items = item.get("evidence_items")
                 if isinstance(evidence_items, list) and evidence_items:
                     lines.append("- Evidence:")
                     for evidence_item in evidence_items:
-                        lines.append(f"  - {evidence_item}")
+                        lines.append(f"  - {_evidence_item_text(evidence_item)}")
                 else:
                     lines.append(f"- Evidence: {item.get('evidence', '')}")
                 lines.append(f"- Why it matters: {item.get('why_it_matters', '')}")
@@ -596,7 +667,8 @@ def write_report_md(
         lines.append(f"### {title}\n")
         if note is not None:
             lines.append(f"{note}\n")
-        lines.append(f"![{title}]({filename})\n")
+        alt_text = plot_alt_text(filename, summary)
+        lines.append(f"![{alt_text}]({filename})\n")
 
     lines.append("## Human notes\n")
     lines.append("- Observations:")

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 
 from audioatlas.analysis.tonal import PITCH_CLASSES, compute_chroma_cqt
@@ -33,10 +35,7 @@ def test_chroma_cqt_c_major_triad_elevates_c_e_g(sr):
 
     result = compute_chroma_cqt(y, sr, cfg)
     mean_chroma = np.asarray(result.to_summary_dict()["mean_chroma"], dtype=np.float64)
-    top_three = {
-        PITCH_CLASSES[idx]
-        for idx in np.argsort(mean_chroma)[-3:]
-    }
+    top_three = {PITCH_CLASSES[idx] for idx in np.argsort(mean_chroma)[-3:]}
 
     assert top_three == {"C", "E", "G"}
 
@@ -45,12 +44,30 @@ def test_chroma_cqt_silence_is_safe(sr):
     cfg = AnalysisConfig(hop_length=1024)
     silent = np.zeros((sr, 1), dtype=np.float32)
 
-    result = compute_chroma_cqt(silent, sr, cfg)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = compute_chroma_cqt(silent, sr, cfg)
     summary = result.to_summary_dict()
 
+    assert caught == []
     assert summary["dominant_pitch_class"] is None
     assert summary["warnings"]
+    assert "no measurable chroma energy" in " ".join(summary["warnings"])
     assert np.allclose(result.chroma, 0.0)
+
+
+def test_chroma_short_input_records_caveat_without_leaking_library_warning(sr):
+    cfg = AnalysisConfig(hop_length=1024)
+    t = np.arange(int(sr * 0.1), dtype=np.float64) / sr
+    y = (0.5 * np.sin(2 * np.pi * 440 * t)).astype(np.float32)[:, None]
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = compute_chroma_cqt(y, sr, cfg)
+
+    assert caught == []
+    assert any("short input" in note for note in result.warnings)
+    assert result.chroma.shape[1] > 0
 
 
 def test_plot_chroma_cqt_writes_png(tmp_path, sr):

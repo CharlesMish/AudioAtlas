@@ -36,7 +36,9 @@ def test_profiles_resolve_expected_graphs():
     assert _keys(GraphSelection(profile="standard")) == STANDARD_KEYS
     assert _keys(GraphSelection(profile="full")) == ALL_KEYS
     assert _keys(GraphSelection(profile="minimal")) == MINIMAL_KEYS
+    assert _keys(GraphSelection(profile="compact")) == MINIMAL_KEYS
     assert len(_keys(GraphSelection(profile="minimal"))) == 4
+    assert len(_keys(GraphSelection(profile="compact"))) == 4
     assert len(_keys(GraphSelection(profile="standard"))) == 14
     assert len(_keys(GraphSelection(profile="full"))) == 17
 
@@ -71,6 +73,7 @@ def test_unknown_profile_error_lists_valid_profiles():
 
     message = str(excinfo.value)
     assert "tiny" in message
+    assert "compact" in message
     assert "minimal" in message
     assert "standard" in message
     assert "full" in message

@@ -1,11 +1,12 @@
 """Tonal analysis (chroma).
 
 Descriptive pitch-class energy only — AudioAtlas does not attempt key
-detection. See ``AGENT_BRIEF.md`` for the no-verdict rule.
+detection. See ``docs/ALPHA_LIMITATIONS.md`` for the no-verdict boundary.
 """
 
 from __future__ import annotations
 
+import warnings as py_warnings
 from dataclasses import dataclass
 
 import librosa
@@ -86,12 +87,35 @@ def compute_chroma_cqt(
     if len(mono) == 0:
         raise ValueError("audio has zero samples")
 
-    chroma = librosa.feature.chroma_cqt(
-        y=mono,
-        sr=sr,
-        hop_length=cfg.hop_length,
-    ).astype(np.float64)
+    with py_warnings.catch_warnings(record=True) as caught:
+        py_warnings.simplefilter("always")
+        chroma = librosa.feature.chroma_cqt(
+            y=mono,
+            sr=sr,
+            hop_length=cfg.hop_length,
+        ).astype(np.float64)
+
     warnings: list[str] = []
+    for caught_warning in caught:
+        message = str(caught_warning.message)
+        if _is_expected_short_input_warning(message):
+            note = (
+                "short input reached an internal FFT window larger than one intermediate "
+                "signal; chroma output was still produced with reduced short-file context"
+            )
+            if note not in warnings:
+                warnings.append(note)
+        elif _is_expected_empty_tuning_warning(message):
+            # The zero-energy caveat below is the stable, user-facing version
+            # of this library warning.
+            continue
+        else:
+            # Preserve unexpected library warnings instead of hiding them globally.
+            py_warnings.warn(
+                caught_warning.message,
+                caught_warning.category,
+                stacklevel=2,
+            )
     if float(np.max(chroma)) <= EPS:
         warnings.append("no measurable chroma energy; chromagram is reported as zero")
 
@@ -106,3 +130,14 @@ def compute_chroma_cqt(
         hop_length=cfg.hop_length,
         warnings=warnings,
     )
+
+
+def _is_expected_short_input_warning(message: str) -> bool:
+    return (
+        message.startswith("n_fft=")
+        and " is too large for input signal of length=" in message
+    )
+
+
+def _is_expected_empty_tuning_warning(message: str) -> bool:
+    return message == "Trying to estimate tuning from empty frequency set."

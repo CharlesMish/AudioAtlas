@@ -8,18 +8,20 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 import yaml
 
 from audioatlas import __version__
-from audioatlas.batch import analyze_folder
-from audioatlas.config import AnalysisConfig
-from audioatlas.graphs import all_graphs
-from audioatlas.graphs.selection import VALID_PROFILES, GraphSelection, GraphSelectionError
-from audioatlas.pipeline import AnalysisRunResult, analyze_file
-from audioatlas.theme import theme_listing_text, validate_theme_name
+from audioatlas.errors import AudioAtlasError, RevisionDiffError
+from audioatlas.graph_profiles import VALID_PROFILES
+from audioatlas.presentation import VALID_PRESENTATION_MODES
+
+if TYPE_CHECKING:
+    from audioatlas.config import AnalysisConfig
+    from audioatlas.graphs.selection import GraphSelection
+    from audioatlas.pipeline import AnalysisRunResult
 
 
 @click.group()
@@ -32,8 +34,8 @@ def main() -> None:
 @click.argument("input_path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option(
     "--out", "out_dir",
-    type=click.Path(file_okay=False, path_type=Path), required=True,
-    help="Output directory for the report.",
+    type=click.Path(file_okay=False, path_type=Path), required=False,
+    help="Output directory. Defaults to ./audioatlas-report-<filename>.",
 )
 @click.option(
     "--max-duration", type=float, default=None,
@@ -64,6 +66,12 @@ def main() -> None:
 )
 @click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
 @click.option(
+    "--presentation",
+    type=click.Choice(VALID_PRESENTATION_MODES),
+    default=None,
+    help="Opening report view. Defaults to Studio; every HTML report can switch views.",
+)
+@click.option(
     "--graphs-profile",
     type=click.Choice(VALID_PROFILES),
     default=None,
@@ -88,9 +96,22 @@ def main() -> None:
     default=None,
     help="YAML file with an optional top-level graphs block.",
 )
+@click.option(
+    "--track-id",
+    default=None,
+    help=(
+        "Optional opaque revision token. AudioAtlas stores only its SHA-256 digest so "
+        "separately named exports can carry matching identity evidence."
+    ),
+)
+@click.option(
+    "--include-local-paths",
+    is_flag=True,
+    help="Include resolved machine-local paths in JSON metadata (off by default for sharing).",
+)
 def analyze(
     input_path: Path,
-    out_dir: Path,
+    out_dir: Path | None,
     max_duration: float | None,
     start_seconds: float | None,
     end_seconds: float | None,
@@ -100,12 +121,21 @@ def analyze(
     db_floor: float,
     true_peak_oversample: int,
     theme: str | None,
+    presentation: str | None,
     graphs_profile: str | None,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
     graphs_config: Path | None,
+    track_id: str | None,
+    include_local_paths: bool,
 ) -> None:
     """Analyze one audio file and write a report folder."""
+
+    if out_dir is None:
+        out_dir = _default_report_out(input_path)
+        click.echo(f"No --out supplied; using: {out_dir}")
+    click.echo(f"Preparing AudioAtlas analysis for: {input_path.name}")
+    from audioatlas.pipeline import analyze_file
 
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
@@ -119,9 +149,12 @@ def analyze(
             start_seconds=start_seconds,
             end_seconds=end_seconds,
             theme_name=selected_theme,
+            presentation_mode=presentation,
             selection=selection,
+            include_local_paths=include_local_paths,
+            track_id=track_id,
         )
-    except ValueError as exc:
+    except (AudioAtlasError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
     click.echo(f"AudioAtlas report written to: {result.out_dir}")
     click.echo(f"Summary: {result.summary_path}")
@@ -165,6 +198,12 @@ def analyze(
 )
 @click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
 @click.option(
+    "--presentation",
+    type=click.Choice(VALID_PRESENTATION_MODES),
+    default=None,
+    help="Opening report view. Defaults to Studio; every HTML report can switch views.",
+)
+@click.option(
     "--graphs-profile",
     type=click.Choice(VALID_PROFILES),
     default=None,
@@ -189,6 +228,16 @@ def analyze(
     default=None,
     help="YAML file with an optional top-level graphs block.",
 )
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="Stop on the first unreadable audio file instead of recording it and continuing.",
+)
+@click.option(
+    "--include-local-paths",
+    is_flag=True,
+    help="Include resolved machine-local paths in JSON metadata (off by default for sharing).",
+)
 def batch(
     input_folder: Path,
     out_dir: Path,
@@ -199,28 +248,48 @@ def batch(
     db_floor: float,
     true_peak_oversample: int,
     theme: str | None,
+    presentation: str | None,
     graphs_profile: str | None,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
     graphs_config: Path | None,
+    strict: bool,
+    include_local_paths: bool,
 ) -> None:
     """Analyze a folder of audio files and write a neutral catalog."""
+
+    click.echo(f"Preparing AudioAtlas batch from: {input_folder.name}")
+    from audioatlas.batch import analyze_folder
 
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
     selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
-    result = analyze_folder(
-        input_folder,
-        out_dir,
-        config=cfg,
-        max_duration_seconds=max_duration,
-        theme_name=selected_theme,
-        selection=selection,
-    )
+    try:
+        result = analyze_folder(
+            input_folder,
+            out_dir,
+            config=cfg,
+            max_duration_seconds=max_duration,
+            theme_name=selected_theme,
+            presentation_mode=presentation,
+            selection=selection,
+            strict=strict,
+            include_local_paths=include_local_paths,
+        )
+    except (AudioAtlasError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
     click.echo(f"AudioAtlas catalog written to: {result.out_dir}")
     click.echo(f"Catalog summary: {result.catalog_summary_path}")
     click.echo(f"Catalog report:  {result.catalog_md_path}")
     click.echo(f"Catalog HTML:    {result.catalog_html_path}")
+    skipped = result.catalog.get("skipped_files")
+    skipped_count = len(skipped) if isinstance(skipped, list) else 0
+    if skipped_count:
+        click.echo(f"Skipped files:   {skipped_count} (details are in the catalog)", err=True)
+    if result.catalog.get("track_count") == 0:
+        raise click.ClickException(
+            f"No audio files were analyzed. See {result.catalog_summary_path} for details."
+        )
 
 
 @main.command()
@@ -273,6 +342,12 @@ def batch(
 )
 @click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
 @click.option(
+    "--presentation",
+    type=click.Choice(VALID_PRESENTATION_MODES),
+    default=None,
+    help="Opening report view. Defaults to Studio; every HTML report can switch views.",
+)
+@click.option(
     "--graphs-profile",
     type=click.Choice(VALID_PROFILES),
     default=None,
@@ -297,6 +372,19 @@ def batch(
     default=None,
     help="YAML file with an optional top-level graphs block.",
 )
+@click.option(
+    "--track-id",
+    default=None,
+    help=(
+        "Optional opaque revision token. Only its SHA-256 digest is stored; all section "
+        "reports from this run receive the same identity."
+    ),
+)
+@click.option(
+    "--include-local-paths",
+    is_flag=True,
+    help="Include resolved machine-local paths in JSON metadata (off by default for sharing).",
+)
 def sections(
     input_path: Path,
     out_dir: Path,
@@ -308,10 +396,13 @@ def sections(
     db_floor: float,
     true_peak_oversample: int,
     theme: str | None,
+    presentation: str | None,
     graphs_profile: str | None,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
     graphs_config: Path | None,
+    track_id: str | None,
+    include_local_paths: bool,
 ) -> None:
     """Analyze manually supplied sections from one audio file.
 
@@ -319,10 +410,13 @@ def sections(
     pipeline on explicit source ranges supplied by the user.
     """
 
+    parsed_sections = _collect_section_definitions(section_specs, config_path)
+    click.echo(f"Preparing {len(parsed_sections)} manual section report(s) for: {input_path.name}")
+    from audioatlas.pipeline import analyze_file
+
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
     selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
-    parsed_sections = _collect_section_definitions(section_specs, config_path)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     section_results: list[tuple[str, float, float | None, AnalysisRunResult]] = []
@@ -336,9 +430,12 @@ def sections(
                 start_seconds=start_seconds,
                 end_seconds=end_seconds,
                 theme_name=selected_theme,
+                presentation_mode=presentation,
                 selection=selection,
+                include_local_paths=include_local_paths,
+                track_id=track_id,
             )
-        except ValueError as exc:
+        except (AudioAtlasError, ValueError) as exc:
             raise click.ClickException(str(exc)) from exc
 
         section_results.append((name, start_seconds, end_seconds, result))
@@ -360,14 +457,117 @@ def sections(
     click.echo(f"Section index: {index_path}")
 
 
+@main.command(name="diff")
+@click.argument(
+    "report_a",
+    type=click.Path(exists=True, path_type=Path),
+)
+@click.argument(
+    "report_b",
+    type=click.Path(exists=True, path_type=Path),
+)
+@click.option(
+    "--out",
+    "out_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    required=True,
+    help="Output directory for the static revision-delta report.",
+)
+@click.option(
+    "--confirm-same-track",
+    is_flag=True,
+    help=(
+        "Assert that both reports are revisions of the same track when matching "
+        "--track-id digests are unavailable. Conflicting digests are never overridden."
+    ),
+)
+@click.option(
+    "--allow-incomparable",
+    is_flag=True,
+    help=(
+        "Generate a prominently caveated report when analysis provenance differs or is missing."
+    ),
+)
+@click.option("--label-a", default=None, help="Optional display label for report A.")
+@click.option("--label-b", default=None, help="Optional display label for report B.")
+@click.option("--theme", default=None, help="Built-in report theme ID. Run `audioatlas themes`.")
+@click.option(
+    "--presentation",
+    type=click.Choice(VALID_PRESENTATION_MODES),
+    default=None,
+    help="Opening report view. Defaults to Studio; the HTML diff can switch views.",
+)
+def diff_reports(
+    report_a: Path,
+    report_b: Path,
+    out_dir: Path,
+    confirm_same_track: bool,
+    allow_incomparable: bool,
+    label_a: str | None,
+    label_b: str | None,
+    theme: str | None,
+    presentation: str | None,
+) -> None:
+    """Compare two completed reports for revisions of the same track."""
+
+    from audioatlas.revision_diff import (
+        generate_revision_diff,
+        load_report_inputs,
+        write_revision_diff,
+    )
+
+    selected_theme = _validate_theme_for_cli(theme)
+    try:
+        source_directories = {
+            load_report_inputs(report_a).directory.resolve(),
+            load_report_inputs(report_b).directory.resolve(),
+        }
+        if out_dir.expanduser().resolve() in source_directories:
+            raise RevisionDiffError(
+                "The revision-diff output must be separate from both source report folders."
+            )
+        payload = generate_revision_diff(
+            report_a,
+            report_b,
+            confirm_same_track=confirm_same_track,
+            allow_incomparable=allow_incomparable,
+            label_a=label_a,
+            label_b=label_b,
+        )
+        paths = write_revision_diff(
+            payload,
+            out_dir,
+            theme_name=selected_theme,
+            presentation_mode=presentation,
+        )
+    except (AudioAtlasError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"AudioAtlas revision delta written to: {out_dir}")
+    click.echo(f"JSON:     {paths['json']}")
+    click.echo(f"Markdown: {paths['markdown']}")
+    click.echo(f"HTML:     {paths['html']}")
+
+
 @main.command()
 def themes() -> None:
     """List built-in static report themes."""
 
+    from audioatlas.theme import theme_listing_text
+
     click.echo(theme_listing_text())
 
 
+def _default_report_out(input_path: Path) -> Path:
+    """Return a predictable friendly output folder for one-track analysis."""
+
+    chars = [char.lower() if char.isalnum() else "-" for char in input_path.stem]
+    slug = re.sub(r"-+", "-", "".join(chars)).strip("-") or "track"
+    return Path.cwd() / f"audioatlas-report-{slug}"
+
+
 def _validate_theme_for_cli(theme: str | None) -> str:
+    from audioatlas.theme import validate_theme_name
+
     try:
         return validate_theme_name(theme)
     except ValueError as exc:
@@ -380,6 +580,9 @@ def _make_selection(
     cli_disable: tuple[str, ...],
     graphs_config: Path | None,
 ) -> GraphSelection:
+    from audioatlas.graphs import all_graphs
+    from audioatlas.graphs.selection import GraphSelection, GraphSelectionError
+
     file_selection = _parse_graphs_config(graphs_config) if graphs_config is not None else {}
     profile = cli_profile or str(file_selection.get("profile", "standard"))
     enable = _merge_graph_key_lists(
@@ -611,6 +814,8 @@ def _make_config(
     db_floor: float,
     true_peak_oversample: int,
 ) -> AnalysisConfig:
+    from audioatlas.config import AnalysisConfig
+
     return AnalysisConfig(
         n_fft=n_fft,
         hop_length=hop_length,

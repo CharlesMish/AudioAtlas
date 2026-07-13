@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from audioatlas.analysis.findings import generate_findings
+from audioatlas.release import FINDING_RULESET_VERSION, FINDINGS_SCHEMA_VERSION
 
 
 def _summary(**overrides):
@@ -212,23 +213,32 @@ def test_high_integrated_lufs_does_not_generate_top_level_finding():
     assert findings == []
 
 
-def test_low_plr_generates_info_without_other_delivery_evidence():
+def test_low_plr_alone_does_not_generate_default_finding():
+    """PLR is context unless an independent high-level measurement also fires."""
     findings = generate_findings(_summary(levels={"plr_db": 7.5})).findings
 
-    assert len(findings) == 1
-    assert findings[0].severity == "info"
-    assert findings[0].category == "dynamics"
-    assert "over-compressed" in findings[0].does_not_mean
+    assert findings == []
 
 
-def test_low_plr_with_headroom_evidence_generates_warning():
+def test_low_plr_with_independent_high_level_evidence_generates_warning():
     findings = generate_findings(
         _summary(levels={"plr_db": 7.5, "true_peak_dbtp": 0.2})
     ).findings
 
-    plr = [finding for finding in findings if finding.title.startswith("Peak-to-loudness")]
+    plr = [
+        finding
+        for finding in findings
+        if finding.rule_id == "dynamics.low_plr_with_level_pressure"
+    ]
     assert len(plr) == 1
     assert plr[0].severity == "warning"
+    assert plr[0].rule_version == 2
+    assert {item.metric for item in plr[0].evidence_items} == {
+        "levels.plr_db",
+        "levels.true_peak_dbtp",
+    }
+    assert "Loudness normalization" in plr[0].does_not_mean
+    assert "does not change PLR" in plr[0].does_not_mean
 
 
 def test_negative_minimum_correlation_generates_warning():
@@ -362,7 +372,15 @@ def test_high_side_to_mid_ratio_generates_info():
 
     assert len(findings) == 1
     assert findings[0].severity == "info"
-    assert findings[0].unit == "mixed stereo metrics"
+    assert findings[0].rule_id == "stereo.low_correlation_or_side_heavy"
+    # Multiple supporting measurements deliberately have no single synthetic unit.
+    assert findings[0].measured_value is None
+    assert findings[0].threshold is None
+    assert findings[0].unit == ""
+    assert [item.metric for item in findings[0].evidence_items] == [
+        "mid_side_energy.side_to_mid_ratio_db_median",
+        "mid_side_energy.side_to_mid_ratio_above_minus_6_regions",
+    ]
     assert findings[0].time_ranges == [{"start": 6.0, "end": 7.0, "duration": 1.0}]
 
 
@@ -394,7 +412,7 @@ def test_wide_low_correlation_track_retains_stereo_warnings_and_info():
     assert "Minimum frame correlation" in findings[0].evidence
     assert "Median L/R correlation" in findings[0].evidence
     assert "Median side/mid ratio" in findings[0].evidence
-    assert findings[0].evidence_items == [
+    assert [item.label for item in findings[0].evidence_items] == [
         "Minimum frame correlation: -0.400.",
         "Total time below 0 correlation: 5.000 seconds across 1 region(s).",
         "Total time below 0.3 correlation: 20.000 seconds across 1 region(s).",
@@ -402,6 +420,8 @@ def test_wide_low_correlation_track_retains_stereo_warnings_and_info():
         "Median side/mid ratio: -4.000 dB.",
         "Side/mid ratio above -6 dB: 1 region(s).",
     ]
+    assert all(item.metric for item in findings[0].evidence_items)
+    assert findings[0].associated_graphs == ["stereo_correlation", "mid_side_energy"]
     assert findings[0].suggested_checks == [
         "Inspect the stereo correlation timeline around the lowest-correlation regions.",
         "Listen in mono around sustained low-correlation regions if mono compatibility matters.",
@@ -476,17 +496,13 @@ def test_spectral_centroid_reduced_ranges_do_not_generate_default_prompt():
     assert findings == []
 
 
-def test_low_rolloff_95_generates_factual_info():
+def test_low_rolloff_95_remains_summary_context_not_a_default_finding():
+    """An absolute rolloff value cannot establish missing air, vocals, or cymbals."""
     findings = generate_findings(
         _summary(spectral_shape={"rolloff_95_median_hz": 6500.0})
     ).findings
 
-    assert len(findings) == 1
-    assert "rolloff" in findings[0].title.lower()
-    assert findings[0].unit == "Hz"
-    # hygiene: why_it_matters must describe audible/delivery consequence
-    assert "air" in findings[0].why_it_matters.lower() or "detail" in findings[0].why_it_matters.lower()
-    assert "normalization" not in findings[0].why_it_matters.lower()  # not PLR text
+    assert findings == []
 
 
 def test_large_centroid_shift_ranges_do_not_generate_default_prompt():
@@ -503,23 +519,29 @@ def test_large_centroid_shift_ranges_do_not_generate_default_prompt():
     assert findings == []
 
 
-def test_marginal_rolloff_above_new_threshold_does_not_generate_finding():
-    """Hygiene: 7200 Hz rolloff (would have fired at old 8 kHz) no longer triggers.
-    Makes the finding more selective for clearly limited HF material."""
+def test_other_absolute_rolloff_values_also_do_not_generate_findings():
     findings = generate_findings(
         _summary(spectral_shape={"rolloff_95_median_hz": 7200.0})
     ).findings
     assert findings == []
 
 
-def test_plr_why_it_matters_describes_consequence_not_definition():
-    """Hygiene: PLR why must focus on practical impact after normalization."""
-    findings = generate_findings(_summary(levels={"plr_db": 6.0})).findings
-    assert len(findings) == 1
-    why = findings[0].why_it_matters.lower()
-    assert "reduced margin" in why or "dynamic contrast" in why
-    assert "loudness normalization" in why or "normalization" in why
-    assert "lower plr means" not in why  # no definition phrasing
+def test_plr_explanation_states_normalization_invariance_without_claiming_damage():
+    findings = generate_findings(
+        _summary(levels={"plr_db": 6.0, "near_clipping_samples": 250})
+    ).findings
+    plr = next(
+        finding
+        for finding in findings
+        if finding.rule_id == "dynamics.low_plr_with_level_pressure"
+    )
+    why = plr.why_it_matters.lower()
+    boundary = plr.does_not_mean.lower()
+    assert "sits relatively close to integrated loudness" in why
+    assert "normalization" not in why
+    assert "loudness normalization" in boundary
+    assert "does not change plr" in boundary
+    assert "reduces dynamic contrast" not in (why + boundary)
 
 
 def test_band_energy_elevated_ranges_do_not_generate_default_prompt():
@@ -835,10 +857,21 @@ def test_findings_result_serializes_to_json_safe_dict():
     result = generate_findings(_summary(levels={"clipped_samples": 1}))
     data = result.to_dict()
 
+    assert data["schema_version"] == FINDINGS_SCHEMA_VERSION
+    assert data["ruleset_version"] == FINDING_RULESET_VERSION
     assert data["count"] == 1
-    assert data["findings"][0]["severity"] == "issue"
-    assert data["findings"][0]["time_ranges"] == []
-    assert data["findings"][0]["does_not_mean"]
+    finding = data["findings"][0]
+    assert finding["rule_id"] == "levels.sample_clipping"
+    assert finding["rule_version"] == 1
+    assert finding["severity"] == "issue"
+    assert finding["time_ranges"] == []
+    assert finding["does_not_mean"]
+    assert finding["evidence_items"][0]["metric"] == "levels.clipped_samples"
+    assert finding["associated_graphs"] == [
+        "peak_timeline",
+        "waveform_rms",
+        "sample_histogram",
+    ]
 
 
 def test_generated_findings_include_does_not_mean_field():

@@ -17,7 +17,7 @@ if not exist "%AUDIO_DIR%" mkdir "%AUDIO_DIR%"
 if not exist "%REPORTS_DIR%" mkdir "%REPORTS_DIR%"
 
 set /a COUNT=0
-for %%E in (wav mp3 flac aiff aif) do (
+for %%E in (wav wave flac ogg aiff aif mp3) do (
   for /f "delims=" %%F in ('dir /b /a-d "%AUDIO_DIR%\*.%%E" 2^>nul') do (
     set /a COUNT+=1
     set "FILE_!COUNT!=%AUDIO_DIR%\%%F"
@@ -53,7 +53,7 @@ echo Chosen file: %INPUT%
 echo Output folder: %OUT_DIR%
 echo.
 
-audioatlas analyze "%INPUT%" --out "%OUT_DIR%" --graphs-profile minimal
+audioatlas analyze "%INPUT%" --out "%OUT_DIR%" --graphs-profile compact
 set "STATUS=%ERRORLEVEL%"
 
 echo.
@@ -61,6 +61,7 @@ if "%STATUS%"=="0" (
   echo Report succeeded.
   echo Output folder: %OUT_DIR%
   echo Open report.html to view the report.
+  start "" "%OUT_DIR%\report.html"
 ) else (
   echo Report failed.
   echo Output folder: %OUT_DIR%

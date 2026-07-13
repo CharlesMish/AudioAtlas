@@ -6,11 +6,15 @@ import pytest
 from audioatlas.analysis.spectral import (
     compute_average_spectrum,
     compute_band_energy_timeline,
+    compute_band_power_timeline,
     compute_log_spectrogram,
     compute_spectral_shape,
 )
 from audioatlas.config import AnalysisConfig
-from audioatlas.visualize.band_energy import plot_band_energy_timeline
+from audioatlas.visualize.band_energy import (
+    plot_band_energy_timeline,
+    plot_band_power_timeline,
+)
 from audioatlas.visualize.spectral_shape import plot_spectral_shape
 from audioatlas.visualize.spectrogram import plot_log_spectrogram
 
@@ -50,7 +54,7 @@ def test_silent_spectral_displays_stay_at_floor(sr):
     assert spectrum.to_summary_dict()["strongest_band"] is None
 
 
-def test_band_energy_identifies_low_frequency_signal(sr):
+def test_mean_band_power_identifies_low_frequency_signal(sr):
     cfg = AnalysisConfig(welch_nperseg=4096)
     t = np.arange(sr, dtype=np.float64) / sr
     y = (0.5 * np.sin(2 * np.pi * 80 * t)).astype(np.float32)[:, None]
@@ -58,11 +62,18 @@ def test_band_energy_identifies_low_frequency_signal(sr):
     spectrum = compute_average_spectrum(y, sr, cfg)
     summary = spectrum.to_summary_dict()
 
-    assert summary["strongest_band"] == "bass"
-    assert summary["band_energies"]["bass"]["energy_db"] > summary["band_energies"]["mid"]["energy_db"]
+    assert summary["band_measurement"] == "relative_mean_power_per_fft_bin"
+    assert summary["highest_mean_power_band"] == "bass"
+    assert (
+        summary["band_mean_power"]["bass"]["mean_power_db"]
+        > summary["band_mean_power"]["mid"]["mean_power_db"]
+    )
+    # Temporary alpha aliases preserve existing consumers without redefining the metric.
+    assert summary["strongest_band"] == summary["highest_mean_power_band"]
+    assert summary["band_energies"] == summary["band_mean_power"]
 
 
-def test_band_energy_identifies_high_frequency_signal(sr):
+def test_mean_band_power_identifies_high_frequency_signal(sr):
     cfg = AnalysisConfig(welch_nperseg=4096)
     t = np.arange(sr, dtype=np.float64) / sr
     y = (0.5 * np.sin(2 * np.pi * 8000 * t)).astype(np.float32)[:, None]
@@ -70,8 +81,11 @@ def test_band_energy_identifies_high_frequency_signal(sr):
     spectrum = compute_average_spectrum(y, sr, cfg)
     summary = spectrum.to_summary_dict()
 
-    assert summary["strongest_band"] == "high"
-    assert summary["band_energies"]["high"]["energy_db"] > summary["band_energies"]["mid"]["energy_db"]
+    assert summary["highest_mean_power_band"] == "high"
+    assert (
+        summary["band_mean_power"]["high"]["mean_power_db"]
+        > summary["band_mean_power"]["mid"]["mean_power_db"]
+    )
 
 
 def test_log_spectrogram_plot_omits_zero_hz_on_log_axis(tmp_path, monkeypatch, sine_minus_6_dbfs, sr):
@@ -146,47 +160,65 @@ def test_plot_spectral_shape_writes_png(tmp_path, sine_minus_6_dbfs, sr):
     assert path.stat().st_size > 0
 
 
-def test_band_energy_timeline_low_frequency_signal_concentrates_lower_band(sr):
+def test_band_power_timeline_low_frequency_signal_concentrates_lower_band(sr):
     cfg = AnalysisConfig(n_fft=2048, hop_length=512)
     t = np.arange(sr, dtype=np.float64) / sr
     y = (0.5 * np.sin(2 * np.pi * 80 * t)).astype(np.float32)[:, None]
 
-    result = compute_band_energy_timeline(y, sr, cfg)
+    result = compute_band_power_timeline(y, sr, cfg)
     summary = result.to_summary_dict()
 
-    assert summary["strongest_band_by_median"] == "bass"
+    assert summary["measurement"] == "relative_mean_power_per_fft_bin"
+    assert summary["highest_mean_power_band_by_median"] == "bass"
     assert summary["bands"]["bass"]["median_db"] > summary["bands"]["mid"]["median_db"]
+    assert (
+        summary["strongest_band_by_median"]
+        == summary["highest_mean_power_band_by_median"]
+    )
 
 
-def test_band_energy_timeline_high_frequency_signal_concentrates_upper_band(sr):
+def test_band_power_timeline_high_frequency_signal_concentrates_upper_band(sr):
     cfg = AnalysisConfig(n_fft=2048, hop_length=512)
     t = np.arange(sr, dtype=np.float64) / sr
     y = (0.5 * np.sin(2 * np.pi * 8000 * t)).astype(np.float32)[:, None]
 
-    result = compute_band_energy_timeline(y, sr, cfg)
+    result = compute_band_power_timeline(y, sr, cfg)
     summary = result.to_summary_dict()
 
-    assert summary["strongest_band_by_median"] in {"high", "air"}
+    assert summary["highest_mean_power_band_by_median"] in {"high", "air"}
     assert summary["bands"]["high"]["median_db"] > summary["bands"]["mid"]["median_db"]
 
 
-def test_band_energy_timeline_silence_is_safe(sr):
+def test_band_power_timeline_silence_is_safe(sr):
     cfg = AnalysisConfig(n_fft=2048, hop_length=512)
     y = np.zeros((sr, 1), dtype=np.float32)
 
-    result = compute_band_energy_timeline(y, sr, cfg)
+    result = compute_band_power_timeline(y, sr, cfg)
     summary = result.to_summary_dict()
 
     assert summary["valid_frames"] == 0
-    assert summary["strongest_band_by_median"] is None
+    assert summary["highest_mean_power_band_by_median"] is None
     assert all(summary["bands"][band]["median_db"] is None for band in summary["band_names"])
     assert result.warnings
 
 
-def test_plot_band_energy_timeline_writes_png(tmp_path, sine_minus_6_dbfs, sr):
+def test_plot_band_power_timeline_writes_png(tmp_path, sine_minus_6_dbfs, sr):
     cfg = AnalysisConfig(n_fft=2048, hop_length=512)
-    result = compute_band_energy_timeline(sine_minus_6_dbfs, sr, cfg)
-    path = plot_band_energy_timeline(result, tmp_path / "band_energy.png")
+    result = compute_band_power_timeline(sine_minus_6_dbfs, sr, cfg)
+    path = plot_band_power_timeline(result, tmp_path / "band_power.png")
 
     assert path.exists()
     assert path.stat().st_size > 0
+
+
+def test_band_energy_compatibility_wrappers_match_canonical_api(
+    tmp_path, sine_minus_6_dbfs, sr
+):
+    cfg = AnalysisConfig(n_fft=2048, hop_length=512)
+    canonical = compute_band_power_timeline(sine_minus_6_dbfs, sr, cfg)
+    legacy = compute_band_energy_timeline(sine_minus_6_dbfs, sr, cfg)
+
+    assert legacy.to_summary_dict() == canonical.to_summary_dict()
+    assert legacy.band_energy_db_by_band.keys() == canonical.band_mean_power_db_by_band.keys()
+    out = plot_band_energy_timeline(legacy, tmp_path / "legacy_band_filename.png")
+    assert out.exists() and out.stat().st_size > 0

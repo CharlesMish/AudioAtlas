@@ -16,7 +16,7 @@ if not exist "%AUDIO_DIR%" mkdir "%AUDIO_DIR%"
 if not exist "%REPORTS_DIR%" mkdir "%REPORTS_DIR%"
 
 set /a COUNT=0
-for %%E in (wav mp3 flac aiff aif) do (
+for %%E in (wav wave flac ogg aiff aif mp3) do (
   for /f "delims=" %%F in ('dir /b /a-d "%AUDIO_DIR%\*.%%E" 2^>nul') do (
     set /a COUNT+=1
     set "FILE_!COUNT!=%AUDIO_DIR%\%%F"
@@ -79,6 +79,7 @@ if "%STATUS%"=="0" (
   echo Section report succeeded.
   echo Output folder: %OUT_DIR%
   echo Open report.html inside a section folder, or open section_index.md.
+  start "" "%OUT_DIR%"
 ) else (
   echo Section report failed.
   echo Output folder: %OUT_DIR%

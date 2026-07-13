@@ -7,11 +7,27 @@ from click.testing import CliRunner
 from audioatlas.cli import main
 from audioatlas.theme import (
     available_theme_names,
+    available_themes,
     default_theme_name,
     featured_theme_names,
     friend_favorite_theme_names,
     theme_css_variables,
 )
+
+
+def _relative_luminance(color: str) -> float:
+    values = [int(color[index : index + 2], 16) / 255 for index in (1, 3, 5)]
+    linear = [
+        value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+        for value in values
+    ]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+
+def _contrast_ratio(foreground: str, background: str) -> float:
+    first = _relative_luminance(foreground)
+    second = _relative_luminance(background)
+    return (max(first, second) + 0.05) / (min(first, second) + 0.05)
 
 
 def test_theme_library_exposes_all_theme_groups():
@@ -33,6 +49,27 @@ def test_theme_css_variables_are_builtin_and_safe():
     assert "http://" not in css
     assert "https://" not in css
     assert "<script" not in css
+
+
+def test_all_theme_text_pairs_meet_aa_normal_text_contrast():
+    pairs = [
+        ("text", "bg"),
+        ("text", "surface"),
+        ("text_muted", "bg"),
+        ("text_muted", "surface"),
+        ("text_soft", "bg"),
+        ("text_soft", "surface"),
+        ("accent", "bg"),
+        ("accent", "surface"),
+        ("issue_text", "issue_bg"),
+        ("warning_text", "warning_bg"),
+        ("info_text", "info_bg"),
+        ("trait_text", "trait_bg"),
+    ]
+    for theme in available_themes():
+        for foreground, background in pairs:
+            ratio = _contrast_ratio(theme.tokens[foreground], theme.tokens[background])
+            assert ratio >= 4.5, f"{theme.theme_id}: {foreground}/{background} = {ratio:.2f}"
 
 
 def test_cli_themes_lists_all_theme_ids():

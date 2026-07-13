@@ -1,17 +1,21 @@
 AudioAtlas demo audio provenance
 
-File: audioatlas2.wav
+The repository intentionally publishes these two finished recordings as musical
+demonstration inputs:
 
-This demo audio is the AudioAtlas trailer/demo track assembled by Charles Mish
-from multiple AI-assisted source generations created under a paid Suno
-subscription. The final track was edited, arranged, mixed, mastered, and
-post-processed for use as an AudioAtlas demo input.
+File: examples/demo_audio/guitar.wav
+Title: Solo Guitar
+SHA-256: 1ecba759cf090f06dc6446cba8ec392e2a10aeaa0dd2a6ad6e7b863a32ddc3b0
 
-The file is provided as a demo input for AudioAtlas report generation. It is
-not provided as general-purpose stock music or as a reusable music asset unless
-Charles Mish separately grants that permission.
+File: examples/demo_audio/guitar_koto_cello_drums.wav
+Title: Guitar, Koto, Cello & Drums
+SHA-256: 3735e5a3bf10d6038811643a65b2c6fde0a1cc704810fd73e843d568fc3c9d84
 
-Recommended use:
-- Run AudioAtlas on this file.
-- Compare minimal, standard, full, and section reports.
-- Do not redistribute it as standalone music without permission.
+Charles Mish created the composition, performance, recording, arrangement, and
+mix contributions described in examples/demo_audio/README.md. The arrangement
+also contains licensed third-party instrument/sample content. See
+AUDIO_RIGHTS.md for the audio-specific license and third-party exception.
+
+These recordings are intended for AudioAtlas demonstrations, not as
+deterministic fixtures, threshold-calibration evidence, a sample library, or
+standalone source material for extraction.

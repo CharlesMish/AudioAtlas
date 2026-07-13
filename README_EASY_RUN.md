@@ -1,73 +1,43 @@
-# AudioAtlas Easy Run
+# AudioAtlas easy-run launchers
 
-This is the simplest local batch workflow.
+These scripts make an **already installed** AudioAtlas easier to use. They are
+not a standalone installer or signed desktop application.
 
-## Install Requirements
+## Install and verify once
 
-Install Python 3.11 or newer, then install AudioAtlas from this folder:
-
-```bash
-python -m pip install -e .
-```
-
-If you want the test tools too:
+From this project folder:
 
 ```bash
-python -m pip install -e ".[dev]"
+python -m pip install .
+audioatlas --version
 ```
 
-## Add Audio Files
+## Folder launcher
 
-Create or use the `input_audio/` folder in this project folder. Put audio
-files there. Batch mode currently supports `.wav` and `.mp3`.
+Create `input_audio/` at the project root and place supported audio there.
 
-## Run
+- Windows: double-click `scripts/run_audioatlas_windows.bat`
+- macOS: double-click `scripts/run_audioatlas_mac.command`
 
-Windows:
+The scripts write `output_reports/catalog.html` and try to open it.
 
-Double-click:
+## Single-track starter kit
 
-```text
-scripts/run_audioatlas_windows.bat
-```
+Put one supported file in `starter_kit/PUT_AUDIO_HERE/`, then choose:
 
-macOS:
+- `RUN_MINIMAL` — legacy filename for the compact four-plot view;
+- `RUN_STANDARD` — normal report depth;
+- `RUN_FULL` — every registered plot;
+- `RUN_SECTIONS_PROMPTED` — manually enter source ranges.
 
-Double-click:
+All choices run the same complete analysis. They differ only in rendered plots.
+Every finished HTML report can switch between Focus and Studio presentation.
 
-```text
-scripts/run_audioatlas_mac.command
-```
+## Honest setup boundary
 
-If macOS blocks the script, right-click it, choose Open, and confirm.
-
-## Open The Catalog
-
-The scripts write reports to:
-
-```text
-output_reports/
-```
-
-They try to open:
-
-```text
-output_reports/catalog.html
-```
-
-If it does not open automatically, open that file in your browser.
-
-The catalog shows folder-level technical fingerprints, ranges, and
-medians. It does not score, rank, or judge tracks.
-
-## Themes
-
-The double-click scripts use the default theme. From a terminal, you can
-choose any built-in local theme:
-
-```bash
-audioatlas themes
-audioatlas batch input_audio --out output_reports --theme midnight_studio
-```
-
-Themes change presentation only. Reports remain static local HTML files.
+The launchers depend on the installed `audioatlas` command being available on
+`PATH`. Finder, Gatekeeper, Windows security prompts, spaces, and non-ASCII
+filenames can behave differently across machines. Test the launchers on the
+actual target computer before promising a one-click setup. Keep the terminal
+window open during the first run; scientific libraries may need extra startup
+time.
