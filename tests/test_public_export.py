@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import zipfile
 from pathlib import Path
 
@@ -77,3 +78,14 @@ def test_public_zip_preserves_mac_launcher_execute_permissions(tmp_path: Path):
         regular_info = archive.getinfo(f"{tree.name}/{regular_file}")
         assert regular_info.create_system == 3
         assert regular_info.external_attr >> 16 == 0o100644
+
+
+def test_exported_manifest_records_owner_commit_and_excludes_itself(tmp_path: Path):
+    module = _module()
+    tree = tmp_path / "AudioAtlas-public"
+
+    assert module.main(["--out", str(tree)]) == 0
+
+    manifest = json.loads((tree / "PUBLIC_SNAPSHOT.json").read_text(encoding="utf-8"))
+    assert manifest["source_commit"] == module._git_commit(ROOT)
+    assert "PUBLIC_SNAPSHOT.json" not in {record["path"] for record in manifest["files"]}

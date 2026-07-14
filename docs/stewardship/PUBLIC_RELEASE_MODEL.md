@@ -46,16 +46,25 @@ python scripts/export_public_tree.py --out ../AudioAtlas-public --zip ../AudioAt
 
 The exporter copies tracked files, excludes the stewardship-only paths declared
 in the script, and writes a deterministic `PUBLIC_SNAPSHOT.json` containing the
-source commit, package version, included-file count, and content hash.
+source commit, package version, included-file count, and content hash. It then
+runs the shared verifier before writing an optional ZIP. The manifest does not
+hash itself: it is written after the exported file list is hashed.
 
 Before publishing, verify:
 
 ```bash
 python scripts/export_public_tree.py --out /tmp/AudioAtlas-public
+python /tmp/AudioAtlas-public/scripts/verify_public_snapshot.py
 cd /tmp/AudioAtlas-public
 python -m pytest
 python -m build
 ```
+
+Public verification checks the complete included path set, per-file SHA-256
+values, count, aggregate tree hash, format version, package version, and the
+shape of `source_commit`. Only the owner-side exporter can also prove that
+`source_commit` equals the stewardship commit used for generation; a public
+checkout cannot infer that private source commit from its own Git history.
 
 ## Staging a public candidate
 

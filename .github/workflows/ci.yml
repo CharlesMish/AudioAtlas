@@ -71,11 +71,22 @@ jobs:
       - name: Lint
         run: ruff check .
 
+      - name: Verify public snapshot
+        run: python scripts/verify_public_snapshot.py
+
       - name: Build source and wheel distributions
         run: python -m build
 
       - name: Check distribution metadata
         run: python -m twine check dist/*
+
+      - name: Run tests distributed in the source archive
+        shell: bash
+        run: |
+          mkdir -p /tmp/audioatlas-sdist-smoke
+          tar -xzf dist/audioatlas-*.tar.gz -C /tmp/audioatlas-sdist-smoke
+          cd /tmp/audioatlas-sdist-smoke/audioatlas-*
+          python -m pytest
 
       - name: Install wheel into a clean environment
         shell: bash
@@ -88,7 +99,7 @@ jobs:
           /tmp/audioatlas-wheel-smoke/bin/audioatlas analyze \
             tests/fixtures/sine_1k_-6dbfs_2s.wav \
             --out /tmp/audioatlas-wheel-report \
-            --graphs-profile minimal \
+            --graphs-profile compact \
             --track-id ci-golden
           /tmp/audioatlas-wheel-smoke/bin/audioatlas diff \
             /tmp/audioatlas-wheel-report \
@@ -112,6 +123,7 @@ jobs:
           assert len(list(out.glob('*.png'))) == 4
           summary = json.loads((out / 'summary.json').read_text(encoding='utf-8'))
           assert summary['schema_version'] == '0.2.1'
+          assert summary['graphs']['profile'] == 'compact'
           assert summary['metadata']['path_kind'] == 'basename'
           assert len(summary['analysis_provenance']['compatible_analysis_sha256']) == 64
           assert len(summary['source_identity']['track_id_sha256']) == 64
@@ -152,7 +164,7 @@ jobs:
         run: |
           audioatlas --version
           audioatlas themes
-          audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav --out aa_platform_report --graphs-profile minimal --track-id platform-golden
+          audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav --out aa_platform_report --graphs-profile compact --track-id platform-golden
           audioatlas diff aa_platform_report aa_platform_report --out aa_platform_diff
 
       - name: Verify generated contract
@@ -175,7 +187,9 @@ jobs:
           summary = json.loads((out / 'summary.json').read_text(encoding='utf-8'))
           assert summary['metadata']['path_kind'] == 'basename'
           assert summary['schema_version'] == '0.2.1'
+          assert summary['graphs']['profile'] == 'compact'
           assert len(summary['analysis_provenance']['compatible_analysis_sha256']) == 64
+          assert len(summary['source_identity']['track_id_sha256']) == 64
           diff = Path('aa_platform_diff')
           assert (diff / 'revision_diff.json').is_file()
           payload = json.loads((diff / 'revision_diff.json').read_text(encoding='utf-8'))

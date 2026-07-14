@@ -5,6 +5,16 @@ tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
+- Hardened deterministic public-snapshot generation and CI verification,
+  including file-set, per-file hash, count, aggregate-tree hash, and metadata
+  checks.
+- Made the demo-free source distribution's included tests coherent while
+  retaining repository-only verification of the published demo WAVs.
+- Aligned schema documentation and CI smokes on the preferred `compact` graph
+  profile while retaining deliberate `minimal` compatibility coverage.
+- Removed the unused mypy development dependency after an initial check showed
+  that meaningful enforcement requires a separate typing project, and hardened
+  the root macOS launcher so failures remain visible and actionable.
 - Published two rights-cleared real musical demo recordings for full report and
   two-track catalog walkthroughs, with audio-specific CC BY 4.0 attribution and
   a visible exception for embedded Native Instruments/Kontakt and possible

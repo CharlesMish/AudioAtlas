@@ -47,9 +47,10 @@ Issues = "https://github.com/CharlesMish/AudioAtlas/issues"
 
 [project.optional-dependencies]
 dev = [
+  "build>=1.2",
+  "hatchling>=1.25",
   "pytest>=8.0",
   "ruff>=0.8",
-  "mypy>=1.10",
   "hypothesis>=6.100"
 ]
 
@@ -58,10 +59,6 @@ audioatlas = "audioatlas.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/audioatlas"]
-exclude = [
-  "/examples/demo_audio",
-  "/examples/demo_audio/**",
-]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -69,6 +66,7 @@ include = [
   "/tests",
   "/README.md",
   "/README_EASY_RUN.md",
+  "/CONTRIBUTING.md",
   "/LICENSE",
   "/AUDIO_RIGHTS.md",
   "/pyproject.toml",
@@ -99,6 +97,8 @@ exclude = [
   "/tests/test_calibration_fixtures.py",
   "/tests/test_calibration_replay.py",
   "/tests/test_calibration_review_preparation.py",
+  "/tests/test_demo_audio_source.py",
+  "/tests/test_distribution_artifacts.py",
   "/tests/test_public_export.py",
 ]
 

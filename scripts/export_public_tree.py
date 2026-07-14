@@ -9,16 +9,23 @@ implementation or editing source files in place.
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 import shutil
 import subprocess
 import sys
-import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
 
-FORMAT_VERSION = 1
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts.public_snapshot import (
+    MANIFEST_NAME,
+    build_manifest,
+    package_version,
+    source_files,
+    verify_manifest,
+    write_manifest,
+)
 
 STEWARDSHIP_ONLY_PREFIXES = (
     "PROJECT_CHARTER.md",
@@ -39,18 +46,6 @@ STEWARDSHIP_ONLY_PREFIXES = (
     "tests/test_public_export.py",
 )
 
-ALWAYS_EXCLUDED_PARTS = {
-    ".git",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".ruff_cache",
-    ".venv",
-    "__pycache__",
-    "build",
-    "dist",
-}
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True, help="Public tree output directory.")
@@ -69,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     if zip_path is not None:
         _prepare_file_destination(zip_path, force=args.force)
 
-    files = _source_files(root)
+    files = source_files(root)
     public_files = [path for path in files if not _is_stewardship_only(path)]
     for relative in public_files:
         source = root / relative
@@ -77,9 +72,19 @@ def main(argv: list[str] | None = None) -> int:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
 
-    manifest = _build_manifest(root, out, public_files)
-    manifest_path = out / "PUBLIC_SNAPSHOT.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    source_commit = _git_commit(root)
+    manifest = build_manifest(
+        out,
+        public_files,
+        package_version=package_version(root),
+        source_commit=source_commit,
+    )
+    manifest_path = out / MANIFEST_NAME
+    write_manifest(manifest_path, manifest)
+    errors = verify_manifest(out, expected_source_commit=source_commit)
+    if errors:
+        details = "\n".join(f"- {error}" for error in errors)
+        raise SystemExit(f"Generated public snapshot failed verification:\n{details}")
 
     if zip_path is not None:
         _write_zip(out, zip_path)
@@ -92,59 +97,9 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _source_files(root: Path) -> list[Path]:
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "-z"],
-            check=True,
-            capture_output=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return sorted(
-            path.relative_to(root)
-            for path in root.rglob("*")
-            if path.is_file() and not (set(path.relative_to(root).parts) & ALWAYS_EXCLUDED_PARTS)
-        )
-
-    paths = []
-    for raw in result.stdout.split(b"\0"):
-        if not raw:
-            continue
-        relative = Path(raw.decode("utf-8"))
-        if not (root / relative).is_file():
-            continue
-        if set(relative.parts) & ALWAYS_EXCLUDED_PARTS:
-            continue
-        paths.append(relative)
-    return sorted(paths)
-
-
 def _is_stewardship_only(path: Path) -> bool:
     posix = PurePosixPath(path.as_posix()).as_posix()
     return any(posix == prefix.rstrip("/") or posix.startswith(prefix) for prefix in STEWARDSHIP_ONLY_PREFIXES)
-
-
-def _build_manifest(root: Path, out: Path, public_files: list[Path]) -> dict[str, object]:
-    pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
-    records = []
-    digest = hashlib.sha256()
-    for relative in public_files:
-        data = (out / relative).read_bytes()
-        file_hash = hashlib.sha256(data).hexdigest()
-        path_text = relative.as_posix()
-        records.append({"path": path_text, "sha256": file_hash})
-        digest.update(path_text.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(file_hash.encode("ascii"))
-        digest.update(b"\n")
-    return {
-        "format_version": FORMAT_VERSION,
-        "package_version": pyproject["project"]["version"],
-        "source_commit": _git_commit(root),
-        "included_file_count": len(public_files),
-        "public_tree_sha256": digest.hexdigest(),
-        "files": records,
-    }
 
 
 def _git_commit(root: Path) -> str | None:

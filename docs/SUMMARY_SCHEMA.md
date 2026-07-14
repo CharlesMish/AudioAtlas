@@ -192,12 +192,15 @@ sized frequency bands and are not calibrated dBFS.
 
 | Field | Type | Meaning |
 |---|---|---|
-| `profile` | string | `minimal`, `standard`, or `full`. |
+| `profile` | string | Preferred values are `compact`, `standard`, and `full`. The legacy accepted alias `minimal` may also be serialized when the caller explicitly uses that spelling. |
 | `selected` | list[string] | Selected graph keys in registry order. |
 | `available` | list[string] | All registered graph keys. |
 | `selected_filenames` | list[string] | Published PNG filenames. |
 
 Graph selection does not reduce the analysis blocks serialized above.
+`compact` and `minimal` select the same four-graph set. The serialized
+`profile` preserves the user-facing spelling, so callers can distinguish an
+explicit legacy `minimal` request from the preferred `compact` spelling.
 
 ## `findings.json`
 
