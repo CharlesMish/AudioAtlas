@@ -43,6 +43,15 @@ def test_profiles_resolve_expected_graphs():
     assert len(_keys(GraphSelection(profile="full"))) == 17
 
 
+def test_minimal_alias_preserves_spelling_and_matches_compact_graphs():
+    compact = GraphSelection(profile="compact")
+    minimal = GraphSelection(profile="minimal")
+
+    assert compact.profile == "compact"
+    assert minimal.profile == "minimal"
+    assert _keys(minimal) == _keys(compact) == MINIMAL_KEYS
+
+
 def test_enable_disable_resolve_in_graph_order():
     selection = GraphSelection(
         profile="minimal",

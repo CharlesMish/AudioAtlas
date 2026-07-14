@@ -6,7 +6,7 @@ VENV_BIN := $(VENV)/bin
 DEMO_OUT ?= reports/_demo
 GOLDEN_WAV := tests/fixtures/sine_1k_-6dbfs_2s.wav
 
-.PHONY: help venv install test lint check demo golden clean
+.PHONY: help venv install test lint check demo golden snapshot clean
 
 help:  ## Show this help.
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) \
@@ -20,10 +20,10 @@ install:  ## Editable install with dev extras (assumes $(VENV) is active).
 	pip install -e ".[dev]"
 
 test:  ## Run the test suite.
-	pytest
+	$(PY) -m pytest
 
 lint:  ## Run ruff.
-	ruff check .
+	$(PY) -m ruff check .
 
 check: test lint  ## Run tests and lint (the pre-commit gate).
 
@@ -35,6 +35,9 @@ demo:  ## Analyze the golden fixture and write a report to $(DEMO_OUT).
 
 golden:  ## Regenerate the golden WAV + expected JSON.
 	$(PY) tests/fixtures/_build_golden.py
+
+snapshot:  ## Verify the generated public-tree integrity manifest.
+	$(PY) scripts/verify_public_snapshot.py
 
 clean:  ## Remove caches, builds, demo outputs.
 	rm -rf .pytest_cache .ruff_cache .mypy_cache
