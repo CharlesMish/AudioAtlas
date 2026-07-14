@@ -55,8 +55,9 @@ Verify a public checkout or extracted public source artifact with:
 uv run python scripts/verify_public_snapshot.py
 ```
 
-Regeneration is owner-side because `source_commit` identifies the stewardship
-commit that produced the public view. From a committed stewardship checkout:
+Normal regeneration is owner-side. The exporter sets `source_commit` to the
+committed stewardship tree that produced the public view and verifies that
+value before writing an optional ZIP. From a committed stewardship checkout:
 
 ```bash
 uv run python scripts/export_public_tree.py \
@@ -64,6 +65,20 @@ uv run python scripts/export_public_tree.py \
 uv run python /tmp/AudioAtlas-public/scripts/verify_public_snapshot.py \
   /tmp/AudioAtlas-public
 ```
+
+If an already-published public tree must be repaired while stewardship contains
+unrelated unreleased changes, commit every covered public file first and then
+run:
+
+```bash
+uv run python scripts/verify_public_snapshot.py --write
+```
+
+That guarded path requires an existing manifest and a clean public Git root. It
+sets `source_commit` to the public content commit, then uses the same canonical
+hashing helper and verifier as the owner exporter. An extracted artifact can
+verify the commit ID's shape but cannot prove its equality to a Git commit that
+is not present in the archive.
 
 Do not hand-edit `PUBLIC_SNAPSHOT.json`. Generate it only after every covered
 file has reached its final content.

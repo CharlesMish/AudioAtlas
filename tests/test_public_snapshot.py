@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 from scripts.public_snapshot import (
@@ -84,3 +86,48 @@ def test_public_snapshot_detects_deterministic_metadata_drift(tmp_path: Path) ->
     assert any(error.startswith("source_commit:") for error in errors)
     assert any(error.startswith("included_file_count:") for error in errors)
     assert any(error.startswith("public_tree_sha256:") for error in errors)
+
+
+def test_public_snapshot_write_requires_clean_committed_public_tree(tmp_path: Path) -> None:
+    root = _tree(tmp_path)
+    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(["git", "add", "."], cwd=root, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=Snapshot Test",
+            "-c",
+            "user.email=snapshot@example.invalid",
+            "commit",
+            "-m",
+            "fixture",
+        ],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    script = Path(__file__).resolve().parents[1] / "scripts" / "verify_public_snapshot.py"
+
+    success = subprocess.run(
+        [sys.executable, str(script), str(root), "--write"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert success.returncode == 0, success.stdout + success.stderr
+    manifest = json.loads((root / MANIFEST_NAME).read_text(encoding="utf-8"))
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True
+    ).stdout.strip()
+    assert manifest["source_commit"] == head
+
+    (root / "README.md").write_text("dirty\n", encoding="utf-8")
+    refused = subprocess.run(
+        [sys.executable, str(script), str(root), "--write"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert refused.returncode != 0
+    assert "commit covered content first" in refused.stderr
