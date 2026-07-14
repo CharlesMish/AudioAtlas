@@ -18,7 +18,7 @@
     },
     {
       "path": "CONTRIBUTING.md",
-      "sha256": "88900bb700070de4c4e14186d6c1c5f9ced6b4966804daf51cd37ee6e42a51f0"
+      "sha256": "74ff4a6b0215fbff17c751220414d4d7dbe18f27c991d1cb328ea27da1768e22"
     },
     {
       "path": "DEMO_AUDIO_PROVENANCE.txt",
@@ -118,7 +118,7 @@
     },
     {
       "path": "scripts/verify_public_snapshot.py",
-      "sha256": "d6f02f5f3a7ba9c1fb438d95e2b801b10d57fa3591a8acfd81edd89863698df2"
+      "sha256": "f8a40f5c5c52f78587e8070411c8165ea894ca7aadf1e65b95ce977df7a4db67"
     },
     {
       "path": "src/audioatlas/__init__.py",
@@ -462,7 +462,7 @@
     },
     {
       "path": "tests/test_public_snapshot.py",
-      "sha256": "88650abdad8321851c1d310a9009065bd8b4278fd39b1c5bd12b1dd5706f554f"
+      "sha256": "9bbbe7989dc1f75489d36786875f214bc40b01443229bdce5253f967efe3c57a"
     },
     {
       "path": "tests/test_release.py",
@@ -504,6 +504,6 @@
   "format_version": 1,
   "included_file_count": 125,
   "package_version": "0.2.0a6",
-  "public_tree_sha256": "530bf4a357a34eabcaad0ceb099854a97d025780760d8a9872388a9622c4219d",
-  "source_commit": "e1a75aef9c608b53badd9492dbd3a5c3c7f34d7f"
+  "public_tree_sha256": "2adce17549d070dff94df5363aed7bca9c2685cf4f4f13eab84e014b7550b056",
+  "source_commit": "72cda3cf4062b4c4bbd7e2f7ec1b97bdad6ad0d9"
 }
