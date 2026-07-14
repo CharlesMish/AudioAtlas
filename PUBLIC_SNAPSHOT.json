@@ -6,7 +6,7 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "97c0d83063e4c5350b573e48f302eda47a9f2817c4a547741910798a0c9591d8"
+      "sha256": "ffd763e905d05d52ec4876ae56a84e3f604189a59fadcc5afcdc30063a668f59"
     },
     {
       "path": ".gitignore",
@@ -15,6 +15,10 @@
     {
       "path": "AUDIO_RIGHTS.md",
       "sha256": "d9b6445e2d83e9ebf9d7c8cc92964135c319c23fe06e4cd238484d1cc66b99eb"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "sha256": "88900bb700070de4c4e14186d6c1c5f9ced6b4966804daf51cd37ee6e42a51f0"
     },
     {
       "path": "DEMO_AUDIO_PROVENANCE.txt",
@@ -26,11 +30,11 @@
     },
     {
       "path": "Makefile",
-      "sha256": "e60ce0378e139e05cc994c7f290ff49d0019879957b7264c454d77ccb4fda81b"
+      "sha256": "8a03f81fc9b100d12ad7c815d922553d7eceb082b89cc170abd4ab4f8ee5b1a1"
     },
     {
       "path": "README.md",
-      "sha256": "d2953742aaa78a7a6a0c436fac041456a850d6624e77147eef0cca609821a477"
+      "sha256": "b78d8e349ca4b61f67f632457252362680a51b9d8619e8557f2fd06be21b1a2f"
     },
     {
       "path": "README_EASY_RUN.md",
@@ -46,7 +50,7 @@
     },
     {
       "path": "docs/CHANGELOG.md",
-      "sha256": "89f8028af4bc42b09d976a25f0f82bac53492948c111adf85de8daac2f3e840f"
+      "sha256": "f052f9c22a6348b9194f9bfdb0b129943b77eb3c787d6f40f979138c39e99501"
     },
     {
       "path": "docs/COMPATIBILITY.md",
@@ -58,27 +62,23 @@
     },
     {
       "path": "docs/SUMMARY_SCHEMA.md",
-      "sha256": "ca133783f94bb4a792daf45c74dcc35690229d7b4e42613ffec7ea799c0cd360"
+      "sha256": "7492222687e4df75995a62e948898f0d9e07a71920d5ad11bb7a22744b20e46c"
     },
     {
       "path": "docs/USER_GUIDE.md",
       "sha256": "7a2d73f2e834989e14a2fbf524ea362dbb4b69f82e1c7b1702866038d501ccc3"
     },
     {
-      "path": "docs/assets/readme/graph_examples.png",
-      "sha256": "5ff538c38d95ca0866bcad5f64f960a90c16b65105a088bff2f08e0255ae196c"
+      "path": "docs/assets/readme/README.md",
+      "sha256": "f8eb0809728837b6201355d62cac06bf0a06f8b8fbd17d3f4a73aaee6511910f"
     },
     {
-      "path": "docs/assets/readme/report_graph_grid.png",
-      "sha256": "f9c5f3de73d85ccd7a600c6544261b01842032642cf43af328ec84a7f422a7f0"
+      "path": "docs/assets/readme/midnight_report_plots.png",
+      "sha256": "97d46b041bbadef5e34e9683cd230f99148fa97a0e5561acbc72776d5001f46d"
     },
     {
       "path": "docs/assets/readme/report_overview.png",
-      "sha256": "ca830dde204d93e52281fcadb64cbf635cac7fbaad2f39a23c5a0c0d00cc4c51"
-    },
-    {
-      "path": "docs/assets/readme/sections_comparison.png",
-      "sha256": "d1a37b6e8aacabb1d69c9bf195df1dc2fdc7a3035ac0320f14e28beb7b06b4d6"
+      "sha256": "dd26503981b61d53664da0131aeba1cb5e2925d8f7ffd103de6849ce5954b93e"
     },
     {
       "path": "examples/README.md",
@@ -98,15 +98,27 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "18d1b4a31282418b4606b26ddb05f3c6b7f4472bd678ab95a69eb066fd7440e7"
+      "sha256": "c0c6b2f59e337ccfcff271c485ccb603de2c4754a767bdd9f306a3220328c825"
+    },
+    {
+      "path": "scripts/__init__.py",
+      "sha256": "be55f9cb31086a9f473c9471cd4c7c509f4cf6443c8abc3c016c7ed84b49a797"
+    },
+    {
+      "path": "scripts/public_snapshot.py",
+      "sha256": "418d881e1b1a379f315e44b03c789979e7184892bc454c610c0fc8d083e0d749"
     },
     {
       "path": "scripts/run_audioatlas_mac.command",
-      "sha256": "6305236953e0a82b6ce6da89a231a000f3dba6a0bdc294d92da2d3c92fd10923"
+      "sha256": "2b811caeab11251bc75594882052afb096859ffebe26933b773f6a2d8edb4732"
     },
     {
       "path": "scripts/run_audioatlas_windows.bat",
       "sha256": "2e438b5b94d4afb202558f8872d4d59bf74a108aa17fc8d5c98e7a6aaaeee220"
+    },
+    {
+      "path": "scripts/verify_public_snapshot.py",
+      "sha256": "d6f02f5f3a7ba9c1fb438d95e2b801b10d57fa3591a8acfd81edd89863698df2"
     },
     {
       "path": "src/audioatlas/__init__.py",
@@ -378,7 +390,15 @@
     },
     {
       "path": "tests/test_demo_audio.py",
-      "sha256": "7000f784106c3961b0588dd815322f78083be3f8da2489aeeae9a02f4cc69259"
+      "sha256": "3eeb39b9e69a8a1195b774026cc0ef3eaab68305132a1ee8d0f32c00620a0fc0"
+    },
+    {
+      "path": "tests/test_demo_audio_source.py",
+      "sha256": "7291aa62a8006d9c582aa4be03e6ee8c854de271ff2ed3f0032af738b86f35c3"
+    },
+    {
+      "path": "tests/test_distribution_artifacts.py",
+      "sha256": "af5b7470c8e08af597d284277db1dcedb671880c40ab445054d2c7d253d60f89"
     },
     {
       "path": "tests/test_dynamics.py",
@@ -398,7 +418,7 @@
     },
     {
       "path": "tests/test_graph_selection.py",
-      "sha256": "a7225ad0c7dfbd9e755b2de2b4e0eadadaa3b191b6a8b6d6fc0dff31630f4f2f"
+      "sha256": "368c5752cd38fa02ab106df54791656a6a9d3e94a0ce5113a0ca83ad0b278213"
     },
     {
       "path": "tests/test_invariants.py",
@@ -407,6 +427,10 @@
     {
       "path": "tests/test_io.py",
       "sha256": "7dc4cdf54173a090b7a59ba30c3b18ee0b70d16efa23a9c8f8bc5fe293204cd2"
+    },
+    {
+      "path": "tests/test_launchers.py",
+      "sha256": "d9a0fe7b6620df6b8277854539648b87e2dfbf5447b50051457b76a2daf82ffd"
     },
     {
       "path": "tests/test_levels.py",
@@ -426,7 +450,7 @@
     },
     {
       "path": "tests/test_pipeline.py",
-      "sha256": "2b11c01315678963a9f935081264ba82184854b1d45c17d4195be2db5f98654a"
+      "sha256": "12b86dcd70257121c06441b9ef68bb6d7b17da862afdef7f35167b9f49a77fd9"
     },
     {
       "path": "tests/test_presentation.py",
@@ -435,6 +459,10 @@
     {
       "path": "tests/test_provenance.py",
       "sha256": "b7f2d9a143b232aee0daf2af11d1acbf6ebe85134a46d8c7a10ce59a02a380d7"
+    },
+    {
+      "path": "tests/test_public_snapshot.py",
+      "sha256": "88650abdad8321851c1d310a9009065bd8b4278fd39b1c5bd12b1dd5706f554f"
     },
     {
       "path": "tests/test_release.py",
@@ -470,12 +498,12 @@
     },
     {
       "path": "uv.lock",
-      "sha256": "7aef4f57ac22484cc3874ff639a1b729d152e4b104cb3460950e08a29e49307e"
+      "sha256": "41d44a6089ab1ad6afbdfc8f0f7c4b4f5d94889ffd1affb12901ad8ba1ac6f07"
     }
   ],
   "format_version": 1,
-  "included_file_count": 118,
+  "included_file_count": 125,
   "package_version": "0.2.0a6",
-  "public_tree_sha256": "8da106fda805e783008f9f2bd497c3adf43a1ffd0ef621211ba411f22d64fead",
-  "source_commit": "ddb41c28dedcf3d076ad0e5ccd4292b5b1af3a4e"
+  "public_tree_sha256": "530bf4a357a34eabcaad0ceb099854a97d025780760d8a9872388a9622c4219d",
+  "source_commit": "e1a75aef9c608b53badd9492dbd3a5c3c7f34d7f"
 }
