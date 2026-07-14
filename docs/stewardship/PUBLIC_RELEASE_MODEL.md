@@ -66,6 +66,14 @@ shape of `source_commit`. Only the owner-side exporter can also prove that
 `source_commit` equals the stewardship commit used for generation; a public
 checkout cannot infer that private source commit from its own Git history.
 
+If stewardship contains unrelated unreleased changes that must not enter a
+bounded public repair, first commit all covered files on the public branch and
+then run `python scripts/verify_public_snapshot.py --write`. This guarded path
+requires an existing manifest and a clean public Git root, records the public
+content commit as `source_commit`, and uses the same hashing implementation as
+the exporter. It is an exception for branch-parity repairs, not the normal
+release path.
+
 ## Staging a public candidate
 
 Fetch GitHub and create the candidate from the exact public base that was
