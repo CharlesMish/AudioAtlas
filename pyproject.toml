@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "audioatlas"
-version = "0.2.0a6"
+version = "0.2.0a7"
 description = "A local single-track audio analysis framework for factual music maps."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -44,6 +44,7 @@ dependencies = [
 Homepage = "https://github.com/CharlesMish/AudioAtlas"
 Repository = "https://github.com/CharlesMish/AudioAtlas"
 Issues = "https://github.com/CharlesMish/AudioAtlas/issues"
+"Live report" = "https://charlesmish.github.io/AudioAtlas/"
 
 [project.optional-dependencies]
 dev = [
@@ -100,6 +101,7 @@ exclude = [
   "/tests/test_demo_audio_source.py",
   "/tests/test_distribution_artifacts.py",
   "/tests/test_public_export.py",
+  "/tests/test_release_workflows.py",
 ]
 
 [tool.pytest.ini_options]

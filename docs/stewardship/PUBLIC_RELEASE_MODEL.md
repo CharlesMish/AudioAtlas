@@ -87,13 +87,13 @@ reviewed. Abort if `origin/main` changed after review:
 
 ```bash
 git fetch origin
-git worktree add -b public/v0.2.0a6-linear \
+git worktree add -b public/v0.2.0a7-linear \
   /tmp/AudioAtlas-public-candidate origin/main
 rsync -a --delete --exclude=.git \
   /tmp/AudioAtlas-public/ /tmp/AudioAtlas-public-candidate/
 git -C /tmp/AudioAtlas-public-candidate add -A
 git -C /tmp/AudioAtlas-public-candidate commit -m \
-  "Publish AudioAtlas v0.2.0a6"
+  "Publish AudioAtlas v0.2.0a7"
 ```
 
 Before pushing, confirm the candidate worktree is byte-identical to the export
@@ -109,3 +109,17 @@ linear-history pull request lands.
 Native launcher and private musical-calibration evidence remain owner-side
 records. Public documentation should report only the conclusions that are safe
 and useful to users.
+
+## Publishing tagged artifacts and the live demo
+
+After the public candidate lands on `main`, configure the repository's Pages
+source for GitHub Actions and the protected `github-pages` environment. The
+`Live demo` workflow regenerates the standard guitar report from public source,
+checks its path/network/audio boundary, and deploys the static bundle.
+
+Configure `testpypi` and `pypi` environments as PyPI Trusted Publishers for the
+matching workflow filenames before dispatching or tagging. Run the TestPyPI
+preflight first. A `v<package-version>` tag then reruns tests, lint, snapshot
+verification, builds, metadata checks, creates the GitHub prerelease artifacts,
+and publishes only the wheel and source distribution to PyPI. Never create the
+tag until the public `main` commit and package version are the intended release.

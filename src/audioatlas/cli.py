@@ -552,6 +552,130 @@ def diff_reports(
     click.echo(f"HTML:     {paths['html']}")
 
 
+@main.group()
+def project() -> None:
+    """Keep same-track revisions in one private, static song workspace."""
+
+
+@project.command(name="init")
+@click.argument("directory", type=click.Path(file_okay=False, path_type=Path))
+@click.option("--name", required=True, help="Human-readable song or project name.")
+@click.option(
+    "--sections",
+    "sections_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Optional YAML file with a reusable top-level sections list.",
+)
+@click.option(
+    "--graphs-profile",
+    type=click.Choice(VALID_PROFILES),
+    default="standard",
+    show_default=True,
+    help="Plot depth used for every revision and manual section.",
+)
+@click.option("--theme", default=None, help="Built-in report theme ID.")
+@click.option(
+    "--presentation",
+    type=click.Choice(VALID_PRESENTATION_MODES),
+    default=None,
+    help="Opening view used for project, revision, diff, and section reports.",
+)
+def project_init(
+    directory: Path,
+    name: str,
+    sections_path: Path | None,
+    graphs_profile: str,
+    theme: str | None,
+    presentation: str | None,
+) -> None:
+    """Create a new local song workspace."""
+
+    from audioatlas.project import init_project
+
+    sections = _parse_sections_from_yaml(sections_path) if sections_path is not None else []
+    selected_theme = _validate_theme_for_cli(theme)
+    try:
+        init_project(
+            directory,
+            name=name,
+            sections=sections,
+            graphs_profile=graphs_profile,
+            theme=selected_theme,
+            presentation=presentation,
+        )
+    except (AudioAtlasError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"AudioAtlas song project created: {directory}")
+    click.echo(f"Add a revision: audioatlas project add {directory} song.wav --label 'Mix 1'")
+    click.echo(f"Project index: {directory / 'project.html'}")
+
+
+@project.command(name="add")
+@click.argument(
+    "directory",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.argument(
+    "audio_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--label", required=True, help="Human-readable revision label, such as Mix 2.")
+@click.option(
+    "--allow-incomparable",
+    is_flag=True,
+    help="Allow a prominently caveated adjacent diff when analysis provenance changed.",
+)
+def project_add(
+    directory: Path,
+    audio_file: Path,
+    label: str,
+    allow_incomparable: bool,
+) -> None:
+    """Analyze and append one user-asserted revision of the project song."""
+
+    from audioatlas.project import add_project_revision
+
+    click.echo(f"Preparing project revision for: {audio_file.name}")
+    try:
+        revision = add_project_revision(
+            directory,
+            audio_file,
+            label=label,
+            allow_incomparable=allow_incomparable,
+        )
+    except (AudioAtlasError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"Revision added: {revision['label']} ({revision['id']})")
+    click.echo(f"Report: {directory / revision['report'] / 'report.html'}")
+    if revision.get("diff_from_previous"):
+        click.echo(
+            "Prior delta: "
+            f"{directory / revision['diff_from_previous'] / 'revision_diff.html'}"
+        )
+    click.echo(f"Project index: {directory / 'project.html'}")
+
+
+@project.command(name="build")
+@click.argument(
+    "directory",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+def project_build(directory: Path) -> None:
+    """Validate completed artifacts and rebuild the static project index."""
+
+    from audioatlas.project import build_project
+
+    try:
+        paths = build_project(directory)
+    except (AudioAtlasError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"AudioAtlas song project rebuilt: {directory}")
+    click.echo(f"JSON:     {paths['json']}")
+    click.echo(f"Markdown: {paths['markdown']}")
+    click.echo(f"HTML:     {paths['html']}")
+
+
 @main.command()
 def themes() -> None:
     """List built-in static report themes."""

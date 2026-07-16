@@ -9,7 +9,7 @@ resolution-markers = [
 
 [[package]]
 name = "audioatlas"
-version = "0.2.0a6"
+version = "0.2.0a7"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

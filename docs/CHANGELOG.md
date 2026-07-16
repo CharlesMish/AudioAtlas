@@ -5,6 +5,23 @@ tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
+## `0.2.0a7` — 2026-07-15
+
+### Easier adoption and local song workspaces
+
+- Added protected GitHub Pages, GitHub prerelease, TestPyPI, and PyPI workflows
+  so users can inspect a live static report and install without cloning source.
+- Added `audioatlas project init`, `project add`, and `project build` for keeping
+  same-track revisions, reusable manual sections, guarded adjacent diffs, and
+  portable static indexes in one private local workspace.
+- Added a dedicated `0.1.0` song-project schema, hashed generated project
+  identity, owner-side YAML state, atomic revision addition, and a guard against
+  publishing ordinary reports into a project root.
+- Kept private source paths only in the explicit owner-side project YAML;
+  generated project JSON, Markdown, and HTML retain portable filenames.
+
+### Reliability and release integrity
+
 - Added early finite/domain validation for CLI and Python analysis inputs so
   invalid ranges and configuration values fail cleanly before analysis.
 - Made YAML keys explicit, prevented colliding manual-section output slugs,

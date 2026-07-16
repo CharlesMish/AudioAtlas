@@ -5,7 +5,7 @@ This file is intentionally short. Historical task lists are archived under
 
 ## Current phase
 
-`0.2.0a6` accessible interactive reports. Read, in order:
+`0.2.0a7` adoption and song-workspace release. Read, in order:
 
 1. `PROJECT_CHARTER.md`
 2. `docs/HOPEFUL_SKEPTIC_PROJECT_EDITION.md`
@@ -33,8 +33,8 @@ This file is intentionally short. Historical task lists are archived under
   engine.
 - Verify the generated public tree matches the stewardship implementation and
   contains no stewardship-only review/calibration records.
-- Add a local notes-export interaction only after the static artifact contract
-  is preserved and tested.
+- Rehearse the published PyPI path and generated live demo from clean user
+  environments; do not describe the launcher kit as a standalone app.
 
 ## Change discipline
 

@@ -1,0 +1,107 @@
+name: Release
+
+"on":
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  MPLBACKEND: Agg
+  PYTHONUTF8: "1"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install release tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libsndfile1 zip
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]" build twine
+
+      - name: Verify tag and release gates
+        shell: bash
+        run: |
+          version="$(python -c 'import audioatlas; print(audioatlas.__version__)')"
+          test "${GITHUB_REF_NAME}" = "v${version}"
+          python -m pytest
+          ruff check .
+          python scripts/verify_public_snapshot.py
+          python -m build
+          python -m twine check dist/*
+
+      - name: Build release extras
+        shell: bash
+        run: |
+          version="$(python -c 'import audioatlas; print(audioatlas.__version__)')"
+          audioatlas analyze examples/demo_audio/guitar.wav \
+            --out "AudioAtlas-${version}-sample-report" \
+            --graphs-profile standard
+          zip -qr "dist/AudioAtlas-${version}-sample-report.zip" \
+            "AudioAtlas-${version}-sample-report"
+          git archive --format=zip \
+            --prefix="AudioAtlas-${version}-public-source/" \
+            --output="dist/AudioAtlas-${version}-public-source.zip" HEAD
+          cd dist
+          shasum -a 256 * > "AudioAtlas-${version}-SHA256SUMS.txt"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: audioatlas-release
+          path: dist/*
+          if-no-files-found: error
+
+  github-release:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: audioatlas-release
+          path: dist
+      - name: Create GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "AudioAtlas ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            --prerelease \
+            --verify-tag
+
+  pypi:
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: audioatlas-release
+          path: all-dist
+      - name: Select Python distributions
+        run: |
+          mkdir dist
+          cp all-dist/audioatlas-*.whl all-dist/audioatlas-*.tar.gz dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
