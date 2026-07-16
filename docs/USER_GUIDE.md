@@ -210,6 +210,12 @@ analysis leaves the configuration and all prior reports unchanged. The project
 uses a random local identity token; only its SHA-256 digest enters generated
 reports and indexes.
 
+Mutating project commands are serialized across processes. If another
+`project init`, `project add`, or `project build` operation is active for the
+same workspace, AudioAtlas fails immediately with a friendly retry message
+instead of risking a lost revision. Rebuilds also verify project identity,
+ownership manifests, share-safe metadata, and non-symlinked artifact paths.
+
 Reuse one manual section map across every revision:
 
 ```bash
@@ -220,7 +226,8 @@ audioatlas project init projects/my-song \
 
 The human-readable `audioatlas-project.yaml` is owner-side state and records
 local source paths. Do not include it in a share bundle unless those paths are
-intended for the recipient. `project.json`, `project.md`, `project.html`, and
+intended for the recipient. AudioAtlas writes this file with owner-only
+permissions on POSIX systems. `project.json`, `project.md`, `project.html`, and
 the nested report/diff artifacts contain portable source filenames by default.
 
 An adjacent diff is refused when analysis provenance changed. Use

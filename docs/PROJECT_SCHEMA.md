@@ -21,6 +21,8 @@ updates it atomically. It contains:
 
 The configuration can contain absolute source paths and the raw identity token.
 It is not a share-safe artifact and is never linked from the generated HTML.
+AudioAtlas writes it with owner-only permissions on POSIX systems and serializes
+all mutating project commands with a cross-process lock.
 
 ## Portable generated index
 
@@ -36,6 +38,10 @@ It is not a share-safe artifact and is never linked from the generated HTML.
 `project.md` and `project.html` present the same revision order and links. They
 do not contain source paths, audio, scores, preferred revisions, or inferred
 song identity.
+
+`project build` accepts only canonical generated paths, complete recognized
+ownership manifests, non-symlinked artifacts, basename-only report metadata,
+and revision identity digests matching the private project identity.
 
 ## Compatibility
 

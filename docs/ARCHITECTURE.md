@@ -117,6 +117,11 @@ and crashed with Numba 0.66.0 / llvmlite 0.48.0 but completed with Numba 0.65.1
 / llvmlite 0.47.0. Dependency versions are recorded in provenance; widening
 this band requires a clean installed-wheel analysis smoke.
 
+Pillow and msgpack are reached through Matplotlib and librosa respectively;
+their direct lower bounds are security floors for the installed runtime.
+`filelock` supplies the cross-platform operating-system lock used to serialize
+song-project mutations without maintaining separate platform implementations.
+
 ## Provenance and comparison boundary
 
 Each one-track summary records a canonical analysis-config hash, measurement

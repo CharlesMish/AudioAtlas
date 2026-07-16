@@ -10,13 +10,15 @@ import re
 import shutil
 import tempfile
 import uuid
-from contextlib import suppress
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 from typing import Any
 
 import yaml
+from filelock import FileLock, Timeout
 
 from audioatlas import __version__
 from audioatlas.errors import ProjectError
@@ -26,6 +28,7 @@ from audioatlas.output import (
     PROJECT_CONFIG_FILENAME,
     PROJECT_FILENAMES,
     publish_staged_output,
+    read_output_manifest,
     staged_output_directory,
     write_output_manifest,
 )
@@ -36,7 +39,7 @@ from audioatlas.presentation import (
     skip_link_html,
     validate_presentation_mode,
 )
-from audioatlas.release import PROJECT_SCHEMA_VERSION
+from audioatlas.release import PROJECT_SCHEMA_VERSION, SUMMARY_SCHEMA_VERSION
 from audioatlas.theme import theme_css_variables, validate_theme_name
 
 PROJECT_JSON_FILENAME = "project.json"
@@ -68,6 +71,29 @@ def init_project(
     """Create a transparent local song-project configuration and static index."""
 
     root = Path(directory).expanduser()
+    try:
+        with _project_mutation_lock(root):
+            return _init_project_locked(
+                root,
+                name=name,
+                sections=sections,
+                graphs_profile=graphs_profile,
+                theme=theme,
+                presentation=presentation,
+            )
+    except (OSError, RuntimeError) as exc:
+        raise _project_storage_error(root) from exc
+
+
+def _init_project_locked(
+    root: Path,
+    *,
+    name: str,
+    sections: list[tuple[str, float, float | None]] | None,
+    graphs_profile: str,
+    theme: str | None,
+    presentation: str | None,
+) -> dict[str, Any]:
     _validate_project_name(name)
     _validate_project_destination(root)
     normalized_sections = _normalize_sections(sections or [])
@@ -101,6 +127,25 @@ def add_project_revision(
     """Analyze and atomically append one revision to an existing song project."""
 
     root = Path(directory).expanduser()
+    try:
+        with _project_mutation_lock(root):
+            return _add_project_revision_locked(
+                root,
+                audio_file,
+                label=label,
+                allow_incomparable=allow_incomparable,
+            )
+    except (OSError, RuntimeError) as exc:
+        raise _project_storage_error(root) from exc
+
+
+def _add_project_revision_locked(
+    root: Path,
+    audio_file: str | Path,
+    *,
+    label: str,
+    allow_incomparable: bool,
+) -> dict[str, Any]:
     config = load_project(root)
     _validate_revision_label(label)
     source = Path(audio_file).expanduser()
@@ -225,14 +270,18 @@ def build_project(directory: str | Path) -> dict[str, Path]:
     """Validate existing revision artifacts and rebuild the static project index."""
 
     root = Path(directory).expanduser()
-    config = load_project(root)
-    _validate_revision_artifacts(root, config)
-    _publish_project_root(root, config)
-    return {
-        "json": root / PROJECT_JSON_FILENAME,
-        "markdown": root / PROJECT_MARKDOWN_FILENAME,
-        "html": root / PROJECT_HTML_FILENAME,
-    }
+    try:
+        with _project_mutation_lock(root):
+            config = load_project(root)
+            _validate_revision_artifacts(root, config)
+            _publish_project_root(root, config)
+            return {
+                "json": root / PROJECT_JSON_FILENAME,
+                "markdown": root / PROJECT_MARKDOWN_FILENAME,
+                "html": root / PROJECT_HTML_FILENAME,
+            }
+    except (OSError, RuntimeError) as exc:
+        raise _project_storage_error(root) from exc
 
 
 def load_project(directory: str | Path) -> dict[str, Any]:
@@ -271,16 +320,19 @@ def load_project(directory: str | Path) -> dict[str, Any]:
     revisions = loaded.get("revisions")
     if not isinstance(revisions, list):
         raise ProjectError("Project revisions must be a list.")
-    _validate_revisions(revisions)
+    _validate_revisions(revisions, expected_sections=loaded["sections"])
     return loaded
 
 
 def _publish_project_root(root: Path, config: dict[str, Any]) -> None:
     payload = _public_project_payload(root, config)
     with staged_output_directory(root) as staging:
-        (staging / PROJECT_CONFIG_FILENAME).write_text(
+        config_path = staging / PROJECT_CONFIG_FILENAME
+        config_path.write_text(
             yaml.safe_dump(config, sort_keys=False, allow_unicode=True), encoding="utf-8"
         )
+        if os.name != "nt":
+            config_path.chmod(0o600)
         (staging / PROJECT_JSON_FILENAME).write_text(
             json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
@@ -522,8 +574,11 @@ def _normalize_sections(value: Any) -> list[dict[str, Any]]:
     return normalized
 
 
-def _validate_revisions(revisions: list[Any]) -> None:
+def _validate_revisions(
+    revisions: list[Any], *, expected_sections: list[dict[str, Any]]
+) -> None:
     ids: set[str] = set()
+    previous_id: str | None = None
     for index, revision in enumerate(revisions, start=1):
         if not isinstance(revision, dict):
             raise ProjectError(f"Revision {index} must be a mapping.")
@@ -532,7 +587,9 @@ def _validate_revisions(revisions: list[Any]) -> None:
         if set(revision) - allowed or not required <= set(revision):
             raise ProjectError(f"Revision {index} has an invalid field set.")
         revision_id = revision["id"]
-        if not isinstance(revision_id, str) or not revision_id or Path(revision_id).name != revision_id:
+        if not isinstance(revision_id, str) or re.fullmatch(
+            r"[0-9]{3,}-[a-z0-9]+(?:-[a-z0-9]+)*", revision_id
+        ) is None:
             raise ProjectError(f"Revision {index} has an invalid ID.")
         if revision_id in ids:
             raise ProjectError(f"Revision ID {revision_id!r} is duplicated.")
@@ -541,16 +598,25 @@ def _validate_revisions(revisions: list[Any]) -> None:
         for key in ("source", "source_filename", "added_at", "report"):
             if not isinstance(revision[key], str) or not revision[key]:
                 raise ProjectError(f"Revision {index} has an invalid {key} value.")
-        if Path(revision["source_filename"]).name != revision["source_filename"]:
+        if (
+            "/" in revision["source_filename"]
+            or "\\" in revision["source_filename"]
+            or Path(revision["source_filename"]).name != revision["source_filename"]
+        ):
             raise ProjectError(f"Revision {index} source filename must be portable.")
         _validate_relative_artifact_path(
-            revision["report"], expected_prefix="reports", expected_id=revision_id
+            revision["report"], expected_parts=("reports", revision_id)
         )
         diff = revision.get("diff_from_previous")
-        if diff is not None:
-            _validate_relative_artifact_path(diff, expected_prefix="diffs")
+        expected_diff = (
+            f"diffs/{previous_id}--{revision_id}" if previous_id is not None else None
+        )
+        if diff != expected_diff:
+            raise ProjectError(f"Revision {index} has an invalid adjacent-diff path.")
         if not isinstance(revision["sections"], list):
             raise ProjectError(f"Revision {index} sections must be a list.")
+        if len(revision["sections"]) != len(expected_sections):
+            raise ProjectError(f"Revision {index} does not match the configured sections.")
         for section_index, section in enumerate(revision["sections"], start=1):
             if not isinstance(section, dict) or set(section) != {
                 "name",
@@ -561,42 +627,152 @@ def _validate_revisions(revisions: list[Any]) -> None:
                 raise ProjectError(
                     f"Revision {index} section {section_index} has an invalid field set."
                 )
-            _normalize_sections(
+            normalized = _normalize_sections(
                 [{"name": section["name"], "start": section["start"], "end": section["end"]}]
+            )[0]
+            if normalized != expected_sections[section_index - 1]:
+                raise ProjectError(
+                    f"Revision {index} section {section_index} does not match the project."
+                )
+            slug = _section_slug(
+                normalized["name"], normalized["start"], normalized["end"]
             )
             _validate_relative_artifact_path(
-                section["report"], expected_prefix="sections", expected_id=revision_id
+                section["report"], expected_parts=("sections", revision_id, slug)
             )
+        previous_id = revision_id
 
 
 def _validate_relative_artifact_path(
     value: Any,
     *,
-    expected_prefix: str,
-    expected_id: str | None = None,
+    expected_parts: tuple[str, ...],
 ) -> None:
     if not isinstance(value, str) or not value:
         raise ProjectError("Project artifact path is missing or invalid.")
-    path = Path(value)
-    if path.is_absolute() or ".." in path.parts or not path.parts:
-        raise ProjectError(f"Project artifact path must remain inside {expected_prefix!r}.")
-    if path.parts[0] != expected_prefix or len(path.parts) not in {2, 3}:
-        raise ProjectError(f"Project artifact path must remain inside {expected_prefix!r}.")
-    if expected_id is not None and (len(path.parts) < 2 or path.parts[1] != expected_id):
-        raise ProjectError("Project artifact path does not match its revision ID.")
+    expected = "/".join(expected_parts)
+    if "\\" in value or value != expected:
+        raise ProjectError(
+            f"Project artifact path must remain inside {expected_parts[0]!r} "
+            "and match its generated revision path."
+        )
 
 
 def _validate_revision_artifacts(root: Path, config: dict[str, Any]) -> None:
+    project_digest = hashlib.sha256(config["project_id"].encode("utf-8")).hexdigest()
     for revision in config["revisions"]:
         report = root / revision["report"]
-        if not (report / "summary.json").is_file() or not (report / "report.html").is_file():
-            raise ProjectError(f"Revision {revision['label']!r} is missing report artifacts.")
+        _validate_report_artifacts(report, project_digest, revision["label"])
         diff = revision.get("diff_from_previous")
-        if diff and not (root / diff / "revision_diff.html").is_file():
-            raise ProjectError(f"Revision {revision['label']!r} is missing its prior diff.")
+        if diff:
+            _validate_diff_artifacts(root / diff, revision["label"])
         for section in revision.get("sections", []):
-            if not isinstance(section, dict) or not (root / str(section.get("report", "")) / "report.html").is_file():
-                raise ProjectError(f"Revision {revision['label']!r} is missing a section report.")
+            _validate_report_artifacts(
+                root / section["report"], project_digest, revision["label"]
+            )
+
+
+def _validate_report_artifacts(report: Path, project_digest: str, label: str) -> None:
+    required = {
+        OUTPUT_MARKER_FILENAME,
+        "summary.json",
+        "findings.json",
+        "report.md",
+        "report.html",
+    }
+    if report.is_symlink() or not report.is_dir():
+        raise ProjectError(f"Revision {label!r} is missing report artifacts.")
+    if any((report / name).is_symlink() or not (report / name).is_file() for name in required):
+        raise ProjectError(f"Revision {label!r} is missing report artifacts.")
+    manifest = read_output_manifest(report / OUTPUT_MARKER_FILENAME)
+    if manifest is None or manifest.get("kind") != "single-track-report":
+        raise ProjectError(f"Revision {label!r} has an invalid report manifest.")
+    generated = manifest.get("generated_files")
+    if not isinstance(generated, list):
+        raise ProjectError(f"Revision {label!r} has an incomplete report manifest.")
+    for name in generated:
+        if not isinstance(name, str) or not name or Path(name).name != name:
+            raise ProjectError(f"Revision {label!r} has an invalid report manifest.")
+        path = report / name
+        if path.is_symlink() or not path.is_file():
+            raise ProjectError(f"Revision {label!r} is missing report artifacts.")
+    if not required <= set(generated):
+        raise ProjectError(f"Revision {label!r} has an incomplete report manifest.")
+    try:
+        summary = json.loads(
+            (report / "summary.json").read_text(encoding="utf-8"),
+            parse_constant=_reject_json_constant,
+        )
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise ProjectError(f"Revision {label!r} has invalid summary JSON.") from exc
+    if not isinstance(summary, dict) or summary.get("schema_version") != SUMMARY_SCHEMA_VERSION:
+        raise ProjectError(f"Revision {label!r} has an unsupported summary schema.")
+    metadata = summary.get("metadata")
+    identity = summary.get("source_identity")
+    levels = summary.get("levels")
+    duration = levels.get("duration_seconds") if isinstance(levels, dict) else None
+    if (
+        not isinstance(metadata, dict)
+        or metadata.get("path_kind") != "basename"
+        or metadata.get("local_paths_included") is not False
+        or not isinstance(identity, dict)
+        or identity.get("track_id_sha256") != project_digest
+        or isinstance(duration, bool)
+        or not isinstance(duration, (int, float))
+        or not math.isfinite(duration)
+        or duration < 0
+    ):
+        raise ProjectError(f"Revision {label!r} is not a share-safe project report.")
+
+
+def _validate_diff_artifacts(diff: Path, label: str) -> None:
+    required = {
+        OUTPUT_MARKER_FILENAME,
+        "revision_diff.json",
+        "revision_diff.md",
+        "revision_diff.html",
+    }
+    if diff.is_symlink() or not diff.is_dir():
+        raise ProjectError(f"Revision {label!r} is missing its prior diff.")
+    if any((diff / name).is_symlink() or not (diff / name).is_file() for name in required):
+        raise ProjectError(f"Revision {label!r} is missing its prior diff.")
+    manifest = read_output_manifest(diff / OUTPUT_MARKER_FILENAME)
+    if manifest is None or manifest.get("kind") != "same-track-revision-diff":
+        raise ProjectError(f"Revision {label!r} has an invalid prior-diff manifest.")
+
+
+@contextmanager
+def _project_mutation_lock(root: Path) -> Iterator[None]:
+    """Serialize mutations of one canonical project across processes and platforms."""
+
+    lock_path = _project_lock_path(root)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(lock_path, timeout=0)
+    try:
+        with lock:
+            yield
+    except Timeout as exc:
+        raise ProjectError(
+            "Another AudioAtlas operation is already updating this song project. "
+            "Wait for it to finish, then try again."
+        ) from exc
+
+
+def _project_lock_path(root: Path) -> Path:
+    canonical = root.expanduser().resolve(strict=False)
+    digest = hashlib.sha256(str(canonical).encode("utf-8")).hexdigest()[:20]
+    return canonical.parent / f".audioatlas-project-{digest}.lock"
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"Non-finite JSON value: {value}")
+
+
+def _project_storage_error(root: Path) -> ProjectError:
+    return ProjectError(
+        f"Could not safely update song project {root.name!r}; "
+        "the filesystem refused the operation. The previous completed state was preserved."
+    )
 
 
 def _next_revision_id(revisions: list[dict[str, Any]], label: str) -> str:
