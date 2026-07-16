@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import pytest
 import yaml
 from click.testing import CliRunner
+from filelock import FileLock
 
 import audioatlas.project as project_module
 from audioatlas.cli import main
@@ -47,6 +49,8 @@ def test_init_project_writes_private_config_and_portable_static_indexes(tmp_path
     assert config["project_id"] not in serialized
     assert str(tmp_path) not in serialized
     assert "My \\[Song\\]" in (project / "project.md").read_text(encoding="utf-8")
+    if os.name != "nt":
+        assert (project / "audioatlas-project.yaml").stat().st_mode & 0o777 == 0o600
 
 
 def test_add_two_revisions_writes_reports_guarded_diff_and_portable_index(tmp_path: Path) -> None:
@@ -101,7 +105,7 @@ def test_project_index_publication_failure_removes_new_revision(tmp_path: Path, 
         raise OSError("synthetic project index failure")
 
     monkeypatch.setattr(project_module, "_publish_project_root", fail_publication)
-    with pytest.raises(OSError, match="synthetic project index failure"):
+    with pytest.raises(ProjectError, match="previous completed state was preserved"):
         add_project_revision(project, FIXTURE, label="Mix 1")
 
     assert (project / "audioatlas-project.yaml").read_bytes() == before
@@ -171,6 +175,79 @@ def test_project_config_rejects_artifact_path_traversal(tmp_path: Path) -> None:
 
     with pytest.raises(ProjectError, match="must remain inside"):
         load_project(project)
+
+
+def test_project_config_requires_canonical_generated_paths(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    init_project(project, name="Canonical Project", graphs_profile="compact")
+    config = load_project(project)
+    config["revisions"] = [
+        {
+            "id": "001-mix",
+            "label": "Mix",
+            "source": "/private/source.wav",
+            "source_filename": "source.wav",
+            "added_at": "2026-07-15T00:00:00Z",
+            "report": "reports/001-mix/extra",
+            "sections": [],
+        }
+    ]
+    (project / "audioatlas-project.yaml").write_text(
+        yaml.safe_dump(config, sort_keys=False), encoding="utf-8"
+    )
+
+    with pytest.raises(ProjectError, match="generated revision path"):
+        load_project(project)
+
+
+def test_project_build_rejects_report_from_another_project(tmp_path: Path) -> None:
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    init_project(first, name="First", graphs_profile="compact")
+    init_project(second, name="Second", graphs_profile="compact")
+    revision = add_project_revision(first, FIXTURE, label="Mix 1")
+    summary_path = first / revision["report"] / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    second_config = load_project(second)
+    summary["source_identity"]["track_id_sha256"] = hashlib.sha256(
+        second_config["project_id"].encode("utf-8")
+    ).hexdigest()
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+
+    with pytest.raises(ProjectError, match="not a share-safe project report"):
+        build_project(first)
+
+
+def test_project_build_rejects_symlinked_artifact(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    init_project(project, name="Symlink Project", graphs_profile="compact")
+    revision = add_project_revision(project, FIXTURE, label="Mix 1")
+    report_html = project / revision["report"] / "report.html"
+    external = tmp_path / "external.html"
+    external.write_text("private", encoding="utf-8")
+    report_html.unlink()
+    try:
+        report_html.symlink_to(external)
+    except OSError:
+        pytest.skip("Symlinks are unavailable on this platform")
+
+    with pytest.raises(ProjectError, match="missing report artifacts"):
+        build_project(project)
+
+
+def test_project_mutation_lock_fails_cleanly_and_releases(tmp_path: Path) -> None:
+    runner = CliRunner()
+    project = tmp_path / "locked-project"
+    init_project(project, name="Locked", graphs_profile="compact")
+    lock = FileLock(project_module._project_lock_path(project), timeout=0)
+
+    with lock:
+        result = runner.invoke(main, ["project", "build", str(project)])
+
+    assert result.exit_code == 1
+    assert "already updating this song project" in result.output
+    assert "Traceback" not in result.output
+    assert build_project(project)["html"].is_file()
 
 
 def test_project_cli_init_and_build(tmp_path: Path) -> None:

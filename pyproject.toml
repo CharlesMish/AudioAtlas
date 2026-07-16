@@ -37,7 +37,11 @@ dependencies = [
   "matplotlib>=3.8",
   "pyloudnorm>=0.1.1",
   "click>=8.1",
-  "PyYAML>=6.0"
+  "PyYAML>=6.0",
+  # Security floors for dependencies imported through Matplotlib and librosa.
+  "Pillow>=12.3.0",
+  "msgpack>=1.2.1",
+  "filelock>=3.16,<4",
 ]
 
 [project.urls]
@@ -52,7 +56,8 @@ dev = [
   "hatchling>=1.25",
   "pytest>=8.0",
   "ruff>=0.8",
-  "hypothesis>=6.100"
+  "hypothesis>=6.100",
+  "pip-audit>=2.10,<3",
 ]
 
 [project.scripts]
@@ -68,6 +73,7 @@ include = [
   "/README.md",
   "/README_EASY_RUN.md",
   "/CONTRIBUTING.md",
+  "/SECURITY.md",
   "/LICENSE",
   "/AUDIO_RIGHTS.md",
   "/pyproject.toml",

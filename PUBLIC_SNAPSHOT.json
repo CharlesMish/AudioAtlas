@@ -5,20 +5,24 @@
       "sha256": "be3991c751117095538a957f55cbdef7cc98863c93257aa30d5e94603e07fc4a"
     },
     {
+      "path": ".github/dependabot.yml",
+      "sha256": "4f4173338864165589a0e5ac471bc0c406c00aea190107e6b0fed4d84d05c001"
+    },
+    {
       "path": ".github/workflows/ci.yml",
-      "sha256": "748aac321107158c0087ce52df1fb550c430b9f4958bf11fafc9863c0b96caec"
+      "sha256": "89de59d8f5c9b497bef20164fed148587d60b459a26b4b83723fb4542af31537"
     },
     {
       "path": ".github/workflows/pages.yml",
-      "sha256": "eed09bf1a3210c920486276a4d7e92b7f21fabfb80eea9a7f800d88678341a59"
+      "sha256": "407340234cbc8af62c8287ecda6e5a7b596b308172ab52792a1d9d06480b2978"
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "96b32c50fd26789c0ca572c33ebe680b4e2cb6d6810cad04c49d9272a471404a"
+      "sha256": "1731996ac4c07d16c3316a081d6edc5df29abcca846fc8a037becd64c6571993"
     },
     {
       "path": ".github/workflows/testpypi.yml",
-      "sha256": "fb8743fe77f8fabebd4be3623e91647ddab65ae40566552055a5ca8b6e2ac4ff"
+      "sha256": "67316773bb796b5ff8fa06f71ba1df0a5324894fa6d8681070db64bd800c568d"
     },
     {
       "path": ".gitignore",
@@ -46,11 +50,15 @@
     },
     {
       "path": "README.md",
-      "sha256": "fe495654aa83d1d656e83abf6290adb581cefe5feb5dcf425d29e88acdb7bbb0"
+      "sha256": "e03d3e335c875e55eee1378ebaeec767bf3b8c13ec7b23ce2aaaa8409f189ba7"
     },
     {
       "path": "README_EASY_RUN.md",
       "sha256": "ff4c74a290c5683388f8c189d39968413efc15764ef68ff156eea70351479b1b"
+    },
+    {
+      "path": "SECURITY.md",
+      "sha256": "0cf38f381189da5737864cb00288dca1b351b52984945a1877dfdb78bdbcdf5c"
     },
     {
       "path": "docs/ALPHA_LIMITATIONS.md",
@@ -58,15 +66,15 @@
     },
     {
       "path": "docs/ARCHITECTURE.md",
-      "sha256": "4751326da9d484a303ab8e505cc55c2c3413c3ad1cd3c244b1204a0e2de83b26"
+      "sha256": "16a8ed525659bfe86b9ca089b4f6946daf47ee04d946172be5e53a30ae465c9b"
     },
     {
       "path": "docs/CHANGELOG.md",
-      "sha256": "d7c620c07bb78b271201c2c6e7c0a8ff712a0888e5a77f14519fbf10ed393da6"
+      "sha256": "ed749feae79826f29ba9f32874a343b9dc239bfd5c890fbf3204eecd6f2c85e8"
     },
     {
       "path": "docs/COMPATIBILITY.md",
-      "sha256": "f1ac87feadd413cb63c108ef5632da5d5482ea38117fee0f20732e7a90ee0dc1"
+      "sha256": "c96cd1e21cf5d8186030e845c98d76138d3bf717486a86aee064115e6d0a7a30"
     },
     {
       "path": "docs/FINDING_RULES.md",
@@ -74,7 +82,7 @@
     },
     {
       "path": "docs/PROJECT_SCHEMA.md",
-      "sha256": "a75f26383c5b4e6b745f65c8245c7a892836d7bb95df45947c019e9b2d69a822"
+      "sha256": "0ffa586812952fd0d91bf56cb6490ee5e3db6cb8bee669eb05c05cb0bd9e274c"
     },
     {
       "path": "docs/SUMMARY_SCHEMA.md",
@@ -82,7 +90,7 @@
     },
     {
       "path": "docs/USER_GUIDE.md",
-      "sha256": "6f97bd8a8578a18008f95734030e7987aa92a7f7acf931e91d7c69d7b18d5b48"
+      "sha256": "a4dcc3d620966e90f0aad591752a206b228eed9a956eb0f6c7f9ca8c8722207f"
     },
     {
       "path": "docs/assets/readme/README.md",
@@ -114,11 +122,15 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "16dbab06835c880b0a3ed6a1eab4ee8b5739259bd6ae83466a4645690410452d"
+      "sha256": "bb85452ac61fbd44f36a112c68be9ec97ca73893e44b00a80c18ea1ad7b5992e"
     },
     {
       "path": "scripts/__init__.py",
       "sha256": "be55f9cb31086a9f473c9471cd4c7c509f4cf6443c8abc3c016c7ed84b49a797"
+    },
+    {
+      "path": "scripts/check_package_index.py",
+      "sha256": "c04af831e46f1ef91aeef677fd27d24304b9c43e54a3fcee9a1d3abe3731afd3"
     },
     {
       "path": "scripts/public_snapshot.py",
@@ -238,7 +250,7 @@
     },
     {
       "path": "src/audioatlas/output.py",
-      "sha256": "f8f68b98d57cfbeb3968481bff44a5fc771e43472274453d0648412213c17188"
+      "sha256": "422c6e46f7791b661e41979836518d9f547ada50c0d02b10732f052b73af62a9"
     },
     {
       "path": "src/audioatlas/pipeline.py",
@@ -254,7 +266,7 @@
     },
     {
       "path": "src/audioatlas/project.py",
-      "sha256": "66894066411edb9e5bce5fc7b76c7b0804d2de97d6624972d6a1d9a8face9213"
+      "sha256": "12d6d63bc2e78011a3654cc81df446cbec779ee97d85ef3529febf9510cee565"
     },
     {
       "path": "src/audioatlas/provenance.py",
@@ -485,6 +497,10 @@
       "sha256": "09ef3dd2536d888f8bcb792e549e28aea924b81ed8b6e476bdbe96af03447be0"
     },
     {
+      "path": "tests/test_package_index.py",
+      "sha256": "83b69d57d347ef887702041b27f2866040e64aef514a1be3cd34312ea7826d9d"
+    },
+    {
       "path": "tests/test_pipeline.py",
       "sha256": "57ca9372999075f2b34fbbac92c59b077e3b6f99a3478b7506c8237472ed6b9b"
     },
@@ -498,7 +514,7 @@
     },
     {
       "path": "tests/test_project.py",
-      "sha256": "f955aff4bd69c95d62164158a33aaf7edf919d663aae78e64ab968cfe1f4987b"
+      "sha256": "c840437bc434bd266b25b6ed1036f63d643f727b32261d01904a516193d52127"
     },
     {
       "path": "tests/test_provenance.py",
@@ -514,7 +530,7 @@
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "e721c1e5c74736a8adeca4f53ede9bab5f3ee8738d0017fe9267bc435dc1f771"
+      "sha256": "a819bec7984f32e55696434b8eeeb240004d4b7bd51ed95e40e18687020bf8f7"
     },
     {
       "path": "tests/test_report.py",
@@ -546,12 +562,12 @@
     },
     {
       "path": "uv.lock",
-      "sha256": "8b88186e5d78b13591a6f0d61e3973d8869729ad2a7f49a5fa935e6176e4a747"
+      "sha256": "d11588b0205e0b184cee0603b9c42d1bc3e95ade0ac652c4bb20fbd024f525e9"
     }
   ],
   "format_version": 1,
-  "included_file_count": 137,
+  "included_file_count": 141,
   "package_version": "0.2.0a7",
-  "public_tree_sha256": "c24330d6077dd28284a2ed05b28addea6815b6099c1403d5233dd42224bf8b5f",
-  "source_commit": "df6cc7caeeb52e83469186ca90318dd360f863c9"
+  "public_tree_sha256": "2435da4bdbe9be7a86cb62dbe56c5ed6ec2f801ad5aed9d2f0eb0ae746cb9466",
+  "source_commit": "0289900550ce50571086989658874317a4e9594a"
 }
