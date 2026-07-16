@@ -105,6 +105,14 @@ jobs:
             /tmp/audioatlas-wheel-report \
             /tmp/audioatlas-wheel-report \
             --out /tmp/audioatlas-wheel-diff
+          /tmp/audioatlas-wheel-smoke/bin/audioatlas project init \
+            /tmp/audioatlas-wheel-project \
+            --name "Wheel project" \
+            --graphs-profile compact
+          /tmp/audioatlas-wheel-smoke/bin/audioatlas project add \
+            /tmp/audioatlas-wheel-project \
+            tests/fixtures/sine_1k_-6dbfs_2s.wav \
+            --label "Mix 1"
           /tmp/audioatlas-wheel-smoke/bin/python - <<'PY'
           import json
           from importlib.metadata import version
@@ -136,6 +144,11 @@ jobs:
           )
           assert diff_payload['schema_version'] == '0.1.0'
           assert diff_payload['comparability']['status'] == 'exact'
+          project = Path('/tmp/audioatlas-wheel-project')
+          project_payload = json.loads((project / 'project.json').read_text(encoding='utf-8'))
+          assert project_payload['schema_version'] == '0.1.0'
+          assert len(project_payload['revisions']) == 1
+          assert (project / project_payload['revisions'][0]['report'] / 'report.html').is_file()
           PY
 
   platform-smoke:
@@ -166,6 +179,8 @@ jobs:
           audioatlas themes
           audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav --out aa_platform_report --graphs-profile compact --track-id platform-golden
           audioatlas diff aa_platform_report aa_platform_report --out aa_platform_diff
+          audioatlas project init aa_platform_project --name "Platform project" --graphs-profile compact
+          audioatlas project add aa_platform_project tests/fixtures/sine_1k_-6dbfs_2s.wav --label "Mix 1"
 
       - name: Verify generated contract
         shell: python
@@ -195,3 +210,8 @@ jobs:
           payload = json.loads((diff / 'revision_diff.json').read_text(encoding='utf-8'))
           assert payload['schema_version'] == '0.1.0'
           assert payload['comparability']['status'] == 'exact'
+          project = Path('aa_platform_project')
+          project_payload = json.loads((project / 'project.json').read_text(encoding='utf-8'))
+          assert project_payload['schema_version'] == '0.1.0'
+          assert len(project_payload['revisions']) == 1
+          assert (project / project_payload['revisions'][0]['report'] / 'report.html').is_file()

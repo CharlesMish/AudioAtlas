@@ -23,6 +23,7 @@ def test_demo_free_sdist_has_a_coherent_distributed_test_contract(tmp_path: Path
         assert any(name.endswith("/tests/test_demo_audio.py") for name in names)
         assert not any(name.endswith("/tests/test_demo_audio_source.py") for name in names)
         assert not any(name.endswith("/tests/test_distribution_artifacts.py") for name in names)
+        assert not any(name.endswith("/tests/test_release_workflows.py") for name in names)
         source.extractall(tmp_path / "extracted", filter="data")
 
     extracted = next((tmp_path / "extracted").iterdir())

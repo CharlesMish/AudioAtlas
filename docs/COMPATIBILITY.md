@@ -5,15 +5,16 @@ finding semantics, and output ownership do not always change together.
 
 ## Version axes
 
-| Axis | Current value in `0.2.0a6` | Changes when |
+| Axis | Current value in `0.2.0a7` | Changes when |
 |---|---:|---|
-| Python package | `0.2.0a6` | any release is published |
+| Python package | `0.2.0a7` | any release is published |
 | Summary schema | `0.2.1` | documented summary fields are removed, retyped, renamed without an alias, or change meaning; `0.2.1` adds identity/provenance |
 | Findings schema | `0.2.0` | finding object structure changes incompatibly |
 | Catalog schema | `0.2.0` | catalog object structure changes incompatibly |
 | Finding ruleset | `0.2.0a2` | default rule eligibility, priority, or interpretive contract changes |
 | Revision-diff schema | `0.1.0` | revision-delta artifact structure changes incompatibly |
 | Calibration-replay schema | `0.1.0` | anonymous replay artifact structure changes incompatibly |
+| Song-project schema | `0.1.0` | local project index/configuration structure changes incompatibly |
 | Output manifest | `1` | ownership/publication manifest structure changes incompatibly |
 
 A package release may therefore keep an earlier ruleset version when it changes
@@ -53,7 +54,7 @@ content. Reports retain both views through a local CSS/JavaScript switch.
 
 ## Runtime dependency compatibility
 
-AudioAtlas `0.2.0a6` directly requires `numba>=0.65.1,<0.66`. This is a
+AudioAtlas `0.2.0a7` directly requires `numba>=0.65.1,<0.66`. This is a
 temporary evidence-backed compatibility band, not an assertion that every
 Numba 0.66 installation is defective. In a clean Python 3.13 installation,
 Numba 0.66.0 with llvmlite 0.48.0 stalled inside LLVM code generation and

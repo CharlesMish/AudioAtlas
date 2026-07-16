@@ -351,3 +351,23 @@ def test_publish_refuses_unowned_staged_file_before_mutation(tmp_path: Path):
 
     assert (target / "report.html").read_text(encoding="utf-8") == "old report"
     assert not (target / "surprise.tmp").exists()
+
+
+def test_normal_report_cannot_replace_song_project_root(tmp_path: Path) -> None:
+    destination = tmp_path / "project"
+    destination.mkdir()
+    (destination / "audioatlas-project.yaml").write_text("schema_version: 0.1.0\n")
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    (staging / "report.html").write_text("new report", encoding="utf-8")
+    write_output_manifest(
+        staging,
+        kind="single-track-report",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+    )
+
+    with pytest.raises(ValueError, match="song-project root"):
+        publish_staged_output(staging, destination, owned_filenames={"report.html"})
+
+    assert (destination / "audioatlas-project.yaml").is_file()
+    assert not (destination / "report.html").exists()

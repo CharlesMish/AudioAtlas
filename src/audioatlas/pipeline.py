@@ -12,6 +12,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from matplotlib import rc_context
+
 from audioatlas.analysis.bundle import AnalysisBundle
 from audioatlas.analysis.findings import generate_findings
 from audioatlas.config import AnalysisConfig
@@ -27,6 +29,7 @@ from audioatlas.output import (
     staged_output_directory,
     write_output_manifest,
 )
+from audioatlas.plot_theme import matplotlib_theme_rc
 from audioatlas.provenance import build_analysis_provenance, track_identity_block
 from audioatlas.release import SUMMARY_SCHEMA_VERSION
 from audioatlas.report import write_findings_json, write_report_md, write_summary_json
@@ -112,6 +115,7 @@ def _analyze_file_impl(
 
     cfg = config or AnalysisConfig()
     cfg.validate()
+    plot_style = matplotlib_theme_rc(theme_name)
     graph_selection = selection or GraphSelection()
     graph_specs = all_graphs()
     selected_graphs = graph_selection.resolve(graph_specs)
@@ -178,8 +182,9 @@ def _analyze_file_impl(
     # among reports, catalogs, and revision diffs cannot leave a mixed folder.
     owned_names = set(ALL_GENERATED_FILENAMES)
     with staged_output_directory(out) as staging:
-        for graph in selected_graphs:
-            graph.render(bundle, staging / graph.filename, cfg)
+        with rc_context(plot_style):
+            for graph in selected_graphs:
+                graph.render(bundle, staging / graph.filename, cfg)
 
         write_summary_json(summary, staging)
         write_findings_json(findings, staging)

@@ -1,6 +1,6 @@
 # AudioAtlas alpha limitations
 
-AudioAtlas `0.2.0a6` is a measurement and report-generation tool for structured
+AudioAtlas `0.2.0a7` is a measurement and report-generation tool for structured
 listening. It is not a mastering assistant or quality judge.
 
 ## Current limitations
@@ -25,7 +25,7 @@ listening. It is not a mastering assistant or quality judge.
 - A fresh environment can have a noticeable first-analysis initialization
   delay from the scientific Python stack. Lightweight discovery commands avoid
   importing that stack, but report generation still requires it.
-- The `0.2.0a6` dependency contract temporarily constrains Numba to
+- The `0.2.0a7` dependency contract temporarily constrains Numba to
   `>=0.65.1,<0.66`. A clean Python 3.13 smoke with Numba 0.66.0 /
   llvmlite 0.48.0 stalled in LLVM code generation; the same workflow
   completed with Numba 0.65.1 / llvmlite 0.47.0. This ceiling should be
@@ -39,6 +39,13 @@ listening. It is not a mastering assistant or quality judge.
   do not recognize audio or prove that two files contain the same composition.
   Hashing omits plaintext from the artifact but does not protect a short token
   from guessing or prevent reused tokens from linking separate reports.
+- Song projects store the raw random project token and owner-side source paths
+  in `audioatlas-project.yaml`. The generated project JSON, Markdown, and HTML
+  are path-safe, but the YAML configuration should remain private unless its
+  local paths are intentionally being shared.
+- A project applies one manual section map to successive exports. It does not
+  infer structure or compensate automatically when an arrangement edit moves a
+  section; update the explicit project ranges when the source timeline changes.
 - Revision deltas are only as comparable as their recorded configuration, code,
   dependency, decoder, and environment fingerprints. Even an exact recorded
   signature is not a guarantee of bit-identical floating-point output.

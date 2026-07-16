@@ -14,6 +14,7 @@ from typing import Any
 from audioatlas import __version__
 
 OUTPUT_MARKER_FILENAME = ".audioatlas-output.json"
+PROJECT_CONFIG_FILENAME = "audioatlas-project.yaml"
 SINGLE_REPORT_FILENAMES = frozenset(
     {"summary.json", "findings.json", "report.md", "report.html"}
 )
@@ -23,8 +24,11 @@ CATALOG_FILENAMES = frozenset(
 REVISION_DIFF_FILENAMES = frozenset(
     {"revision_diff.json", "revision_diff.md", "revision_diff.html"}
 )
+PROJECT_FILENAMES = frozenset(
+    {PROJECT_CONFIG_FILENAME, "project.json", "project.md", "project.html"}
+)
 ROOT_GENERATED_FILENAMES = frozenset(
-    SINGLE_REPORT_FILENAMES | CATALOG_FILENAMES | REVISION_DIFF_FILENAMES
+    SINGLE_REPORT_FILENAMES | CATALOG_FILENAMES | REVISION_DIFF_FILENAMES | PROJECT_FILENAMES
 )
 # Kept lightweight so report publication and the diff command can clean stale
 # plots without importing Matplotlib. ``tests/test_graph_registry.py`` locks
@@ -132,6 +136,15 @@ def publish_staged_output(
     staged_names = {path.name for path in source_entries if path.is_file()}
     staged_directories = {path.name for path in source_entries if path.is_dir()}
     _validate_staging_manifest(source, staged_names, staged_directories)
+    staged_manifest = _read_output_manifest(source / OUTPUT_MARKER_FILENAME)
+    if (
+        (target / PROJECT_CONFIG_FILENAME).is_file()
+        and (staged_manifest or {}).get("kind") != "song-project"
+    ):
+        raise ValueError(
+            "Refusing to publish a report into an AudioAtlas song-project root. "
+            "Choose a separate output folder."
+        )
 
     allowed_staged_files = owned_filenames | {OUTPUT_MARKER_FILENAME}
     unexpected_files = staged_names - allowed_staged_files

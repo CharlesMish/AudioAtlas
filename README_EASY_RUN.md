@@ -5,12 +5,14 @@ not a standalone installer or signed desktop application.
 
 ## Install and verify once
 
-From this project folder:
+Install the published package:
 
 ```bash
-python -m pip install .
+python -m pip install audioatlas
 audioatlas --version
 ```
+
+An editable source checkout may use `python -m pip install -e .` instead.
 
 ## Folder launcher
 

@@ -6,7 +6,13 @@ not grade the track or tell you what artistic choice to make.
 
 ## Installation
 
-AudioAtlas supports Python 3.11 and newer. From the project folder:
+AudioAtlas supports Python 3.11 and newer. For a normal installation:
+
+```bash
+python -m pip install audioatlas
+```
+
+For an editable source checkout, create and activate an environment:
 
 ```bash
 python -m venv .venv
@@ -26,7 +32,7 @@ Then install:
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install .
+python -m pip install -e .
 ```
 
 Verify the lightweight command path:
@@ -113,6 +119,10 @@ graphs:
 audioatlas analyze song.wav --graphs-config graphs.yaml
 ```
 
+Configuration keys are checked strictly so misspellings fail with a clear
+error instead of silently selecting defaults. One YAML file may contain both
+the documented `graphs` block and the documented `sections` block.
+
 ### Themes
 
 Themes change the report and graph color system. They are separate from the
@@ -183,6 +193,40 @@ The diff refuses conflicting identity digests. Missing identity requires
 refused unless `--allow-incomparable` is supplied, in which case the output
 retains a prominent caveat.
 
+## Song projects
+
+A song project keeps successive exports and their adjacent descriptive diffs
+inside one local static workspace:
+
+```bash
+audioatlas project init projects/my-song --name "My Song"
+audioatlas project add projects/my-song mix-v1.wav --label "Mix 1"
+audioatlas project add projects/my-song mix-v2.wav --label "Mix 2"
+audioatlas project build projects/my-song
+```
+
+`project add` analyzes the new revision before changing the project. A failed
+analysis leaves the configuration and all prior reports unchanged. The project
+uses a random local identity token; only its SHA-256 digest enters generated
+reports and indexes.
+
+Reuse one manual section map across every revision:
+
+```bash
+audioatlas project init projects/my-song \
+  --name "My Song" \
+  --sections sections.yaml
+```
+
+The human-readable `audioatlas-project.yaml` is owner-side state and records
+local source paths. Do not include it in a share bundle unless those paths are
+intended for the recipient. `project.json`, `project.md`, `project.html`, and
+the nested report/diff artifacts contain portable source filenames by default.
+
+An adjacent diff is refused when analysis provenance changed. Use
+`project add --allow-incomparable` only for a deliberately caveated forensic
+comparison; the project never ranks revisions or recommends a winner.
+
 ## Manual sections
 
 ```bash
@@ -209,6 +253,10 @@ sections:
 ```bash
 audioatlas sections song.wav --out reports/song-sections --config sections.yaml
 ```
+
+Section names must be single-line and 160 characters or fewer. Definitions
+that would resolve to the same output-folder slug are rejected before analysis
+so one section cannot silently replace another.
 
 ## Folder catalogs
 
@@ -272,4 +320,5 @@ python -m build
 ```
 
 See the architecture, schema, compatibility, and finding-rule documents for the
-more technical contracts.
+more technical contracts, including the dedicated
+[song-project schema](PROJECT_SCHEMA.md).

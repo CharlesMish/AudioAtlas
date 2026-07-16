@@ -9,6 +9,7 @@ from audioatlas.release import (
     CATALOG_SCHEMA_VERSION,
     FINDING_RULESET_VERSION,
     FINDINGS_SCHEMA_VERSION,
+    PROJECT_SCHEMA_VERSION,
     RELEASE_LABEL,
     REVISION_DIFF_SCHEMA_VERSION,
     SUMMARY_SCHEMA_VERSION,
@@ -27,15 +28,17 @@ def test_release_contract_has_one_consistent_alpha_identity():
     assert audioatlas.RELEASE_LABEL == RELEASE_LABEL
     assert audioatlas.SUMMARY_SCHEMA_VERSION == SUMMARY_SCHEMA_VERSION
     assert audioatlas.FINDINGS_SCHEMA_VERSION == FINDINGS_SCHEMA_VERSION
+    assert audioatlas.PROJECT_SCHEMA_VERSION == PROJECT_SCHEMA_VERSION
     assert audioatlas.CATALOG_SCHEMA_VERSION == CATALOG_SCHEMA_VERSION
     assert audioatlas.REVISION_DIFF_SCHEMA_VERSION == REVISION_DIFF_SCHEMA_VERSION
     assert audioatlas.CALIBRATION_REPLAY_SCHEMA_VERSION == CALIBRATION_REPLAY_SCHEMA_VERSION
     assert audioatlas.FINDING_RULESET_VERSION == FINDING_RULESET_VERSION
-    assert "alpha 6" in RELEASE_LABEL
-    assert audioatlas.__version__ == "0.2.0a6"
+    assert "alpha 7" in RELEASE_LABEL
+    assert audioatlas.__version__ == "0.2.0a7"
     assert SUMMARY_SCHEMA_VERSION == "0.2.1"
     assert FINDINGS_SCHEMA_VERSION == CATALOG_SCHEMA_VERSION == "0.2.0"
     assert REVISION_DIFF_SCHEMA_VERSION == CALIBRATION_REPLAY_SCHEMA_VERSION == "0.1.0"
+    assert PROJECT_SCHEMA_VERSION == "0.1.0"
     # This pass changes calibration and delivery workflow, not finding semantics.
     assert FINDING_RULESET_VERSION == "0.2.0a2"
     assert audioatlas.__version__ != FINDING_RULESET_VERSION
@@ -58,6 +61,7 @@ def test_project_metadata_exposes_discovery_keywords_and_verified_urls():
         "Homepage": "https://github.com/CharlesMish/AudioAtlas",
         "Repository": "https://github.com/CharlesMish/AudioAtlas",
         "Issues": "https://github.com/CharlesMish/AudioAtlas/issues",
+        "Live report": "https://charlesmish.github.io/AudioAtlas/",
     }
 
 

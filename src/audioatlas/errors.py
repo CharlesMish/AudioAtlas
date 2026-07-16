@@ -34,3 +34,7 @@ def _safe_reason(path: Path, value: str) -> str:
 
 class RevisionDiffError(AudioAtlasError):
     """Raised when two reports cannot be compared under the requested guardrails."""
+
+
+class ProjectError(AudioAtlasError):
+    """Raised when a local song-project operation cannot complete safely."""
