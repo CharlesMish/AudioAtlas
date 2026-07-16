@@ -6,6 +6,7 @@ Keep this module thin. Argument parsing only. All work is done in
 
 from __future__ import annotations
 
+import math
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -16,6 +17,7 @@ import yaml
 from audioatlas import __version__
 from audioatlas.errors import AudioAtlasError, RevisionDiffError
 from audioatlas.graph_profiles import VALID_PROFILES
+from audioatlas.markdown import markdown_code_span, markdown_text
 from audioatlas.presentation import VALID_PRESENTATION_MODES
 
 if TYPE_CHECKING:
@@ -131,15 +133,16 @@ def analyze(
 ) -> None:
     """Analyze one audio file and write a report folder."""
 
+    cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
+    _validate_source_range_options(start_seconds, end_seconds, max_duration)
+    selected_theme = _validate_theme_for_cli(theme)
+    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
     if out_dir is None:
         out_dir = _default_report_out(input_path)
         click.echo(f"No --out supplied; using: {out_dir}")
     click.echo(f"Preparing AudioAtlas analysis for: {input_path.name}")
     from audioatlas.pipeline import analyze_file
 
-    cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
-    selected_theme = _validate_theme_for_cli(theme)
-    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
     try:
         result = analyze_file(
             input_path,
@@ -258,12 +261,13 @@ def batch(
 ) -> None:
     """Analyze a folder of audio files and write a neutral catalog."""
 
+    cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
+    _validate_optional_seconds(max_duration, option="--max-duration", allow_zero=False)
+    selected_theme = _validate_theme_for_cli(theme)
+    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
     click.echo(f"Preparing AudioAtlas batch from: {input_folder.name}")
     from audioatlas.batch import analyze_folder
 
-    cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
-    selected_theme = _validate_theme_for_cli(theme)
-    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
     try:
         result = analyze_folder(
             input_folder,
@@ -411,12 +415,12 @@ def sections(
     """
 
     parsed_sections = _collect_section_definitions(section_specs, config_path)
-    click.echo(f"Preparing {len(parsed_sections)} manual section report(s) for: {input_path.name}")
-    from audioatlas.pipeline import analyze_file
-
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
     selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
+    click.echo(f"Preparing {len(parsed_sections)} manual section report(s) for: {input_path.name}")
+    from audioatlas.pipeline import analyze_file
+
     out_dir.mkdir(parents=True, exist_ok=True)
 
     section_results: list[tuple[str, float, float | None, AnalysisRunResult]] = []
@@ -445,7 +449,7 @@ def sections(
     index_lines: list[str] = [
         "# AudioAtlas section reports",
         "",
-        f"Input: `{input_path.name}`",
+        f"Input: {markdown_code_span(input_path.name)}",
         "",
         "These are manually supplied sections, not automatically detected song sections.",
         "",
@@ -616,20 +620,17 @@ def _merge_graph_key_lists(*lists: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def _parse_graphs_config(path: Path) -> dict[str, Any]:
-    try:
-        loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except yaml.YAMLError as exc:
-        raise click.BadParameter(f"Invalid YAML in {path}: {exc}") from exc
-
-    if loaded is None:
-        loaded = {}
-    if not isinstance(loaded, dict):
-        raise click.BadParameter(f"Graphs config {path} must be a YAML mapping.")
+    loaded = _load_yaml_mapping(path, label="Graphs config")
     graphs = loaded.get("graphs", {})
     if graphs is None:
         graphs = {}
     if not isinstance(graphs, dict):
         raise click.BadParameter(f"Graphs config {path} must contain a graphs mapping.")
+    _reject_unknown_keys(
+        graphs,
+        allowed={"profile", "enable", "disable"},
+        source=f"graphs block in {path}",
+    )
 
     out: dict[str, Any] = {}
     if "profile" in graphs:
@@ -652,6 +653,41 @@ def _string_list(value: Any, *, source: str) -> tuple[str, ...]:
     return tuple(dict.fromkeys(item.strip() for item in value if item.strip()))
 
 
+def _load_yaml_mapping(path: Path, *, label: str) -> dict[Any, Any]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise click.BadParameter(f"Could not read {label.lower()} {path}: {exc}") from exc
+    try:
+        loaded = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        raise click.BadParameter(f"Invalid YAML in {path}: {exc}") from exc
+
+    if loaded is None:
+        loaded = {}
+    if not isinstance(loaded, dict):
+        raise click.BadParameter(f"{label} {path} must be a YAML mapping.")
+    _reject_unknown_keys(
+        loaded,
+        allowed={"graphs", "sections"},
+        source=f"top level of {path}",
+    )
+    return loaded
+
+
+def _reject_unknown_keys(
+    mapping: dict[Any, Any],
+    *,
+    allowed: set[str],
+    source: str,
+) -> None:
+    unknown = [key for key in mapping if key not in allowed]
+    if not unknown:
+        return
+    rendered = ", ".join(repr(key) for key in sorted(unknown, key=repr))
+    raise click.BadParameter(f"Unknown key(s) in {source}: {rendered}.")
+
+
 def _collect_section_definitions(
     section_specs: tuple[str, ...],
     config_path: Path | None,
@@ -664,6 +700,7 @@ def _collect_section_definitions(
         parsed.append(_parse_section_spec(spec))
     if config_path is not None:
         parsed.extend(_parse_sections_from_yaml(config_path))
+    _validate_unique_section_slugs(parsed)
     return parsed
 
 
@@ -675,11 +712,35 @@ def _normalize_section(
     cleaned_name = name.strip()
     if not cleaned_name:
         raise click.BadParameter("Section name cannot be blank")
+    if len(cleaned_name) > 160:
+        raise click.BadParameter("Section name must be 160 characters or fewer")
+    if any(character in cleaned_name for character in ("\r", "\n", "\0")):
+        raise click.BadParameter("Section name cannot contain line breaks or null characters")
+    if not math.isfinite(start):
+        raise click.BadParameter("Section start time must be finite")
     if start < 0:
         raise click.BadParameter("Section start time must be non-negative")
-    if end is not None and end <= start:
-        raise click.BadParameter("Section end time must be greater than start time")
+    if end is not None:
+        if not math.isfinite(end):
+            raise click.BadParameter("Section end time must be finite")
+        if end <= start:
+            raise click.BadParameter("Section end time must be greater than start time")
     return cleaned_name, start, end
+
+
+def _validate_unique_section_slugs(
+    sections: list[tuple[str, float, float | None]],
+) -> None:
+    by_slug: dict[str, str] = {}
+    for name, start, end in sections:
+        slug = _section_slug(name, start, end)
+        previous_name = by_slug.get(slug)
+        if previous_name is not None:
+            raise click.BadParameter(
+                "Section definitions produce the same output folder "
+                f"{slug!r}: {previous_name!r} and {name!r}."
+            )
+        by_slug[slug] = name
 
 
 def _parse_section_spec(spec: str) -> tuple[str, float, float | None]:
@@ -704,15 +765,7 @@ def _parse_section_spec(spec: str) -> tuple[str, float, float | None]:
 
 
 def _parse_sections_from_yaml(path: Path) -> list[tuple[str, float, float | None]]:
-    try:
-        loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except yaml.YAMLError as exc:
-        raise click.BadParameter(f"Invalid YAML in {path}: {exc}") from exc
-
-    if not isinstance(loaded, dict):
-        raise click.BadParameter(
-            f"Section config {path} must be a YAML mapping with a sections list."
-        )
+    loaded = _load_yaml_mapping(path, label="Section config")
 
     sections = loaded.get("sections")
     if not isinstance(sections, list) or not sections:
@@ -722,6 +775,11 @@ def _parse_sections_from_yaml(path: Path) -> list[tuple[str, float, float | None
     for index, entry in enumerate(sections, start=1):
         if not isinstance(entry, dict):
             raise click.BadParameter(f"Section entry {index} in {path} must be a mapping.")
+        _reject_unknown_keys(
+            entry,
+            allowed={"name", "start", "end"},
+            source=f"section entry {index} in {path}",
+        )
         name = entry.get("name")
         start = entry.get("start")
         end = entry.get("end") if "end" in entry else None
@@ -799,7 +857,7 @@ def _build_section_comparison_table(
         html_link = f"[{result.html_report_path.name}]({slug}/{result.html_report_path.name})"
 
         row = (
-            f"| {name} | {src} | {_fmt(dur, 1)} | {_fmt(lufs, 1)} | {_fmt(plr, 1)} | "
+            f"| {markdown_text(name)} | {src} | {_fmt(dur, 1)} | {_fmt(lufs, 1)} | {_fmt(plr, 1)} | "
             f"{_fmt(spk, 1)} | {_fmt(tpk, 1)} | {_fmt(rms, 1)} | {_fmt(corr, 2)} | "
             f"{_fmt(sm, 1)} | {_fmt(roll, 0)} | {_fmt(ons, 3)} | {report_link} | {html_link} |"
         )
@@ -816,13 +874,59 @@ def _make_config(
 ) -> AnalysisConfig:
     from audioatlas.config import AnalysisConfig
 
-    return AnalysisConfig(
+    config = AnalysisConfig(
         n_fft=n_fft,
         hop_length=hop_length,
         rms_frame_length=rms_frame_length if rms_frame_length is not None else n_fft,
         db_floor=db_floor,
         true_peak_oversample=true_peak_oversample,
     )
+    try:
+        config.validate()
+    except ValueError as exc:
+        raise click.BadParameter(
+            str(exc),
+            param_hint=(
+                "--n-fft/--hop-length/--rms-frame-length/"
+                "--db-floor/--true-peak-oversample"
+            ),
+        ) from exc
+    return config
+
+
+def _validate_optional_seconds(
+    value: float | None,
+    *,
+    option: str,
+    allow_zero: bool,
+) -> None:
+    if value is None:
+        return
+    if not math.isfinite(value):
+        raise click.BadParameter("must be finite", param_hint=option)
+    if value < 0 or (value == 0 and not allow_zero):
+        comparison = "non-negative" if allow_zero else "positive"
+        raise click.BadParameter(f"must be {comparison}", param_hint=option)
+
+
+def _validate_source_range_options(
+    start_seconds: float | None,
+    end_seconds: float | None,
+    max_duration_seconds: float | None,
+) -> None:
+    _validate_optional_seconds(start_seconds, option="--start", allow_zero=True)
+    _validate_optional_seconds(end_seconds, option="--end", allow_zero=False)
+    _validate_optional_seconds(
+        max_duration_seconds,
+        option="--max-duration",
+        allow_zero=False,
+    )
+    if (
+        start_seconds is not None
+        and end_seconds is not None
+        and end_seconds <= start_seconds
+    ):
+        raise click.BadParameter("must be greater than --start", param_hint="--end")
 
 
 if __name__ == "__main__":

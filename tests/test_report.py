@@ -327,6 +327,16 @@ def test_report_md_shows_source_range_for_manual_section(tmp_path: Path):
     assert "Source range: 30.000s-62.000s of 252.000s" in text
 
 
+def test_report_md_escapes_user_controlled_filename(tmp_path: Path):
+    summary = _make_summary()
+    summary["metadata"]["filename"] = "mix | *draft* _two_.wav"
+
+    path = write_report_md(summary, summary["plots"], tmp_path)
+    text = path.read_text(encoding="utf-8")
+
+    assert r"# AudioAtlas Report: mix \| \*draft\* \_two\_.wav" in text
+
+
 def test_write_report_md_contains_findings_section(tmp_path: Path):
     summary = _make_summary()
     findings = {

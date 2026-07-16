@@ -113,6 +113,10 @@ graphs:
 audioatlas analyze song.wav --graphs-config graphs.yaml
 ```
 
+Configuration keys are checked strictly so misspellings fail with a clear
+error instead of silently selecting defaults. One YAML file may contain both
+the documented `graphs` block and the documented `sections` block.
+
 ### Themes
 
 Themes change the report and graph color system. They are separate from the
@@ -209,6 +213,10 @@ sections:
 ```bash
 audioatlas sections song.wav --out reports/song-sections --config sections.yaml
 ```
+
+Section names must be single-line and 160 characters or fewer. Definitions
+that would resolve to the same output-folder slug are rejected before analysis
+so one section cannot silently replace another.
 
 ## Folder catalogs
 

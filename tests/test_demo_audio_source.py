@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import subprocess
 import wave
 from pathlib import Path
@@ -19,18 +20,40 @@ EXPECTED = {
 }
 
 
+def _declared_demo_paths() -> list[str]:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files", "--", "examples/demo_audio/*.wav"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        result = None
+    if result is not None and result.returncode == 0:
+        return result.stdout.splitlines()
+
+    manifest_path = ROOT / "PUBLIC_SNAPSHOT.json"
+    assert manifest_path.is_file(), "Git-less public trees must include PUBLIC_SNAPSHOT.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    records = manifest.get("files")
+    assert isinstance(records, list)
+    return sorted(
+        str(record["path"])
+        for record in records
+        if isinstance(record, dict)
+        and isinstance(record.get("path"), str)
+        and str(record["path"]).startswith("examples/demo_audio/")
+        and str(record["path"]).endswith(".wav")
+    )
+
+
 def test_intended_demo_wavs_are_tracked_pcm16_stereo_44100() -> None:
     expected_paths = [f"examples/demo_audio/{name}" for name in EXPECTED]
     actual_paths = [path.relative_to(ROOT).as_posix() for path in sorted(DEMO_DIR.glob("*.wav"))]
     assert actual_paths == expected_paths
 
-    tracked = subprocess.run(
-        ["git", "-C", str(ROOT), "ls-files", "--", "examples/demo_audio/*.wav"],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.splitlines()
-    assert tracked == expected_paths
+    assert _declared_demo_paths() == expected_paths
 
     for filename, expected in EXPECTED.items():
         path = DEMO_DIR / filename

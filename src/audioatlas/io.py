@@ -6,6 +6,7 @@ Internal convention throughout AudioAtlas:
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -96,12 +97,21 @@ def load_audio(
     if info.frames <= 0 or info.samplerate <= 0:
         raise AudioLoadError(p, "the file contains no decodable audio frames")
 
-    if start_seconds is not None and start_seconds < 0:
-        raise ValueError("start_seconds must be non-negative")
-    if end_seconds is not None and end_seconds <= 0:
-        raise ValueError("end_seconds must be positive")
-    if max_duration_seconds is not None and max_duration_seconds <= 0:
-        raise ValueError("max_duration_seconds must be positive")
+    if start_seconds is not None:
+        if not math.isfinite(start_seconds):
+            raise ValueError("start_seconds must be finite")
+        if start_seconds < 0:
+            raise ValueError("start_seconds must be non-negative")
+    if end_seconds is not None:
+        if not math.isfinite(end_seconds):
+            raise ValueError("end_seconds must be finite")
+        if end_seconds <= 0:
+            raise ValueError("end_seconds must be positive")
+    if max_duration_seconds is not None:
+        if not math.isfinite(max_duration_seconds):
+            raise ValueError("max_duration_seconds must be finite")
+        if max_duration_seconds <= 0:
+            raise ValueError("max_duration_seconds must be positive")
 
     start_frame = 0
     if start_seconds is not None:

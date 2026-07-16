@@ -5,6 +5,12 @@ tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
+- Added early finite/domain validation for CLI and Python analysis inputs so
+  invalid ranges and configuration values fail cleanly before analysis.
+- Made YAML keys explicit, prevented colliding manual-section output slugs,
+  and escaped user-controlled labels in generated Markdown.
+- Guarded public export against tracked public files that differ from the
+  recorded stewardship commit.
 - Hardened deterministic public-snapshot generation and CI verification,
   including file-set, per-file hash, count, aggregate-tree hash, and metadata
   checks.

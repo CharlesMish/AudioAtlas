@@ -60,6 +60,7 @@ def main(argv: list[str] | None = None) -> int:
     out = args.out.expanduser().resolve()
     zip_path = args.zip_path.expanduser().resolve() if args.zip_path else None
     _validate_destinations(root, out, zip_path)
+    source_commit = _committed_public_source(root)
     _prepare_destination(out, force=args.force)
     if zip_path is not None:
         _prepare_file_destination(zip_path, force=args.force)
@@ -72,7 +73,6 @@ def main(argv: list[str] | None = None) -> int:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
 
-    source_commit = _git_commit(root)
     manifest = build_manifest(
         out,
         public_files,
@@ -114,6 +114,54 @@ def _git_commit(root: Path) -> str | None:
         return None
     value = result.stdout.strip()
     return value or None
+
+
+def _committed_public_source(root: Path) -> str:
+    """Return HEAD only when every tracked public path matches that commit."""
+
+    source_commit = _git_commit(root)
+    if source_commit is None:
+        raise SystemExit("Cannot export without a committed stewardship Git checkout.")
+    try:
+        top_level = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        changed = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(root),
+                "diff",
+                "--no-renames",
+                "--name-only",
+                "-z",
+                "HEAD",
+                "--",
+                ".",
+            ],
+            check=True,
+            capture_output=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise SystemExit(f"Cannot verify committed public source files: {exc}") from exc
+
+    if Path(top_level).resolve() != root.resolve():
+        raise SystemExit("Refusing to export outside the root of the stewardship checkout.")
+    dirty_public_paths = sorted(
+        Path(raw.decode("utf-8"))
+        for raw in changed.split(b"\0")
+        if raw and not _is_stewardship_only(Path(raw.decode("utf-8")))
+    )
+    if dirty_public_paths:
+        rendered = ", ".join(path.as_posix() for path in dirty_public_paths)
+        raise SystemExit(
+            "Refusing to export public files that differ from stewardship HEAD. "
+            f"Commit the covered changes first: {rendered}"
+        )
+    return source_commit
 
 
 def _validate_destinations(root: Path, out: Path, zip_path: Path | None) -> None:

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import zipfile
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "export_public_tree.py"
@@ -15,6 +18,29 @@ def _module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _git(args: list[str], *, cwd: Path) -> str:
+    return subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def _committed_export_fixture(tmp_path: Path) -> Path:
+    root = tmp_path / "stewardship"
+    root.mkdir()
+    (root / "README.md").write_text("public\n", encoding="utf-8")
+    (root / "PROJECT_CHARTER.md").write_text("private\n", encoding="utf-8")
+    _git(["init", "-q"], cwd=root)
+    _git(["config", "user.name", "AudioAtlas Tests"], cwd=root)
+    _git(["config", "user.email", "tests@example.invalid"], cwd=root)
+    _git(["add", "."], cwd=root)
+    _git(["commit", "-q", "-m", "fixture"], cwd=root)
+    return root
 
 
 def test_public_export_excludes_stewardship_material_but_keeps_user_contracts():
@@ -80,12 +106,41 @@ def test_public_zip_preserves_mac_launcher_execute_permissions(tmp_path: Path):
         assert regular_info.external_attr >> 16 == 0o100644
 
 
-def test_exported_manifest_records_owner_commit_and_excludes_itself(tmp_path: Path):
+def test_exported_manifest_records_owner_commit_and_excludes_itself(
+    tmp_path: Path,
+    monkeypatch,
+):
     module = _module()
     tree = tmp_path / "AudioAtlas-public"
+    source_commit = module._git_commit(ROOT)
+    monkeypatch.setattr(module, "_committed_public_source", lambda _root: source_commit)
 
     assert module.main(["--out", str(tree)]) == 0
 
     manifest = json.loads((tree / "PUBLIC_SNAPSHOT.json").read_text(encoding="utf-8"))
-    assert manifest["source_commit"] == module._git_commit(ROOT)
+    assert manifest["source_commit"] == source_commit
     assert "PUBLIC_SNAPSHOT.json" not in {record["path"] for record in manifest["files"]}
+
+
+@pytest.mark.parametrize("change", ["modified", "staged", "deleted"])
+def test_public_export_refuses_tracked_public_changes(tmp_path: Path, change: str):
+    module = _module()
+    root = _committed_export_fixture(tmp_path)
+    readme = root / "README.md"
+    if change == "deleted":
+        readme.unlink()
+    else:
+        readme.write_text(f"{change}\n", encoding="utf-8")
+    if change == "staged":
+        _git(["add", "README.md"], cwd=root)
+
+    with pytest.raises(SystemExit, match="README.md"):
+        module._committed_public_source(root)
+
+
+def test_public_export_allows_dirty_stewardship_only_files(tmp_path: Path):
+    module = _module()
+    root = _committed_export_fixture(tmp_path)
+    (root / "PROJECT_CHARTER.md").write_text("private draft\n", encoding="utf-8")
+
+    assert module._committed_public_source(root) == _git(["rev-parse", "HEAD"], cwd=root)

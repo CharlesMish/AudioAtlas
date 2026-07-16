@@ -9,6 +9,7 @@ from pathlib import Path
 from statistics import mean, median
 from typing import Any
 
+from audioatlas.markdown import markdown_text
 from audioatlas.presentation import (
     presentation_controls_html,
     presentation_css,
@@ -321,8 +322,9 @@ def write_catalog_md(catalog: dict[str, Any], out_dir: str | Path) -> Path:
     out = Path(out_dir) / "catalog.md"
     tracks = _track_list(catalog)
     stats = catalog.get("statistics") if isinstance(catalog.get("statistics"), dict) else {}
+    input_name = Path(str(catalog.get("input_folder", "folder"))).name
     lines = [
-        f"# AudioAtlas Catalog: {Path(str(catalog.get('input_folder', 'folder'))).name}",
+        f"# AudioAtlas Catalog: {markdown_text(input_name)}",
         "",
         "Folder-level technical fingerprints, not verdicts.",
         "",
@@ -335,8 +337,8 @@ def write_catalog_md(catalog: dict[str, Any], out_dir: str | Path) -> Path:
         "## Folder summary",
         "",
         f"- Track count: {catalog.get('track_count', 0)}",
-        f"- Input folder: {_short_path(catalog.get('input_folder', ''))}",
-        f"- Output folder: {_short_path(catalog.get('output_folder', ''))}",
+        f"- Input folder: {markdown_text(_short_path(catalog.get('input_folder', '')))}",
+        f"- Output folder: {markdown_text(_short_path(catalog.get('output_folder', '')))}",
         "",
     ]
     lines.extend(_common_patterns_md(catalog))
@@ -748,7 +750,7 @@ def _duration(value: Any) -> str:
 
 
 def _md_cell(value: Any) -> str:
-    return str(value).replace("|", "\\|") if value is not None else "—"
+    return markdown_text(value) if value is not None else "—"
 
 
 def _short_path(value: Any) -> str:

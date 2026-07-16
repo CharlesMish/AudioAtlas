@@ -50,6 +50,12 @@ source commit, package version, included-file count, and content hash. It then
 runs the shared verifier before writing an optional ZIP. The manifest does not
 hash itself: it is written after the exported file list is hashed.
 
+Before touching the destination, the exporter verifies that every tracked path
+eligible for the public projection matches stewardship `HEAD`. Staged,
+unstaged, or deleted public files are refused so `source_commit` cannot name a
+commit that did not contain the exported bytes. Dirty stewardship-only records
+and untracked files do not enter the projection and do not block it.
+
 Before publishing, verify:
 
 ```bash
