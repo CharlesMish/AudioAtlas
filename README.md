@@ -254,6 +254,7 @@ The temporary Numba compatibility range is documented in
 - [Song-project schema](docs/PROJECT_SCHEMA.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Changelog](docs/CHANGELOG.md)
+- [Security policy](SECURITY.md)
 
 ## License
 

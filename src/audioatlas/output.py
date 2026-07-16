@@ -427,3 +427,9 @@ def _read_output_manifest(path: Path) -> dict[str, Any] | None:
     if payload.get("manifest_version") != 1:
         return None
     return payload
+
+
+def read_output_manifest(path: str | Path) -> dict[str, Any] | None:
+    """Return a recognized ownership manifest without exposing parser details."""
+
+    return _read_output_manifest(Path(path))

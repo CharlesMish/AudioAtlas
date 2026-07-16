@@ -67,6 +67,14 @@ wheel report generation succeeds on the candidate dependency line. The
 resolved Numba version remains part of `analysis_provenance.dependencies` and
 therefore changes report-comparability signatures.
 
+AudioAtlas also requires `Pillow>=12.3.0` and `msgpack>=1.2.1` as explicit
+security floors for transitive runtime dependencies, plus `filelock>=3.16,<4`
+for cross-platform song-project serialization. Raising a security floor does
+not change report schemas or finding semantics. These three packages do not
+enter the measurement-provenance dependency block because they currently serve
+rendering, an unused transitive serialization path, and workspace coordination
+rather than measurement calculations.
+
 ## Revision identity lifecycle
 
 `source_identity.track_id_sha256` is SHA-256 of a user-supplied opaque token.

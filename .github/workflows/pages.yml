@@ -7,8 +7,6 @@ name: Live demo
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: audioatlas-pages
@@ -19,16 +17,14 @@ env:
   PYTHONUTF8: "1"
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
           cache: pip
@@ -57,21 +53,53 @@ jobs:
           from pathlib import Path
 
           site = Path("site")
+          allowed_suffixes = {".html", ".md", ".json", ".png"}
+          files = [path for path in site.rglob("*") if path.name != ".nojekyll"]
+          assert files
+          assert not any(path.is_symlink() for path in site.rglob("*"))
+          assert all(path.is_file() for path in files)
+          assert all(path.suffix.lower() in allowed_suffixes for path in files)
+          assert not list(site.rglob("*.wav"))
+
           summary = json.loads((site / "summary.json").read_text(encoding="utf-8"))
           assert summary["metadata"]["path_kind"] == "basename"
           assert summary["metadata"]["local_paths_included"] is False
-          assert not list(site.rglob("*.wav"))
-          html = (site / "index.html").read_text(encoding="utf-8")
-          forbidden = ("/home/runner/", "C:\\\\Users\\\\", "file://", "fetch(", "XMLHttpRequest")
-          assert not any(value in html for value in forbidden)
-          assert not re.search(r"<(?:script|link)[^>]+(?:src|href)=[\"']https?://", html)
+          forbidden = (
+              "/home/runner/",
+              "C:\\Users\\",
+              "file://",
+              "fetch(",
+              "XMLHttpRequest",
+          )
+          for path in files:
+              if path.suffix.lower() not in {".html", ".md", ".json"}:
+                  continue
+              text = path.read_text(encoding="utf-8")
+              assert not any(value in text for value in forbidden), path
+              if path.suffix.lower() == ".html":
+                  assert not re.search(
+                      r"<(?:script|link)[^>]+(?:src|href)=[\"']https?://", text
+                  ), path
           for filename in summary["graphs"]["selected_filenames"]:
               assert (site / filename).is_file(), filename
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
           path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Deploy live report
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

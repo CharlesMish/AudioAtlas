@@ -22,6 +22,17 @@ tracked separately in `src/audioatlas/release.py`.
 
 ### Reliability and release integrity
 
+- Serialized song-project mutations across processes, converted filesystem
+  races into friendly retry errors, and retained rollback of prior revisions.
+- Restricted private project YAML permissions on POSIX and made project rebuilds
+  reject symlinks, noncanonical paths, incomplete ownership manifests,
+  mismatched identities, and non-share-safe summaries.
+- Pinned workflow actions to immutable commits, isolated OIDC publication jobs,
+  made TestPyPI/PyPI reruns digest-aware, and required indexed clean-install
+  smokes before finalizing the GitHub prerelease.
+- Added locked dependency auditing, automated dependency updates, a security
+  policy, fixed Pillow/msgpack floors, a non-yanked build-tool lock, and PyPI
+  provenance and distribution-hash verification.
 - Added early finite/domain validation for CLI and Python analysis inputs so
   invalid ranges and configuration values fail cleanly before analysis.
 - Made YAML keys explicit, prevented colliding manual-section output slugs,

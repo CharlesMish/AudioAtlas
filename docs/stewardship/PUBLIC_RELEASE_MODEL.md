@@ -118,8 +118,16 @@ source for GitHub Actions and the protected `github-pages` environment. The
 checks its path/network/audio boundary, and deploys the static bundle.
 
 Configure `testpypi` and `pypi` environments as PyPI Trusted Publishers for the
-matching workflow filenames before dispatching or tagging. Run the TestPyPI
-preflight first. A `v<package-version>` tag then reruns tests, lint, snapshot
-verification, builds, metadata checks, creates the GitHub prerelease artifacts,
-and publishes only the wheel and source distribution to PyPI. Never create the
-tag until the public `main` commit and package version are the intended release.
+matching workflow filenames before dispatching or tagging. Restrict TestPyPI to
+`main` and production publication to `v*` tags. Run the TestPyPI preflight first;
+the production workflow requires a successful preflight for the same commit.
+
+A `v<package-version>` tag must belong to public `main`. The release workflow
+reruns tests, lint, snapshot verification, dependency auditing, builds, and
+metadata checks; creates or refreshes a draft GitHub prerelease; publishes only
+the wheel and source distribution through the minimal OIDC job; and compares
+the indexed filenames, hashes, and attestations with the prepared artifacts.
+The GitHub prerelease becomes public only after clean PyPI installs exercise the
+report, diff, and song-project paths on Linux, macOS, and Windows. Reruns skip an
+existing index version only when every filename and SHA-256 is exact. Never
+create the tag until the public `main` commit and package version are intended.

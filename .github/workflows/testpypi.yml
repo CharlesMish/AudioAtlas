@@ -6,35 +6,134 @@ name: TestPyPI preflight
 permissions:
   contents: read
 
+concurrency:
+  group: audioatlas-testpypi
+  cancel-in-progress: false
+
+env:
+  MPLBACKEND: Agg
+  PYTHONUTF8: "1"
+
 jobs:
   build:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.package.outputs.version }}
+
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
-      - run: |
+      - name: Build and verify distributions
+        run: |
           python -m pip install --upgrade pip build twine
           python -m build
           python -m twine check dist/*
-      - uses: actions/upload-artifact@v4
+      - name: Record package version
+        id: package
+        run: echo "version=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: testpypi-dist
-          path: dist/*
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
 
-  publish:
+  state:
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: testpypi
-    permissions:
-      id-token: write
+    timeout-minutes: 5
+    outputs:
+      publish_needed: ${{ steps.index.outputs.publish_needed }}
+
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: testpypi-dist
           path: dist
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Compare prepared files with TestPyPI
+        id: index
+        run: |
+          python scripts/check_package_index.py \
+            --index-json-url https://test.pypi.org/pypi/audioatlas/json \
+            --dist-dir dist \
+            --version "${{ needs.build.outputs.version }}"
+
+  publish:
+    needs: [build, state]
+    if: needs.state.outputs.publish_needed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/audioatlas
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: testpypi-dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+
+  verify:
+    needs: [build, state, publish]
+    if: ${{ always() && needs.build.result == 'success' && needs.state.result == 'success' && (needs.publish.result == 'success' || needs.publish.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: testpypi-dist
+          path: dist
+      - name: Wait for exact TestPyPI files
+        shell: bash
+        run: |
+          for attempt in {1..18}; do
+            if python scripts/check_package_index.py \
+              --index-json-url https://test.pypi.org/pypi/audioatlas/json \
+              --dist-dir dist \
+              --version "${{ needs.build.outputs.version }}" \
+              --require-present; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 18 ]; then
+              exit 1
+            fi
+            sleep 10
+          done
+      - name: Clean-install the indexed wheel and exercise the project workflow
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libsndfile1
+          python -m pip download --no-deps --only-binary=:all: \
+            --index-url https://test.pypi.org/simple/ \
+            --dest /tmp/testpypi-wheel \
+            "audioatlas==${{ needs.build.outputs.version }}"
+          python -m venv /tmp/testpypi-smoke
+          /tmp/testpypi-smoke/bin/python -m pip install --upgrade pip
+          /tmp/testpypi-smoke/bin/python -m pip install /tmp/testpypi-wheel/*.whl
+          /tmp/testpypi-smoke/bin/audioatlas --version
+          /tmp/testpypi-smoke/bin/audioatlas analyze \
+            tests/fixtures/sine_1k_-6dbfs_2s.wav \
+            --out /tmp/testpypi-report \
+            --graphs-profile compact
+          /tmp/testpypi-smoke/bin/audioatlas project init \
+            /tmp/testpypi-project --name "TestPyPI smoke" --graphs-profile compact
+          /tmp/testpypi-smoke/bin/audioatlas project add \
+            /tmp/testpypi-project tests/fixtures/sine_1k_-6dbfs_2s.wav --label "Mix 1"

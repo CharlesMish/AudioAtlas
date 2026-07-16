@@ -6,6 +6,11 @@ name: Release
 
 permissions:
   contents: read
+  actions: read
+
+concurrency:
+  group: audioatlas-release-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   MPLBACKEND: Agg
@@ -14,17 +19,22 @@ env:
 jobs:
   prepare:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      version: ${{ steps.package.outputs.version }}
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: pyproject.toml
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       - name: Install release tools
         run: |
@@ -33,21 +43,38 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]" build twine
 
-      - name: Verify tag and release gates
+      - name: Record and verify release identity
+        id: package
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           version="$(python -c 'import audioatlas; print(audioatlas.__version__)')"
           test "${GITHUB_REF_NAME}" = "v${version}"
+          git fetch origin main
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+          successful_preflights="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/testpypi.yml/runs?head_sha=${GITHUB_SHA}&status=success&per_page=1" \
+            --jq '.total_count')"
+          test "${successful_preflights}" -gt 0
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Run release gates
+        run: |
           python -m pytest
           ruff check .
           python scripts/verify_public_snapshot.py
+          uv export --locked --no-dev --no-emit-project \
+            --format requirements-txt \
+            --output-file /tmp/audioatlas-runtime-requirements.txt
+          pip-audit --require-hashes -r /tmp/audioatlas-runtime-requirements.txt
           python -m build
           python -m twine check dist/*
 
-      - name: Build release extras
+      - name: Build release extras and checksums
         shell: bash
         run: |
-          version="$(python -c 'import audioatlas; print(audioatlas.__version__)')"
+          version="${{ steps.package.outputs.version }}"
           audioatlas analyze examples/demo_audio/guitar.wav \
             --out "AudioAtlas-${version}-sample-report" \
             --graphs-profile standard
@@ -59,49 +86,185 @@ jobs:
           cd dist
           shasum -a 256 * > "AudioAtlas-${version}-SHA256SUMS.txt"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: audioatlas-python-dist
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: audioatlas-release
           path: dist/*
           if-no-files-found: error
+          retention-days: 30
 
-  github-release:
+  index-state:
     needs: prepare
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      publish_needed: ${{ steps.index.outputs.publish_needed }}
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: audioatlas-python-dist
+          path: dist
+      - name: Compare prepared files with PyPI
+        id: index
+        run: |
+          python scripts/check_package_index.py \
+            --index-json-url https://pypi.org/pypi/audioatlas/json \
+            --dist-dir dist \
+            --version "${{ needs.prepare.outputs.version }}"
+
+  draft-release:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-release
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: audioatlas-release
+          path: dist
+      - name: Create or refresh GitHub prerelease draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/* \
+              --repo "${GITHUB_REPOSITORY}" --clobber
+            gh release edit "${GITHUB_REF_NAME}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "AudioAtlas ${GITHUB_REF_NAME}" \
+              --prerelease
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "AudioAtlas ${GITHUB_REF_NAME}" \
+              --generate-notes \
+              --draft \
+              --prerelease \
+              --verify-tag
+          fi
+
+  pypi:
+    needs: [prepare, index-state, draft-release]
+    if: needs.index-state.outputs.publish_needed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/p/audioatlas
+    permissions:
+      actions: read
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: audioatlas-python-dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
+
+  verify-index:
+    needs: [prepare, index-state, draft-release, pypi]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.index-state.result == 'success' && needs.draft-release.result == 'success' && (needs.pypi.result == 'success' || needs.pypi.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: audioatlas-python-dist
+          path: dist
+      - name: Wait for exact PyPI files and digests
+        shell: bash
+        run: |
+          for attempt in {1..18}; do
+            if python scripts/check_package_index.py \
+              --index-json-url https://pypi.org/pypi/audioatlas/json \
+              --dist-dir dist \
+              --version "${{ needs.prepare.outputs.version }}" \
+              --require-present \
+              --provenance-base-url https://pypi.org/integrity/audioatlas; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 18 ]; then
+              exit 1
+            fi
+            sleep 10
+          done
+
+  pypi-smoke:
+    needs: [prepare, verify-index]
+    name: PyPI smoke · ${{ matrix.os }} · Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.11"
+          - os: macos-latest
+            python-version: "3.13"
+          - os: windows-latest
+            python-version: "3.14"
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Linux decoder library
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libsndfile1
+      - name: Install exact PyPI release
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "audioatlas==${{ needs.prepare.outputs.version }}"
+          audioatlas --version
+          audioatlas themes
+      - name: Exercise report, diff, and project workflows
+        run: |
+          audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav --out aa_pypi_report --graphs-profile compact --track-id pypi-smoke
+          audioatlas diff aa_pypi_report aa_pypi_report --out aa_pypi_diff
+          audioatlas project init aa_pypi_project --name "PyPI smoke" --graphs-profile compact
+          audioatlas project add aa_pypi_project tests/fixtures/sine_1k_-6dbfs_2s.wav --label "Mix 1"
+
+  finalize-release:
+    needs: [prepare, verify-index, pypi-smoke]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-release
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
     permissions:
       contents: write
 
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: audioatlas-release
-          path: dist
-      - name: Create GitHub prerelease
+      - name: Publish GitHub prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" dist/* \
+          gh release edit "${GITHUB_REF_NAME}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --title "AudioAtlas ${GITHUB_REF_NAME}" \
-            --generate-notes \
-            --prerelease \
-            --verify-tag
-
-  pypi:
-    needs: prepare
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-    permissions:
-      id-token: write
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: audioatlas-release
-          path: all-dist
-      - name: Select Python distributions
-        run: |
-          mkdir dist
-          cp all-dist/audioatlas-*.whl all-dist/audioatlas-*.tar.gz dist/
-      - uses: pypa/gh-action-pypi-publish@release/v1
+            --draft=false \
+            --prerelease
