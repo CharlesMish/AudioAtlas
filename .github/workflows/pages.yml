@@ -1,0 +1,77 @@
+name: Live demo
+
+"on":
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: audioatlas-pages
+  cancel-in-progress: true
+
+env:
+  MPLBACKEND: Agg
+  PYTHONUTF8: "1"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install decoder and AudioAtlas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libsndfile1
+          python -m pip install --upgrade pip
+          python -m pip install .
+
+      - name: Generate share-safe guitar report
+        run: |
+          audioatlas analyze examples/demo_audio/guitar.wav \
+            --out site \
+            --graphs-profile standard
+          mv site/report.html site/index.html
+          touch site/.nojekyll
+
+      - name: Verify static demo boundary
+        shell: python
+        run: |
+          import json
+          import re
+          from pathlib import Path
+
+          site = Path("site")
+          summary = json.loads((site / "summary.json").read_text(encoding="utf-8"))
+          assert summary["metadata"]["path_kind"] == "basename"
+          assert summary["metadata"]["local_paths_included"] is False
+          assert not list(site.rglob("*.wav"))
+          html = (site / "index.html").read_text(encoding="utf-8")
+          forbidden = ("/home/runner/", "C:\\\\Users\\\\", "file://", "fetch(", "XMLHttpRequest")
+          assert not any(value in html for value in forbidden)
+          assert not re.search(r"<(?:script|link)[^>]+(?:src|href)=[\"']https?://", html)
+          for filename in summary["graphs"]["selected_filenames"]:
+              assert (site / filename).is_file(), filename
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - name: Deploy live report
+        id: deployment
+        uses: actions/deploy-pages@v4

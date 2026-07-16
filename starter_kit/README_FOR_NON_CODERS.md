@@ -12,6 +12,9 @@ Ask the person setting up the computer to verify:
 audioatlas --version
 ```
 
+The normal installation command is `python -m pip install audioatlas`. This
+still requires Python 3.11 or newer; the launcher kit is not a standalone app.
+
 Then place one supported audio file in `PUT_AUDIO_HERE/`. The launchers find
 WAV/WAVE, FLAC, OGG, AIFF/AIF, or MP3 files (when the local decoder supports
 that format) and write a report folder beside this README.

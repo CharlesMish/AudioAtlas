@@ -141,18 +141,38 @@ textarea:focus-visible,
   outline-offset: 2px;
 }
 
+body[data-presentation="focus"] .container {
+  max-width: 1120px;
+}
+body[data-presentation="focus"] .presentation-controls {
+  margin: 0 0 12px;
+  background: var(--surface-muted);
+  border-color: var(--border-soft);
+  box-shadow: none;
+}
+body[data-presentation="focus"] .presentation-controls button {
+  min-height: 34px;
+  padding: 6px 12px;
+}
+body[data-presentation="focus"] .presentation-controls button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-soft);
+  box-shadow: none;
+}
+
 body[data-presentation="studio"] {
   background:
     radial-gradient(circle at 9% 2%, var(--accent-muted), transparent 28rem),
-    radial-gradient(circle at 92% 11%, var(--pattern-accent), transparent 32rem),
+    radial-gradient(circle at 92% 11%, var(--accent-muted), transparent 26rem),
     var(--bg);
 }
-body[data-presentation="studio"] .container { max-width: 1240px; }
+body[data-presentation="studio"] .container { max-width: 1260px; }
 body[data-presentation="studio"] header {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  margin: 12px 0 30px;
+  margin: 14px 0 32px;
   padding: 34px 34px 20px;
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -218,13 +238,13 @@ body[data-presentation="studio"] .metric-card {
 body[data-presentation="studio"] .metric-card::after {
   content: "";
   position: absolute;
-  width: 74px;
-  height: 74px;
-  right: -40px;
-  bottom: -46px;
-  border: 14px solid var(--accent-muted);
+  width: 62px;
+  height: 62px;
+  right: -34px;
+  bottom: -38px;
+  border: 10px solid var(--accent-muted);
   border-radius: 50%;
-  opacity: 0.7;
+  opacity: 0.48;
 }
 body[data-presentation="studio"] .finding-card { border-left: 4px solid var(--callout-border); }
 body[data-presentation="studio"] .plot-card { padding: 19px; }
@@ -253,6 +273,26 @@ body[data-presentation="studio"] .how-to-read {
   border-radius: 14px;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.055);
 }
+body[data-presentation="focus"] .how-to-read,
+body[data-presentation="studio"] .how-to-read {
+  border-top: 1px solid var(--border-soft);
+}
+body[data-presentation="studio"] .plot-image-wrapper:focus-visible,
+body[data-presentation="focus"] .plot-image-wrapper:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .plot-image-wrapper {
+    transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  }
+  .plot-image-wrapper:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--border-soft), var(--shadow-card);
+  }
+}
 
 @media (max-width: 640px) {
   body[data-presentation="studio"] header { padding: 26px 20px 16px; border-radius: 14px; }
@@ -269,6 +309,7 @@ body[data-presentation="studio"] .how-to-read {
 }
 @media print {
   body, body[data-presentation="studio"] { background: #fff !important; color: #000 !important; }
+  .container { max-width: none !important; padding: 0 !important; }
   body[data-presentation="studio"] header,
   body[data-presentation="studio"] .metric-card,
   body[data-presentation="studio"] .finding-card,
@@ -286,7 +327,9 @@ body[data-presentation="studio"] .how-to-read {
   .lightbox,
   .note-actions,
   .notes-status { display: none !important; }
-  section, article, details, table, .card { break-inside: avoid; }
+  .plot-image-wrapper { padding: 0 !important; border: 0 !important; box-shadow: none !important; }
+  section { break-inside: auto; }
+  article, details, table, .metric-card, .note-box, .context-card { break-inside: avoid; }
 }
 """
 

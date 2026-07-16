@@ -68,7 +68,7 @@ def test_pipeline_writes_expected_outputs(tmp_path: Path, sr: int):
     assert summary["metadata"]["local_paths_included"] is False
     assert summary["source_identity"] == {"kind": "none", "track_id_sha256": None}
     provenance = summary["analysis_provenance"]
-    assert provenance["audioatlas_version"] == "0.2.0a6"
+    assert provenance["audioatlas_version"] == "0.2.0a7"
     assert provenance["summary_schema_version"] == SUMMARY_SCHEMA_VERSION
     assert len(provenance["analysis_config_sha256"]) == 64
     assert len(provenance["measurement_code_sha256"]) == 64
@@ -125,6 +125,23 @@ def test_pipeline_writes_expected_outputs(tmp_path: Path, sr: int):
 
     image = matplotlib_image.imread(result.out_dir / "rms_timeline.png")
     expected_rgb = np.asarray(to_rgb(get_theme("default").tokens["surface"]))
+    assert np.allclose(image[0, 0, :3], expected_rgb, atol=1 / 255)
+
+
+def test_pipeline_applies_dark_report_theme_to_plot_canvas(tmp_path: Path, sr: int):
+    path = tmp_path / "song.wav"
+    _write_short_sine(path, sr)
+
+    result = analyze_file(
+        path,
+        tmp_path / "report",
+        config=_small_config(),
+        selection=GraphSelection(profile="minimal"),
+        theme_name="midnight_studio",
+    )
+
+    image = matplotlib_image.imread(result.out_dir / "rms_timeline.png")
+    expected_rgb = np.asarray(to_rgb(get_theme("midnight_studio").tokens["surface"]))
     assert np.allclose(image[0, 0, :3], expected_rgb, atol=1 / 255)
 
 

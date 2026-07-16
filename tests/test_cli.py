@@ -526,6 +526,116 @@ sections:
     assert "greater than start" in result.output
 
 
+def test_cli_sections_rejects_colliding_output_slugs_before_writing(tmp_path):
+    path = tmp_path / "sections.wav"
+    _write_sections_fixture(path)
+    out_dir = tmp_path / "colliding_sections"
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "sections",
+            str(path),
+            "--out",
+            str(out_dir),
+            "--section",
+            "A/B:0:3",
+            "--section",
+            "A B:0:3",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "same output folder" in result.output
+    assert "Preparing AudioAtlas" not in result.output
+    assert not out_dir.exists()
+
+
+def test_cli_sections_rejects_non_finite_range_before_writing(tmp_path):
+    path = tmp_path / "sections.wav"
+    _write_sections_fixture(path)
+    out_dir = tmp_path / "non_finite_section"
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "sections",
+            str(path),
+            "--out",
+            str(out_dir),
+            "--section",
+            "intro:inf:",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Section start time must be finite" in result.output
+    assert "Preparing AudioAtlas" not in result.output
+    assert not out_dir.exists()
+
+
+def test_cli_sections_escapes_section_names_in_markdown_index(tmp_path):
+    path = tmp_path / "sections.wav"
+    _write_sections_fixture(path)
+    out_dir = tmp_path / "escaped_sections"
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "sections",
+            str(path),
+            "--out",
+            str(out_dir),
+            "--section",
+            "verse | *lift*:0:3",
+            "--graphs-profile",
+            "compact",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    index = (out_dir / "section_index.md").read_text(encoding="utf-8")
+    assert r"verse \| \*lift\*" in index
+
+
+def test_cli_sections_rejects_unknown_yaml_keys(tmp_path):
+    path = tmp_path / "sections.wav"
+    _write_sections_fixture(path)
+    config_path = tmp_path / "sections.yaml"
+    config_path.write_text(
+        "sections:\n  - name: intro\n    start: 0\n    end: 3\n    colour: blue\n",
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "unknown_section_key"
+
+    result = CliRunner().invoke(
+        main,
+        ["sections", str(path), "--out", str(out_dir), "--config", str(config_path)],
+    )
+
+    assert result.exit_code == 2
+    assert "Unknown key(s)" in result.output
+    assert "colour" in result.output
+    assert not out_dir.exists()
+
+
+def test_cli_sections_rejects_non_utf8_yaml(tmp_path):
+    path = tmp_path / "sections.wav"
+    _write_sections_fixture(path)
+    config_path = tmp_path / "sections.yaml"
+    config_path.write_bytes(b"sections:\n  - name: \xff\n")
+    out_dir = tmp_path / "non_utf8_section_config"
+
+    result = CliRunner().invoke(
+        main,
+        ["sections", str(path), "--out", str(out_dir), "--config", str(config_path)],
+    )
+
+    assert result.exit_code == 2
+    assert "Could not read section config" in result.output
+    assert not out_dir.exists()
+
+
 def test_cli_analyze_without_out_uses_friendly_default(tmp_path, monkeypatch):
     path = tmp_path / "My Mix (v5).wav"
     sr = 48_000

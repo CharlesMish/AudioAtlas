@@ -254,6 +254,27 @@ def test_lossy_decoded_catalog_caveat_renders_for_mp3_heavy_folder(tmp_path: Pat
     assert "decoded-audio delivery context" in md
 
 
+def test_catalog_markdown_escapes_user_controlled_labels(tmp_path: Path):
+    catalog = build_catalog_summary(
+        input_folder=tmp_path / "audio | *draft*",
+        output_folder=tmp_path / "reports _two_",
+        tracks=[
+            {
+                "filename": "mix | *draft* _two_.wav",
+                "report_path": "mix-draft-two/report.html",
+            }
+        ],
+        skipped_files=[{"filename": "notes | old.txt", "reason": "not *audio*"}],
+    )
+
+    path = write_catalog_md(catalog, tmp_path)
+    text = path.read_text(encoding="utf-8")
+
+    assert r"# AudioAtlas Catalog: audio \| \*draft\*" in text
+    assert r"mix \| \*draft\* \_two\_.wav" in text
+    assert r"notes \| old.txt: not \*audio\*" in text
+
+
 def test_catalog_html_uses_trait_tags_and_distribution_median_ticks(tmp_path: Path):
     tracks = [
         {

@@ -78,3 +78,19 @@ def test_load_audio_corrupt_error_is_domain_specific_and_redacts_parent_path(tmp
     assert "Could not read audio file 'corrupt.wav'" in message
     assert str(tmp_path) not in message
     assert "Traceback" not in message
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"start_seconds": float("inf")}, "start_seconds must be finite"),
+        ({"end_seconds": float("nan")}, "end_seconds must be finite"),
+        ({"max_duration_seconds": float("inf")}, "max_duration_seconds must be finite"),
+    ],
+)
+def test_load_audio_rejects_non_finite_ranges(tmp_path, sr, kwargs, message):
+    path = tmp_path / "finite.wav"
+    sf.write(path, np.zeros((sr // 10, 1), dtype=np.float32), sr)
+
+    with pytest.raises(ValueError, match=message):
+        load_audio(path, **kwargs)

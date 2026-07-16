@@ -163,3 +163,26 @@ graphs:
 
     with pytest.raises(BadParameter):
         _make_selection(None, (), (), config_path)
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "graphz:\n  profile: compact\n",
+        "graphs:\n  profile: compact\n  enabled: [chroma_cqt]\n",
+    ],
+)
+def test_graphs_yaml_rejects_unknown_keys(tmp_path, content):
+    config_path = tmp_path / "unknown.yaml"
+    config_path.write_text(content, encoding="utf-8")
+
+    with pytest.raises(BadParameter, match="Unknown key"):
+        _make_selection(None, (), (), config_path)
+
+
+def test_graphs_yaml_rejects_non_utf8_input(tmp_path):
+    config_path = tmp_path / "non_utf8.yaml"
+    config_path.write_bytes(b"graphs:\n  profile: \xff\n")
+
+    with pytest.raises(BadParameter, match="Could not read graphs config"):
+        _make_selection(None, (), (), config_path)

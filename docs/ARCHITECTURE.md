@@ -11,6 +11,7 @@ There is no server, plugin system, hidden state, or cloud dependency.
 cli.py
   ├── pipeline.py      ── one-track/section orchestration
   ├── batch.py         ── folder orchestration
+  ├── project.py       ── local same-track song workspaces
   └── revision_diff.py ── guarded same-track report deltas
          ↓
 io.py ── decoded audio + portable metadata
@@ -41,6 +42,7 @@ scripts/prepare_calibration_review.py
 | `visualize/*` | rendering supplied results | decoding or analysis |
 | `pipeline.py` | one coherent run and summary assembly | DSP math |
 | `batch.py` | per-file isolation and catalog assembly | DSP math or ranking |
+| `project.py` | private project state, atomic revision addition, reusable sections, and portable static indexes | audio recognition, preferred-version claims, or public source paths |
 | `provenance.py` | canonical hashes, dependency/decoder/environment metadata, opaque identity digest | source paths, audio recognition, quality inference |
 | `revision_diff.py` | same-track guard, comparability assessment, descriptive B-minus-A artifacts | audio analysis, cross-track ranking, preferred-version claims |
 | `alt_text.py` | measured descriptions from existing summary values | analysis recomputation or musical inference |
@@ -109,7 +111,7 @@ runs from retaining completed Matplotlib graphs and their analysis bundles.
 
 Librosa uses Numba/llvmlite in analysis paths, so those transitive packages are
 part of the executable measurement environment rather than incidental build
-tools. AudioAtlas `0.2.0a6` promotes Numba into the direct dependency contract
+tools. AudioAtlas `0.2.0a7` promotes Numba into the direct dependency contract
 and constrains it to `>=0.65.1,<0.66` after a clean Python 3.13 report stalled
 and crashed with Numba 0.66.0 / llvmlite 0.48.0 but completed with Numba 0.65.1
 / llvmlite 0.47.0. Dependency versions are recorded in provenance; widening
@@ -144,6 +146,16 @@ saved summary only. It records appeared/disappeared/changed/unchanged prompts.
 Because measurements are not rerun, replay isolates finding-rule churn from DSP
 or decoder changes; it does not validate the music or replace reviewer labels.
 
+## Song-project boundary
+
+`project.py` stores a random raw identity token only in the owner-side
+`audioatlas-project.yaml`; generated reports and project artifacts receive its
+SHA-256 digest. Adding a revision completes its report, manual-section reports,
+and guarded adjacent diff before updating project state. A failed analysis
+leaves prior configuration and artifacts unchanged. Generated project indexes
+contain portable filenames, links, and descriptive order only—never local
+source paths, scores, or preferred revisions.
+
 ## Accessible plot descriptions
 
 `alt_text.py` reads already-serialized summary values and emits bounded,
@@ -165,10 +177,14 @@ image's alt text. The helper never imports analysis or plotting code.
 
 ## Serialized compatibility
 
-Release, summary-schema, findings-schema, catalog-schema, and finding-ruleset
-versions live in `src/audioatlas/release.py`. Precise new names are preferred;
+Release, summary-schema, findings-schema, catalog-schema, song-project-schema,
+and finding-ruleset versions live in `src/audioatlas/release.py`. Precise new names are preferred;
 temporary aliases are explicitly marked deprecated. Removing an alias or
 changing a field type requires a schema decision and migration note.
+
+The owner-side and portable song-project surfaces are documented separately in
+`docs/PROJECT_SCHEMA.md` because local configuration paths are intentionally not
+part of the share-safe generated index.
 
 ## Product boundary
 

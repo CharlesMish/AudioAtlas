@@ -14,6 +14,7 @@ from typing import Any
 from audioatlas import __version__
 from audioatlas.alt_text import plot_alt_text
 from audioatlas.graphs.registry import RELATIVE_DB_NOTE, graph_by_filename
+from audioatlas.markdown import markdown_text
 from audioatlas.release import RELEASE_LABEL
 from audioatlas.utils import mmss
 
@@ -338,7 +339,7 @@ def write_report_md(
     mid_side = summary.get("mid_side_energy", {})
 
     lines: list[str] = []
-    lines.append(f"# AudioAtlas Report: {metadata.get('filename', 'unknown')}\n")
+    lines.append(f"# AudioAtlas Report: {markdown_text(metadata.get('filename', 'unknown'))}\n")
     build_metadata = report_build_metadata()
 
     duration = levels.get("duration_seconds")

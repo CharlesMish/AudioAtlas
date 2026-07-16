@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from audioatlas import __version__
@@ -110,4 +111,45 @@ def test_corrupt_single_file_has_clean_cli_error_without_traceback_or_path_leak(
     assert "Traceback" not in result.output
     assert "private-user-directory" not in result.output
     assert str(tmp_path) not in result.output
+    assert not out.exists()
+
+
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        (["--start", "inf"], "--start: must be finite"),
+        (["--max-duration", "inf"], "--max-duration: must be finite"),
+        (["--rms-frame-length", "0"], "rms_frame_length must be a positive integer"),
+        (["--db-floor", "nan"], "db_floor must be a finite number"),
+    ],
+)
+def test_invalid_analysis_numbers_fail_before_preparation(tmp_path, options, message):
+    source = ROOT / "tests" / "fixtures" / "sine_1k_-6dbfs_2s.wav"
+    out = tmp_path / "report"
+
+    result = CliRunner().invoke(
+        main,
+        ["analyze", str(source), "--out", str(out), *options],
+    )
+
+    assert result.exit_code == 2
+    assert message in result.output
+    assert "Preparing AudioAtlas" not in result.output
+    assert "Traceback" not in result.output
+    assert not out.exists()
+
+
+def test_batch_rejects_non_finite_duration_before_preparation(tmp_path):
+    source = tmp_path / "audio"
+    source.mkdir()
+    out = tmp_path / "catalog"
+
+    result = CliRunner().invoke(
+        main,
+        ["batch", str(source), "--out", str(out), "--max-duration", "inf"],
+    )
+
+    assert result.exit_code == 2
+    assert "--max-duration: must be finite" in result.output
+    assert "Preparing AudioAtlas" not in result.output
     assert not out.exists()

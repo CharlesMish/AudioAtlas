@@ -15,12 +15,17 @@ the track.
 This is the regular no-theme output: AudioAtlas uses the polished light default
 theme and opens the finished report in Studio.
 
-## Make your first report
+## Try it, then make your first report
+
+Open the [live guitar report](https://charlesmish.github.io/AudioAtlas/) to see
+the complete local-first experience before installing anything. The hosted
+sample contains the static report only; AudioAtlas itself does not upload user
+audio or generated reports.
 
 AudioAtlas supports Python 3.11 or newer.
 
 ```bash
-python -m pip install .
+python -m pip install audioatlas
 audioatlas analyze song.wav
 ```
 
@@ -171,6 +176,22 @@ disappeared, or changed. It does not choose a winner. AudioAtlas stores only the
 token's SHA-256 digest; matching digests mean the same token was supplied, not
 that AudioAtlas recognized the music.
 
+## Keep a song's revisions together
+
+For recurring work, create a private local song workspace and add each export
+in order:
+
+```bash
+audioatlas project init projects/my-song --name "My Song"
+audioatlas project add projects/my-song mix-v1.wav --label "Mix 1"
+audioatlas project add projects/my-song mix-v2.wav --label "Mix 2"
+```
+
+Open `projects/my-song/project.html`. The workspace keeps per-revision reports
+and guarded adjacent diffs together. Its YAML configuration records local
+source paths for repeatable owner-side use, while generated JSON, Markdown, and
+HTML expose only portable filenames and the hashed project identity.
+
 ## Analyze sections or a folder
 
 Manual sections:
@@ -212,7 +233,8 @@ surface no prioritized prompts at all.
 
 ## Alpha status
 
-AudioAtlas `0.2.0a6` is a public alpha. The report pipeline and comparison tools
+AudioAtlas `0.2.0a7` is a public alpha. The report pipeline, comparison tools,
+and local song-project workflow
 are usable, but the default review prompts are still being calibrated on real
 music. Native double-click launchers also remain convenience wrappers for an
 already installed AudioAtlas environment, not a standalone desktop installer.
@@ -229,6 +251,7 @@ The temporary Numba compatibility range is documented in
 - [Alpha limitations](docs/ALPHA_LIMITATIONS.md)
 - [Compatibility](docs/COMPATIBILITY.md)
 - [Schemas](docs/SUMMARY_SCHEMA.md)
+- [Song-project schema](docs/PROJECT_SCHEMA.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Changelog](docs/CHANGELOG.md)
 

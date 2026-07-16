@@ -17,6 +17,8 @@ output_reports/
 catalog_reports/
 calibration_reports/
 outputs/
+projects/
+song_projects/
 
 # Audio dropped into the repo by accident
 *.wav
