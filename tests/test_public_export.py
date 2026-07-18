@@ -69,6 +69,7 @@ def test_public_export_excludes_stewardship_material_but_keeps_user_contracts():
         "tests/test_pipeline.py",
         ".github/workflows/ci.yml",
         "examples/demo_audio/README.md",
+        "examples/demo_audio/audioatlas_demo.wav",
         "examples/demo_audio/guitar.wav",
         "examples/demo_audio/guitar_koto_cello_drums.wav",
     ]

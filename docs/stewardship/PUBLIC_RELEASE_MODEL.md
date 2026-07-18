@@ -114,8 +114,9 @@ and useful to users.
 
 After the public candidate lands on `main`, configure the repository's Pages
 source for GitHub Actions and the protected `github-pages` environment. The
-`Live demo` workflow regenerates the standard guitar report from public source,
-checks its path/network/audio boundary, and deploys the static bundle.
+`Live demo` workflow regenerates the standard Midnight Studio report from the
+public AudioAtlas demo track, checks its path/network/audio boundary, and
+deploys the static bundle without the source WAV.
 
 Configure `testpypi` and `pypi` environments as PyPI Trusted Publishers for the
 matching workflow filenames before dispatching or tagging. Restrict TestPyPI to
