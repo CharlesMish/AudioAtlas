@@ -109,6 +109,7 @@ def test_windows_spec_is_onedir_x64_and_uses_shared_runtime_hook() -> None:
     assert '"architectures": ["x86_64"]' in spec
     assert '"common" / "audioatlas_runtime_hook.py"' in spec
     assert '"numba.np.ufunc.omppool"' in spec
+    assert '"numba.np.ufunc.tbbpool"' in spec
     assert "COLLECT(" in spec
 
 

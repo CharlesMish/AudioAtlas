@@ -198,6 +198,11 @@ def test_private_windows_candidate_workflow_cannot_publish() -> None:
     assert "Get-AuthenticodeSignature" in text
     assert "--ui-smoke" in text
     assert "retention-days: 14" in text
+    for step in job["steps"]:
+        if step.get("shell") == "pwsh":
+            run = step.get("run", "")
+            assert "$ErrorActionPreference = 'Stop'" in run
+            assert "$PSNativeCommandUseErrorActionPreference = $true" in run
     for promised in (
         "*-portable.zip",
         "*-setup.exe",

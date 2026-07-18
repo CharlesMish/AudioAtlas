@@ -44,7 +44,16 @@ analysis = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[str(root / "packaging" / "common" / "audioatlas_runtime_hook.py")],
-    excludes=["AppKit", "objc", "PyObjCTools", "sklearn", "pandas", "bokeh", "numba.np.ufunc.omppool"],
+    excludes=[
+        "AppKit",
+        "objc",
+        "PyObjCTools",
+        "sklearn",
+        "pandas",
+        "bokeh",
+        "numba.np.ufunc.omppool",
+        "numba.np.ufunc.tbbpool",
+    ],
     noarchive=False,
     optimize=1,
 )
