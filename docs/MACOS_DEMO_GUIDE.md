@@ -8,10 +8,11 @@ not upload audio, require an account, or use telemetry.
 
 1. Download this complete ZIP through a web browser and extract it with macOS.
 2. Compare the DMG checksum with `SHA256SUMS.txt`.
-3. Open the DMG. Do not bypass or disable macOS security checks.
-4. Drag AudioAtlas to Applications, then open it normally from Applications.
-5. Drag `audioatlas_demo.wav` onto the window or use **Choose Audio File**.
-6. Allow extra time for **Starting the local analysis engine…** on the first run.
+3. Confirm `notarization-submission.json` and `notarization-log.json` are present.
+4. Open the DMG. Do not bypass or disable macOS security checks.
+5. Drag AudioAtlas to Applications, then open it normally from Applications.
+6. Drag `audioatlas_demo.wav` onto the window or use **Choose Audio File**.
+7. Allow extra time for **Starting the local analysis engine…** on the first run.
 
 The report is written beside the source as
 `AudioAtlas Report – audioatlas_demo` and opens in the default browser. AudioAtlas
@@ -30,6 +31,8 @@ It is not a general-purpose stock music asset.
 
 ## Clean-Mac acceptance record
 
+Release handoff evidence bundle name: `AudioAtlas-<version>-build-<build>-macOS-demo-kit.zip`
+
 Candidate ID: ____________________  Date: __________  Tester: _______________
 
 Mac model: _______________________  Apple chip: _____________________________
@@ -40,10 +43,14 @@ Cold launch time: _______________  First report time: ______________________
 
 - [ ] The kit was downloaded through a browser and extracted normally.
 - [ ] The DMG checksum matched and macOS accepted it without a security bypass.
+- [ ] Gatekeeper allowed launch directly from the mounted DMG and Applications copy.
 - [ ] AudioAtlas launched directly from the mounted DMG.
 - [ ] AudioAtlas copied to Applications and launched normally.
 - [ ] Fresh install, replacement install, and a duplicate copy were exercised.
 - [ ] The stapled app launched and analyzed audio while offline.
+- [ ] Notarization submission/log files were retained and status was Accepted.
+- [ ] Manifest (`macos-candidate-manifest.json`) was retained and consistent.
+- [ ] Manifest SHA-256 matched `AudioAtlas-*.dmg.sha256` and first-report timing was captured.
 - [ ] File picker and drag-and-drop each accepted one track.
 - [ ] The included demo and one tester-selected track produced complete reports.
 - [ ] A source path containing spaces and Unicode produced a complete report.

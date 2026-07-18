@@ -8,18 +8,16 @@ not contain DSP interpretation logic.
 from __future__ import annotations
 
 import gc
-import threading
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from matplotlib import rc_context
 
 from audioatlas.analysis.bundle import AnalysisBundle
 from audioatlas.analysis.findings import generate_findings
 from audioatlas.config import AnalysisConfig
-from audioatlas.errors import AnalysisCancelled
 from audioatlas.graphs import all_graphs
 from audioatlas.graphs.selection import GraphSelection
 from audioatlas.html_report import write_report_html
@@ -37,66 +35,14 @@ from audioatlas.plot_theme import matplotlib_theme_rc
 from audioatlas.provenance import build_analysis_provenance, track_identity_block
 from audioatlas.release import SUMMARY_SCHEMA_VERSION
 from audioatlas.report import write_findings_json, write_report_md, write_summary_json
-
-
-@dataclass(frozen=True)
-class AnalysisRunResult:
-    """Paths and in-memory summary produced by an analysis run.
-
-    The ``summary`` dict mirrors what is written to ``summary.json`` so
-    downstream workflows can chain runs without re-reading from disk.
-    """
-
-    out_dir: Path
-    summary_path: Path
-    findings_path: Path
-    report_path: Path
-    html_report_path: Path
-    plot_paths: list[Path]
-    summary: dict[str, Any]
-    findings: dict[str, Any]
-
-
-AnalysisProgressStage = Literal[
-    "loading",
-    "measuring",
-    "rendering",
-    "publishing",
-    "complete",
-]
-
-
-@dataclass(frozen=True)
-class AnalysisProgress:
-    """A coarse, presentation-neutral update from one analysis run."""
-
-    stage: AnalysisProgressStage
-    message: str
-    completed: int | None = None
-    total: int | None = None
-
+from audioatlas.run_contract import (
+    AnalysisProgress,
+    AnalysisProgressStage,
+    AnalysisRunResult,
+    CancellationToken,
+)
 
 ProgressCallback = Callable[[AnalysisProgress], None]
-
-
-class CancellationToken:
-    """Thread-safe cooperative cancellation shared with UI callers."""
-
-    def __init__(self) -> None:
-        self._event = threading.Event()
-
-    def cancel(self) -> None:
-        """Request cancellation at the next safe analysis checkpoint."""
-
-        self._event.set()
-
-    @property
-    def is_cancelled(self) -> bool:
-        return self._event.is_set()
-
-    def raise_if_cancelled(self) -> None:
-        if self.is_cancelled:
-            raise AnalysisCancelled("Analysis canceled. The previous report was unchanged.")
 
 
 def analyze_file(

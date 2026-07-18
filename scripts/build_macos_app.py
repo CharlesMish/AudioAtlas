@@ -12,6 +12,36 @@ import subprocess
 import sys
 from pathlib import Path
 
+DEFAULT_COMMAND_TIMEOUT_SECONDS = 120
+PYINSTALLER_TIMEOUT_SECONDS = 900
+PACKAGE_ROOT_ENTRIES = {"Contents"}
+
+
+def _run(
+    *args: str,
+    context: str,
+    timeout: int = DEFAULT_COMMAND_TIMEOUT_SECONDS,
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(
+            args,
+            check=True,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            cwd=cwd,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise SystemExit(f"{context} timed out after {timeout}s: {args}") from exc
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(
+            f"{context} failed with exit code {exc.returncode}:\n"
+            f"command: {args}\n"
+            f"stdout: {exc.stdout}\n"
+            f"stderr: {exc.stderr}"
+        ) from exc
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -29,22 +59,28 @@ def main(argv: list[str] | None = None) -> int:
 
     root = Path(__file__).resolve().parents[1]
     spec = root / "packaging" / "macos" / "AudioAtlas.spec"
+    build_root = args.work.resolve()
+    dist_root = args.dist.resolve()
     command = [
         sys.executable,
         "-m",
         "PyInstaller",
         "--noconfirm",
         "--distpath",
-        str(args.dist.resolve()),
+        str(dist_root),
         "--workpath",
-        str(args.work.resolve()),
+        str(build_root),
     ]
     if not args.no_clean:
         command.append("--clean")
     command.append(str(spec))
-    subprocess.run(command, cwd=root, check=True)
-
-    app = args.dist.resolve() / "AudioAtlas.app"
+    _run(
+        *command,
+        context="Run PyInstaller",
+        timeout=PYINSTALLER_TIMEOUT_SECONDS,
+        cwd=root,
+    )
+    app = dist_root / "AudioAtlas.app"
     if not app.is_dir():
         raise SystemExit(f"Build completed without expected app bundle: {app}")
     _audit_bundle(app)
@@ -73,41 +109,47 @@ def _audit_bundle(app: Path) -> None:
     if not re.fullmatch(r"[1-9][0-9]*", str(info.get("CFBundleVersion", ""))):
         raise SystemExit("Bundle audit failed: CFBundleVersion is not a positive integer")
 
+    root_contents = {entry.name for entry in app.iterdir()}
+    if root_contents != PACKAGE_ROOT_ENTRIES:
+        raise SystemExit(
+            "Bundle audit failed: app root unexpected entries: "
+            f"{sorted(root_contents)!r}"
+        )
+
     files = [path for path in app.rglob("*") if path.is_file() and not path.is_symlink()]
     bundle_basenames = {path.name for path in files}
     mach_o: list[Path] = []
     for path in files:
-        identified = subprocess.run(
-            ["file", "-b", str(path)],
-            check=True,
-            capture_output=True,
-            text=True,
+        identified = _run(
+            "file",
+            "-b",
+            str(path),
+            context=f"Determine Mach-O type for {path.relative_to(app)}",
         ).stdout
         if "Mach-O" in identified:
             mach_o.append(path)
 
     if not mach_o:
         raise SystemExit("Bundle audit failed: no Mach-O files found")
+
     for path in mach_o:
-        architectures = subprocess.run(
-            ["lipo", "-archs", str(path)],
-            check=True,
-            capture_output=True,
-            text=True,
+        architecture_lines = _run(
+            "lipo",
+            "-archs",
+            str(path),
+            context=f"Check Mach-O architectures for {path.relative_to(app)}",
         ).stdout.split()
-        if "arm64" not in architectures or "x86_64" in architectures:
+        if "arm64" not in architecture_lines or "x86_64" in architecture_lines:
             raise SystemExit(
-                f"Bundle audit failed: {path.relative_to(app)} architectures={architectures!r}"
+                f"Bundle audit failed: {path.relative_to(app)} architectures={architecture_lines!r}"
             )
-        build = subprocess.run(
-            ["vtool", "-show-build", str(path)],
-            check=True,
-            capture_output=True,
-            text=True,
+        build_output = _run(
+            "vtool",
+            "-show-build",
+            str(path),
+            context=f"Read Mach-O minimum system version for {path.relative_to(app)}",
         ).stdout
-        minimum_versions = re.findall(
-            r"^\s*minos\s+(\d+(?:\.\d+)+)", build, re.MULTILINE
-        )
+        minimum_versions = re.findall(r"^\s*minos\s+(\d+(?:\.\d+)+)", build_output, re.MULTILINE)
         if not minimum_versions:
             raise SystemExit(
                 f"Bundle audit failed: {path.relative_to(app)} has no macOS build target"
@@ -118,17 +160,18 @@ def _audit_bundle(app: Path) -> None:
                     "Bundle audit failed: "
                     f"{path.relative_to(app)} requires macOS {minimum_version}"
                 )
-        linked = subprocess.run(
-            ["otool", "-L", str(path)],
-            check=True,
-            capture_output=True,
-            text=True,
+
+        linked = _run(
+            "otool",
+            "-L",
+            str(path),
+            context=f"Inspect Mach-O linked libraries for {path.relative_to(app)}",
         ).stdout.splitlines()[1:]
-        dylib_ids = subprocess.run(
-            ["otool", "-D", str(path)],
-            check=True,
-            capture_output=True,
-            text=True,
+        dylib_ids = _run(
+            "otool",
+            "-D",
+            str(path),
+            context=f"Inspect Mach-O install name for {path.relative_to(app)}",
         ).stdout.splitlines()[1:]
         install_id = dylib_ids[0].strip() if dylib_ids else None
         for line in linked:
@@ -146,9 +189,13 @@ def _audit_bundle(app: Path) -> None:
                 f"{dependency!r} in {path.relative_to(app)}"
             )
 
-    subprocess.run(
-        ["codesign", "--verify", "--deep", "--strict", str(app)],
-        check=True,
+    _run(
+        "codesign",
+        "--verify",
+        "--deep",
+        "--strict",
+        str(app),
+        context="Verify app signing status",
     )
 
 

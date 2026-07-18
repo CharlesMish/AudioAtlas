@@ -78,31 +78,56 @@ def output_transaction(destination: str | Path) -> Iterator[OutputTransaction]:
     if target.is_symlink():
         raise OutputOwnershipError("Refusing to publish through an output-folder symlink.")
     canonical = target.resolve(strict=False)
-    digest = hashlib.sha256(str(canonical).encode("utf-8")).hexdigest()
-    lock_root = user_cache_path("AudioAtlas", "CharlesMish") / "output-locks"
+    # normcase is a no-op on POSIX and folds case/separators on Windows, where
+    # spelling variants of one not-yet-created NTFS destination must share a lock.
+    digest = _output_lock_digest(canonical)
+    user_key = str(getattr(os, "getuid", lambda: "user")())
+    guard_root = Path(tempfile.gettempdir()) / f"audioatlas-output-locks-{user_key}"
     try:
-        lock_root.mkdir(parents=True, exist_ok=True)
-    except OSError:
-        user_key = str(getattr(os, "getuid", lambda: "user")())
-        lock_root = Path(tempfile.gettempdir()) / f"audioatlas-output-locks-{user_key}"
-        try:
-            lock_root.mkdir(parents=True, exist_ok=True)
-        except OSError as exc:
-            raise OutputBusyError(
-                "AudioAtlas could not create its local output lock. "
-                "Check the account's cache-folder permissions and try again."
-            ) from exc
-
-    lock = FileLock(lock_root / f"{digest}.lock", timeout=0)
-    try:
-        with lock:
-            _validate_output_root(target)
-            yield OutputTransaction(destination=canonical)
+        guard_root.mkdir(parents=True, exist_ok=True)
+        guard_lock = FileLock(guard_root / f"{digest}.lock", timeout=0)
+        guard_lock.acquire()
     except Timeout as exc:
+        raise _output_busy_error() from exc
+    except OSError as exc:
         raise OutputBusyError(
-            "Another AudioAtlas operation is already updating this report. "
-            "Wait for it to finish, then try again."
+            "AudioAtlas could not create its local output lock. "
+            "Check the account's temporary-folder permissions and try again."
         ) from exc
+
+    cache_lock: FileLock | None = None
+    try:
+        cache_root = user_cache_path("AudioAtlas", appauthor=False) / "output-locks"
+        try:
+            cache_root.mkdir(parents=True, exist_ok=True)
+            cache_lock = FileLock(cache_root / f"{digest}.lock", timeout=0)
+            cache_lock.acquire()
+        except Timeout as exc:
+            raise _output_busy_error() from exc
+        except OSError:
+            # Restricted application contexts can expose the cache directory
+            # while denying new files inside it. The per-user guard remains the
+            # common serialization point for all current AudioAtlas processes.
+            cache_lock = None
+
+        _validate_output_root(target)
+        yield OutputTransaction(destination=canonical)
+    finally:
+        if cache_lock is not None:
+            cache_lock.release()
+        guard_lock.release()
+
+
+def _output_busy_error() -> OutputBusyError:
+    return OutputBusyError(
+        "Another AudioAtlas operation is already updating this report. "
+        "Wait for it to finish, then try again."
+    )
+
+
+def _output_lock_digest(canonical: Path) -> str:
+    lock_identity = os.path.normcase(str(canonical))
+    return hashlib.sha256(lock_identity.encode("utf-8")).hexdigest()
 
 
 @contextmanager

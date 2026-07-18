@@ -3,16 +3,16 @@ name: TestPyPI preflight
 "on":
   workflow_dispatch: {}
 
+env:
+  MPLBACKEND: Agg
+  PYTHONUTF8: "1"
+
 permissions:
   contents: read
 
 concurrency:
   group: audioatlas-testpypi
   cancel-in-progress: false
-
-env:
-  MPLBACKEND: Agg
-  PYTHONUTF8: "1"
 
 jobs:
   build:
@@ -27,11 +27,12 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
       - name: Build and verify distributions
         run: |
-          python -m pip install --upgrade pip build twine
-          python -m build
-          python -m twine check dist/*
+          uv sync --locked --extra dev
+          uv run python -m build
+          uv run python -m twine check dist/*
       - name: Record package version
         id: package
         run: echo "version=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')" >> "$GITHUB_OUTPUT"
@@ -77,6 +78,7 @@ jobs:
       id-token: write
 
     steps:
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: testpypi-dist
@@ -96,6 +98,7 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.13"
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: testpypi-dist
@@ -126,8 +129,8 @@ jobs:
             --dest /tmp/testpypi-wheel \
             "audioatlas==${{ needs.build.outputs.version }}"
           python -m venv /tmp/testpypi-smoke
-          /tmp/testpypi-smoke/bin/python -m pip install --upgrade pip
-          /tmp/testpypi-smoke/bin/python -m pip install /tmp/testpypi-wheel/*.whl
+          /tmp/testpypi-smoke/bin/pip install --upgrade pip
+          /tmp/testpypi-smoke/bin/pip install /tmp/testpypi-wheel/*.whl
           /tmp/testpypi-smoke/bin/audioatlas --version
           /tmp/testpypi-smoke/bin/audioatlas analyze \
             tests/fixtures/sine_1k_-6dbfs_2s.wav \

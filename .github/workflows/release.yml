@@ -42,8 +42,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libsndfile1 zip
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]" build twine
+          uv sync --locked --extra dev
 
       - name: Record and verify release identity
         id: package
@@ -51,7 +50,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          version="$(python -c 'import audioatlas; print(audioatlas.__version__)')"
+          version="$(uv run python -c 'import audioatlas; print(audioatlas.__version__)')"
           test "${GITHUB_REF_NAME}" = "v${version}"
           git fetch origin main
           git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
@@ -63,21 +62,21 @@ jobs:
 
       - name: Run release gates
         run: |
-          python -m pytest
-          ruff check .
-          python scripts/verify_public_snapshot.py
+          uv run pytest
+          uv run ruff check .
+          uv run python scripts/verify_public_snapshot.py
           uv export --locked --no-dev --no-emit-project \
             --format requirements-txt \
             --output-file /tmp/audioatlas-runtime-requirements.txt
-          pip-audit --require-hashes -r /tmp/audioatlas-runtime-requirements.txt
-          python -m build
-          python -m twine check dist/*
+          uv run pip-audit --require-hashes -r /tmp/audioatlas-runtime-requirements.txt
+          uv run python -m build
+          uv run python -m twine check dist/*
 
       - name: Build release extras and checksums
         shell: bash
         run: |
           version="${{ steps.package.outputs.version }}"
-          audioatlas analyze examples/demo_audio/guitar.wav \
+          uv run audioatlas analyze examples/demo_audio/guitar.wav \
             --out "AudioAtlas-${version}-sample-report" \
             --graphs-profile standard
           zip -qr "dist/AudioAtlas-${version}-sample-report.zip" \
@@ -263,6 +262,16 @@ jobs:
           rm -f "${RUNNER_TEMP}/audioatlas-entitlements.plist"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: audioatlas-macos-notarization-evidence-${{ github.run_number }}
+          path: |
+            notarization-submission.json
+            notarization-log.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: audioatlas-macos-app
           path: |
@@ -274,18 +283,115 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: always()
+  macos-evidence:
+    needs: [prepare, macos-app]
+    runs-on: macos-14
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: audioatlas-macos-notarization-log
-          path: |
-            notarization-submission.json
-            notarization-log.json
-          if-no-files-found: warn
-          retention-days: 30
+          name: audioatlas-macos-app
+          path: dist
+      - name: Verify notarized DMG evidence artifacts
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          dmgs=(dist/AudioAtlas-*-macOS-arm64.dmg)
+          if (( ${#dmgs[@]} != 1 )); then
+            echo "Expected one DMG artifact, found ${#dmgs[@]}" >&2
+            exit 1
+          fi
+          dmg="${dmgs[0]}"
+
+          manifest_path="dist/macos-distribution-manifest.json"
+          log_path="dist/notarization-log.json"
+          submission_path="dist/notarization-submission.json"
+          hash_path="${dmg}.sha256"
+          test -s "${manifest_path}"
+          test -s "${log_path}"
+          test -s "${submission_path}"
+          test -s "${hash_path}"
+
+          python - "${dmg}" <<'PY'
+          import hashlib
+          import json
+          import sys
+          from pathlib import Path
+
+          dmg_path = Path(sys.argv[1])
+          manifest_path = Path("dist/macos-distribution-manifest.json")
+          log = json.loads((Path("dist/notarization-log.json")).read_text(encoding="utf-8"))
+          submission = json.loads((Path("dist/notarization-submission.json")).read_text(encoding="utf-8"))
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest_fields = {
+            "schema_version",
+            "candidate_id",
+            "version",
+            "bundle_build",
+            "commit",
+            "architecture",
+            "minimum_macos",
+            "bundle_identifier",
+            "workflow_url",
+            "dmg_filename",
+            "dmg_sha256",
+            "notarization_submission_id",
+            "notarytool_id",
+            "notarization_status",
+            "signing_team",
+            "built_at",
+          }
+          missing_manifest_fields = [field for field in manifest_fields if field not in manifest]
+          if missing_manifest_fields:
+            raise SystemExit(
+              f"manifest missing required fields: {missing_manifest_fields!r}"
+            )
+
+          if not isinstance(submission, dict):
+            raise SystemExit("notary submission is not an object")
+          if not isinstance(submission.get("id"), str) or not submission["id"]:
+            raise SystemExit("notary submission id is missing or empty")
+          if submission.get("status") != "Accepted":
+            raise SystemExit("notary submission status is not Accepted")
+
+          if not isinstance(log, dict):
+            raise SystemExit("notary log is not an object")
+          if log.get("status") != "Accepted":
+            raise SystemExit("notary log status is not Accepted")
+          if log.get("id") != manifest.get("notarization_submission_id"):
+            raise SystemExit("notary log id does not match manifest submission id")
+          if not isinstance(log.get("createdDate"), str) or not log["createdDate"]:
+            raise SystemExit("notary log createdDate is missing")
+          if not isinstance(log.get("issues"), list) or log["issues"]:
+            raise SystemExit("notary log has unresolved issues")
+          if manifest.get("schema_version") != 1:
+            raise SystemExit("manifest schema_version is unexpected")
+          if manifest.get("notarization_status") != log.get("status"):
+            raise SystemExit("manifest notarization_status mismatch")
+          if manifest.get("notarization_submission_id") != submission.get("id"):
+            raise SystemExit("manifest submission id mismatch")
+
+          expected_hash = manifest.get("dmg_sha256")
+          if not isinstance(expected_hash, str) or len(expected_hash) != 64:
+            raise SystemExit("manifest dmg_sha256 is missing or malformed")
+          with dmg_path.open("rb") as stream:
+            observed = hashlib.sha256(stream.read()).hexdigest()
+          if expected_hash != observed:
+            raise SystemExit("manifest hash does not match DMG file")
+          expected_line = f"{manifest['dmg_sha256']}  {manifest['dmg_filename']}"
+          checksum = Path(f"{dmg_path}.sha256").read_text(encoding="utf-8").strip()
+          if checksum != expected_line:
+            raise SystemExit("checksum file does not match manifest")
+          if dmg_path.name != manifest.get("dmg_filename"):
+            raise SystemExit("manifest filename does not match packaged DMG filename")
+          PY
+
+          codesign --verify --deep --strict --verbose=2 "${dmg}"
+          xcrun stapler validate "${dmg}"
+          spctl --assess --type open --context context:primary-signature --verbose=2 "${dmg}"
 
   macos-acceptance:
-    needs: [prepare, macos-app]
+    needs: [prepare, macos-app, macos-evidence]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:
