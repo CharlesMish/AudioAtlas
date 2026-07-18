@@ -9,6 +9,7 @@ There is no server, plugin system, hidden state, or cloud dependency.
 
 ```text
 macos_app.py ── Cocoa adapter
+windows_app.py ── Tkinter/Win32 adapter
       ↓
 desktop_controller.py + run_contract.py ── cross-platform run lifecycle
       ↓
@@ -61,6 +62,7 @@ scripts/prepare_calibration_review.py
 | `desktop_controller.py` | managed worker, preparation, confirmation, cancellation, output retry, previous-result state, and local diagnostics | Cocoa, measurements, report serialization |
 | `desktop_runtime.py` | platform-standard per-user caches and rotating diagnostic log | telemetry, audio content, system-wide state |
 | `macos_app.py` | Cocoa controls/dialogs, UI-thread dispatch, termination deferral, browser/Finder actions | worker lifecycle, measurements, report serialization |
+| `windows_app.py` | Tk controls/dialogs, queued UI-thread dispatch, deferred close, browser/Explorer actions | worker lifecycle, measurements, report serialization |
 
 ## CLI loading boundary
 
@@ -96,7 +98,23 @@ The signed app carries hardened-runtime JIT entitlements and is exercised with
 the same deterministic report fixture before a DMG may be notarized. Cache
 paths come from the operating system's standard per-user locations, preserving
 `~/Library/Caches/AudioAtlas` on macOS. The generic frozen runtime hook lives in
-`packaging/common` so a future Windows freezer uses the same Numba policy.
+`packaging/common` so both desktop freezers use the same Numba policy.
+
+## Internal Windows boundary
+
+The Windows shell uses bundled Tkinter and polls a thread-safe state queue on
+Tk's event loop; controller callbacks never touch Tk widgets from the worker.
+PyInstaller packages a Python 3.11 x64 onedir application so native DLL closure
+can be audited and startup does not require onefile extraction. A separate
+Inno Setup definition installs the same audited directory under the current
+user without elevation. The app creates no services, updater, file association,
+PATH entry, startup task, or app-owned registry state.
+
+Windows artifacts remain private and visibly `INTERNAL` while unsigned. CI
+proves packaging and installer lifecycle on Windows Server, not Windows 10/11
+client security reputation. Friend-ready distribution requires a signed or
+Store-distributed browser download to pass the client checklist without a
+security bypass.
 
 ## Internal audio contract
 

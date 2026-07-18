@@ -1,7 +1,7 @@
-# Future Windows Desktop Packaging
+# Windows Desktop Candidate Packaging
 
-This document defines the boundary for a later Windows packaging pass. Pass Two
-does not build, advertise, or distribute a Windows desktop executable.
+Pass Two Phase B implements a private Windows engineering candidate. It does
+not advertise or publicly distribute a friend-ready Windows executable.
 
 ## Target and evidence
 
@@ -25,29 +25,28 @@ diverge.
 
 ## Desktop adapter
 
-A Windows UI will consume `DesktopRunController` and marshal worker callbacks
-onto its native event thread. The toolkit remains deliberately undecided until
-the Cocoa adapter and headless controller tests prove that this boundary is
-complete. The adapter may own file selection/drop, progress controls, native
-confirmation, opening the browser, revealing reports/logs, and deferred close.
-It must not duplicate inspection, worker, retry, cancellation, or report-state
-logic.
+The Tkinter UI consumes `DesktopRunController` and marshals worker callbacks
+through a queue polled on Tk's event thread. The adapter owns file selection,
+progress controls, native confirmation, opening the browser, revealing
+reports/logs, and deferred close. It does not duplicate inspection, worker,
+retry, cancellation, or report-state logic. Drag-and-drop remains deferred.
 
 ## Candidate forms
 
-The first internal artifact should be portable and unpackable without an
-installer. The friend-facing candidate should then use a per-user installer
-that needs neither administrator access nor writes beside the installed app.
-It must use standard per-user cache/log directories and remain fully offline
-after download.
+The workflow builds an x64 Python 3.11 PyInstaller onedir application, then
+packages that exact directory as both a portable ZIP and an Inno Setup per-user
+installer. The installer needs neither administrator access nor writes beside
+user audio. Runtime caches/logs use standard per-user directories and analysis
+remains fully offline.
 
-Code signing is desirable for friend distribution and reputation building but
-is not required for local development. Unsigned artifacts must be labeled
-internal-only. Documentation must explain ordinary SmartScreen behavior without
-instructing users to weaken security or bypass system protections.
+The workflow artifacts are private, retained for 14 days, and labeled
+`INTERNAL`. Code signing is not required for development, but unsigned output
+cannot satisfy friend-ready acceptance. Documentation explains ordinary
+SmartScreen behavior without instructing users to weaken or bypass security.
 
-Every frozen candidate must audit architecture, Python and native dependencies,
-the Visual C++ runtime, unresolved DLLs, and the packaged license inventory.
+Every frozen candidate audits architecture, Python and native dependencies,
+the Visual C++ runtime, unresolved DLLs, executable inventory, activation-size
+budgets, and packaged license notices.
 No service, registry integration, shell extension, automatic network request,
 or elevation is part of the initial package.
 

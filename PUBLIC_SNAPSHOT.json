@@ -33,6 +33,10 @@
       "sha256": "bef88c3568f81570e0d28e3a302f734a6e7b92e6e519f7db815c430c0004c7fc"
     },
     {
+      "path": ".github/workflows/windows-demo-candidate.yml",
+      "sha256": "c705d104e662451552a576f4a8dd06c2acc01ee49df82c054f9d8520b1b31d05"
+    },
+    {
       "path": ".gitignore",
       "sha256": "48fd4c6c620a7d4c191e3d28ae1a9f6693cb47799f0608ac8f4f7df461179724"
     },
@@ -70,19 +74,19 @@
     },
     {
       "path": "docs/ALPHA_LIMITATIONS.md",
-      "sha256": "4024963a455dc4dacdb50c2490a0a950dee0c7ac10bedadd9a0f0a1859105572"
+      "sha256": "9c42e88cdecd670d55b2e16b2ccb8f03f06e09ab8dcc4283008e811d659e27d5"
     },
     {
       "path": "docs/ARCHITECTURE.md",
-      "sha256": "b25089fe3317ea352f4754e5c5a310d03e73ce4ee3e21489df326ceefdefd0d3"
+      "sha256": "52dc0a4532985212985ac4c863acdc0b66436a9fc7f78de31d90ea84b461cec0"
     },
     {
       "path": "docs/CHANGELOG.md",
-      "sha256": "b9a78d973d07ee9bce4ca437a56afdaa6be73452bd55418a4aee5ee0c6943d80"
+      "sha256": "70fff50b10870d40235b498484270868a8fa70e2dca574a8bdf076ff43424f89"
     },
     {
       "path": "docs/COMPATIBILITY.md",
-      "sha256": "6cf2d67513b5d2a18db6f3c112878eda3d32e45929a086e2302a9c0977c332f4"
+      "sha256": "91b7fbdd228660bdb6a60373b17153a111bf3cc4fb5206d2dbf467d0fff76c0c"
     },
     {
       "path": "docs/FINDING_RULES.md",
@@ -109,8 +113,12 @@
       "sha256": "ea71acd457f6ff9d4dd348714c96b6e440bd489547389c892b94ea6470952543"
     },
     {
+      "path": "docs/WINDOWS_DEMO_GUIDE.md",
+      "sha256": "86f10b56f779ca86c6d678c606512303cbb34761133da70ee1853e65bec0592e"
+    },
+    {
       "path": "docs/WINDOWS_PACKAGING_DESIGN.md",
-      "sha256": "58e15fc68be783602ea2649f5f2ae1c5f3adce88e075ad659a6b3ac126664530"
+      "sha256": "63b50d20dd744c6c94424fab5c7be149906134a8ffb91fb627ca8b4bd4c62947"
     },
     {
       "path": "docs/assets/readme/README.md",
@@ -157,8 +165,16 @@
       "sha256": "0ce4cef1281b4b4784fd5dadbb58332b56dc0fe5e98012835920b08dd65a07a3"
     },
     {
+      "path": "packaging/windows/AudioAtlas.iss",
+      "sha256": "741ab029274e1dd5bd3a9d39b90f21d8faa37cc60a2619fd31d8960ac7dcdc4c"
+    },
+    {
+      "path": "packaging/windows/AudioAtlas.spec",
+      "sha256": "3306cbef0699a4b4ca5afbe1214fb24c85a4e81ba6b60f9f45a6502f15d976aa"
+    },
+    {
       "path": "pyproject.toml",
-      "sha256": "f7cdc07cba10c6c87196f0d737703a900fc89f6b0f599da6c95274807640b094"
+      "sha256": "062099d709c0e4ecdde77f7c8c72e23dfdde364eeeb9b553d5b9031e61c2840b"
     },
     {
       "path": "scripts/__init__.py",
@@ -169,12 +185,20 @@
       "sha256": "683d2b38b9d244155ee3b00bd6e7613c604cc2d0a13fad4bf9b01a43a6232797"
     },
     {
+      "path": "scripts/build_windows_app.py",
+      "sha256": "98e6629f33a9fd6a5ae5a3f724c23cdcaa7580617bbd129295b0f993118f7969"
+    },
+    {
       "path": "scripts/check_package_index.py",
       "sha256": "c04af831e46f1ef91aeef677fd27d24304b9c43e54a3fcee9a1d3abe3731afd3"
     },
     {
       "path": "scripts/package_macos_dmg.py",
       "sha256": "e278d8211434aa7fe9353e3f35cdd2df90656b99a38bb3ce470bca317f3b4938"
+    },
+    {
+      "path": "scripts/package_windows_candidate.py",
+      "sha256": "7ae5d33efb0744ea34bfc94dd92210d2cfcf678435054897122114ca8b0bd12d"
     },
     {
       "path": "scripts/public_snapshot.py",
@@ -413,6 +437,10 @@
       "sha256": "f77601fad21ba172c8d8bd4cc7a29940323cd1c5c463696ad65786e8fc754210"
     },
     {
+      "path": "src/audioatlas/windows_app.py",
+      "sha256": "24aaafe77929ec3cf28af5fa47d8f57ecba788db304f07bc6871c0ea24be3e4f"
+    },
+    {
       "path": "starter_kit/PUT_AUDIO_HERE/.gitkeep",
       "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
     },
@@ -522,7 +550,7 @@
     },
     {
       "path": "tests/test_distribution_artifacts.py",
-      "sha256": "f1feebaf6f447ecbc9a3b9c00660c8924916f45d075adc2a11630ee1e3175317"
+      "sha256": "d10e725537600ad3ed2b531582ee5e7f0b6643b53df169c14721b54f06ecdbf9"
     },
     {
       "path": "tests/test_dynamics.py",
@@ -550,7 +578,7 @@
     },
     {
       "path": "tests/test_io.py",
-      "sha256": "564b20639ed2f3ab768803f5e36d527921c7303653c85700927dabe5352760e9"
+      "sha256": "e7bad54228d4f30ecdd6a883ec373cbb9752093e3fac0e828dbbafa9252da93c"
     },
     {
       "path": "tests/test_launchers.py",
@@ -618,7 +646,7 @@
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "eb35f80f6dc3fd975260325d9f6d0c5cdf1f90c332f6e667f47236e0d5b56184"
+      "sha256": "7ee3ff33d32d296c022f0b33c63f97485f0d459513d20d37f8c3f9801895a032"
     },
     {
       "path": "tests/test_report.py",
@@ -649,13 +677,21 @@
       "sha256": "5a407c79ed87d03295a3edd4671df1447082da5e093283bc1b17341aec9615f6"
     },
     {
+      "path": "tests/test_windows_app.py",
+      "sha256": "af90e6e1de961f8c2f670de4611f07328882943cbfeccf51ecfad8814ac2e42a"
+    },
+    {
+      "path": "tests/test_windows_packaging.py",
+      "sha256": "d3d98d7119ed3ddebe46e132a0a7bda9cac95191e990eecc26e9df4c55dfe20a"
+    },
+    {
       "path": "uv.lock",
-      "sha256": "f7c6d124a98367bd4627b812889d28507576634adad964772a61a10215e31a41"
+      "sha256": "718949a224e73cfe1638b83508cd92a6b68eac020fffedfd448e5890d89365f1"
     }
   ],
   "format_version": 1,
-  "included_file_count": 163,
+  "included_file_count": 172,
   "package_version": "0.2.0a7",
-  "public_tree_sha256": "f3340c523f3980acf68f6a72833f81783add7fa0ba34996c901f6f9dcfa384ed",
-  "source_commit": "4c283780f6777eff9d3a714650e774c81b7e333c"
+  "public_tree_sha256": "bf9c0946d69e57d35f74b3f23186a94f87af79b6ab364f52938203c18595f46e",
+  "source_commit": "6c06c1a178b4de58312956fc39e562e47c5a665e"
 }
