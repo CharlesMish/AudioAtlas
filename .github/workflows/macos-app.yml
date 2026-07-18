@@ -6,8 +6,11 @@ name: macOS app
     paths:
       - "src/**"
       - "packaging/macos/**"
+      - "packaging/common/**"
       - "scripts/build_macos_app.py"
       - "tests/test_app_core.py"
+      - "tests/test_desktop_controller.py"
+      - "tests/test_desktop_runtime.py"
       - "tests/test_macos_app.py"
       - "pyproject.toml"
       - "uv.lock"
@@ -39,7 +42,7 @@ jobs:
         run: uv sync --locked --extra dev --extra app-build
 
       - name: Test app contract
-        run: uv run pytest tests/test_app_core.py tests/test_macos_app.py tests/test_pipeline.py
+        run: uv run pytest tests/test_app_core.py tests/test_desktop_controller.py tests/test_desktop_runtime.py tests/test_macos_app.py tests/test_pipeline.py
 
       - name: Build Apple Silicon app
         run: uv run python scripts/build_macos_app.py

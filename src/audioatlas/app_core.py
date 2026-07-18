@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
-    from audioatlas.pipeline import AnalysisProgress, AnalysisRunResult, CancellationToken
+    from audioatlas.run_contract import AnalysisProgress, AnalysisRunResult, CancellationToken
 
 from audioatlas.errors import (
     AnalysisCancelled,
@@ -21,7 +21,12 @@ from audioatlas.errors import (
     OutputOwnershipError,
     SourceChangedError,
 )
-from audioatlas.output import OUTPUT_MARKER_FILENAME, read_output_manifest
+from audioatlas.output import (
+    OUTPUT_MARKER_FILENAME,
+    output_transaction,
+    read_output_manifest,
+    staged_output_directory,
+)
 
 SUPPORTED_AUDIO_EXTENSIONS = frozenset(
     {".wav", ".wave", ".flac", ".ogg", ".aif", ".aiff", ".mp3"}
@@ -216,6 +221,7 @@ def analyze_for_app(
     input_path: str | Path,
     *,
     output_parent: str | Path | None = None,
+    _preflighted_output_dir: str | Path | None = None,
     progress_callback: Callable[[AnalysisProgress], None] | None = None,
     cancellation_token: CancellationToken | None = None,
 ) -> AnalysisRunResult:
@@ -224,7 +230,11 @@ def analyze_for_app(
     from audioatlas.graphs.selection import GraphSelection
 
     source = validate_app_input(input_path)
-    out_dir = safe_report_directory(source, output_parent=output_parent)
+    out_dir = (
+        safe_report_directory(source, output_parent=output_parent)
+        if _preflighted_output_dir is None
+        else Path(_preflighted_output_dir).expanduser()
+    )
     return _analyze_file(
         source,
         out_dir,
@@ -235,6 +245,25 @@ def analyze_for_app(
         progress_callback=progress_callback,
         cancellation_token=cancellation_token,
     )
+
+
+def preflight_app_output(
+    input_path: str | Path,
+    *,
+    output_parent: str | Path | None = None,
+) -> Path:
+    """Prove a desktop report destination is owned, unlocked, and writable.
+
+    This lightweight check happens before scientific initialization. The real
+    analysis reacquires the same transaction, so a later race still fails safe
+    without repeating decoding or measurements.
+    """
+
+    source = validate_app_input(input_path)
+    out_dir = safe_report_directory(source, output_parent=output_parent)
+    with output_transaction(out_dir), staged_output_directory(out_dir):
+        pass
+    return out_dir
 
 
 def _analyze_file(*args: object, **kwargs: object) -> AnalysisRunResult:
@@ -307,6 +336,7 @@ def _candidate_matches_source(candidate: Path, source_filename: str) -> bool:
 
 def _report_component(label: str) -> str:
     prefix = "AudioAtlas Report – "
+    label = _portable_report_label(label)
     raw = f"{prefix}{label}"
     if len(raw.encode("utf-8")) <= _MAX_REPORT_COMPONENT_BYTES:
         return raw
@@ -322,3 +352,13 @@ def _report_component(label: str) -> str:
         kept.append(character)
         used += len(encoded)
     return f"{prefix}{''.join(kept).rstrip()}{suffix}"
+
+
+def _portable_report_label(label: str) -> str:
+    """Return a component valid on NTFS, APFS, and common archive formats."""
+
+    invalid = '<>:"/\\|?*'
+    translated = "".join("_" if character in invalid or ord(character) < 32 else character for character in label)
+    # Win32 silently trims these suffixes, which otherwise breaks deterministic
+    # collision checks. The prefix means reserved device basenames are harmless.
+    return translated.rstrip(" .") or "track"

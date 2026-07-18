@@ -29,6 +29,9 @@ cannot create a release or publish a Python package. The workflow produces a
 with the authorized project demo track, checksums, candidate manifest, rights
 notice, and fillable clean-Mac guide.
 
+Preserve this private artifact as `AudioAtlas-<version>-build-<build>-macOS-demo-kit.zip`
+for handoff to the release review issue.
+
 Download the complete kit through a browser before testing so the handoff keeps
 normal quarantine behavior. Do not substitute the ad-hoc beta ZIP or bypass
 Gatekeeper. A missing signing or notarization secret fails the candidate build;
@@ -49,14 +52,16 @@ Create the protected `macos-release` environment and configure:
 The candidate and tagged release workflows import the certificate into an ephemeral keychain,
 builds and verifies the signed app, creates and signs the DMG, submits it with
 `notarytool`, waits for acceptance, staples and validates the ticket, performs a
-Gatekeeper assessment, and attaches the DMG plus checksum to the draft GitHub
-prerelease. It verifies every Mach-O is arm64-compatible and requires no newer
-than macOS 14, rejects unresolved non-system libraries, retrieves and audits the
-notarization log even after acceptance, and removes ephemeral credentials in an
-unconditional cleanup step. It does not log secret material.
+Gatekeeper assessment, and attaches the DMG, checksum, notarization submissions
+and manifest artifacts to the draft GitHub prerelease. It verifies every Mach-O
+is arm64-compatible and requires no newer than macOS 14, rejects unresolved
+non-system libraries, retrieves and audits the notarization log only once status
+is final, and removes ephemeral credentials in an unconditional cleanup step. It
+does not log secret material.
+
 Both workflows invoke `scripts/package_macos_dmg.py` so DMG contents, identity,
-notarization, stapling, Gatekeeper, size, checksum, and manifest audits cannot
-drift between the private rehearsal and the tagged release.
+notarization, stapling, Gatekeeper, hash-consistency, and manifest audits are
+frozen between the private rehearsal and the tagged release.
 
 ## Human release gate
 
@@ -74,7 +79,12 @@ macOS 14-or-newer account:
 6. Confirm same-stem files with different extensions do not replace one another.
 7. Test a fresh install, upgrade, duplicate copy, launch from the mounted DMG,
    and launch after copying to Applications.
-8. Disconnect networking and confirm an installed app still produces a report.
+8. Confirm Gatekeeper accepted launch from DMG and Applications path.
+9. Disconnect networking and confirm an installed app still produces a report.
+10. Verify the handoff kit included candidate manifest and notarization evidence
+    (`notarization-submission.json`, `notarization-log.json`,
+    `macos-candidate-manifest.json`), that `*.sha256` matches the packaged DMG,
+    and that first-report timing was captured in the guide.
 
 Record install actions, time to first report, hesitations, and any explanation
 the tester needed in the included `DEMO_AND_ACCEPTANCE_GUIDE.md`. Retain the

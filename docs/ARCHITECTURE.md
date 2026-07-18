@@ -8,8 +8,12 @@ There is no server, plugin system, hidden state, or cloud dependency.
 ## Layer map
 
 ```text
-macos_app.py + app_core.py ── one-drop native shell
-             ↓
+macos_app.py ── Cocoa adapter
+      ↓
+desktop_controller.py + run_contract.py ── cross-platform run lifecycle
+      ↓
+app_core.py ── input, naming, and fixed friend-facing analysis policy
+      ↓
 cli.py
   ├── pipeline.py      ── one-track/section orchestration
   ├── batch.py         ── folder orchestration
@@ -53,7 +57,10 @@ scripts/prepare_calibration_review.py
 | calibration scripts | anonymous review/replay evidence and hash verification | opening audio or replacing human listening |
 | `cli.py` | arguments, lightweight discovery, and friendly user errors | business logic |
 | `app_core.py` | fixed friend-facing defaults, input validation, and output naming | DSP, Cocoa, alternate analysis behavior |
-| `macos_app.py` | Cocoa interaction, worker lifecycle, progress, open/reveal actions | measurements or report serialization |
+| `run_contract.py` | lightweight progress, cancellation, result, and desktop-state contracts | decoder, scientific stack, native UI |
+| `desktop_controller.py` | managed worker, preparation, confirmation, cancellation, output retry, previous-result state, and local diagnostics | Cocoa, measurements, report serialization |
+| `desktop_runtime.py` | platform-standard per-user caches and rotating diagnostic log | telemetry, audio content, system-wide state |
+| `macos_app.py` | Cocoa controls/dialogs, UI-thread dispatch, termination deferral, browser/Finder actions | worker lifecycle, measurements, report serialization |
 
 ## CLI loading boundary
 
@@ -65,11 +72,12 @@ the scientific dependencies. Graph-profile names live in the lightweight
 `graph_profiles.py` module so command discovery does not initialize the graph
 registry.
 
-The macOS window follows the same boundary: it imports Cocoa and the lightweight
-app contract before importing the scientific pipeline. The analysis stack is
-loaded only on the worker thread after a file is accepted, so the window can
-provide immediate feedback. `AnalysisProgress` events are observational and a
-listener failure cannot fail or modify an analysis.
+Desktop shells follow the same boundary: they import the lightweight run
+contract and controller before importing the scientific pipeline. The shared
+controller loads the analysis stack only on its non-daemon worker after input
+inspection and any large-file confirmation. Native adapters marshal controller
+callbacks to their UI thread. A callback failure is logged and cannot fail or
+modify an analysis.
 
 Each destination is protected by a canonical per-user output transaction.
 Staging begins before decoding to detect storage failures early; cancellation
@@ -81,12 +89,14 @@ new report must win. Nonempty roots require a recognized ownership manifest.
 PyInstaller packages the same `audioatlas` modules as an Apple Silicon onedir
 application. The runtime hook changes only librosa's Numba decorator option
 from `cache=True` to `cache=False`, because frozen modules lack the source-file
-locator required by Numba's disk cache. JIT remains enabled. Matplotlib and
-Numba use persistent user-writable caches under `~/Library/Caches/AudioAtlas`.
-The frozen runtime forces Numba's tested `workqueue` backend and excludes its
-unused OpenMP pool, so the bundle has no undeclared `libomp` dependency.
+locator required by Numba's disk cache. JIT remains enabled. The frozen runtime
+forces Numba's tested `workqueue` backend and excludes its unused OpenMP pool,
+so the bundle has no undeclared `libomp` dependency.
 The signed app carries hardened-runtime JIT entitlements and is exercised with
-the same deterministic report fixture before a DMG may be notarized.
+the same deterministic report fixture before a DMG may be notarized. Cache
+paths come from the operating system's standard per-user locations, preserving
+`~/Library/Caches/AudioAtlas` on macOS. The generic frozen runtime hook lives in
+`packaging/common` so a future Windows freezer uses the same Numba policy.
 
 ## Internal audio contract
 

@@ -16,6 +16,48 @@ from audioatlas.output import (
 )
 
 
+def test_output_lock_identity_folds_case_on_windows(monkeypatch) -> None:
+    monkeypatch.setattr(
+        output_module.os.path,
+        "normcase",
+        lambda value: value.casefold().replace("/", "\\"),
+    )
+
+    assert output_module._output_lock_digest(
+        Path("C:/Music/AudioAtlas Report")
+    ) == output_module._output_lock_digest(Path("c:/music/audioatlas report"))
+
+
+def test_output_transaction_uses_guard_when_cache_lock_is_denied(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache_root = tmp_path / "cache"
+    temporary_root = tmp_path / "temporary"
+    real_file_lock = output_module.FileLock
+
+    class DeniedLock:
+        def acquire(self) -> None:
+            raise PermissionError("cache is restricted")
+
+    def lock_factory(path: Path, *, timeout: int):
+        if Path(path).is_relative_to(cache_root):
+            return DeniedLock()
+        return real_file_lock(path, timeout=timeout)
+
+    monkeypatch.setattr(output_module, "user_cache_path", lambda *args, **kwargs: cache_root)
+    monkeypatch.setattr(output_module.tempfile, "gettempdir", lambda: str(temporary_root))
+    monkeypatch.setattr(output_module, "FileLock", lock_factory)
+    destination = tmp_path / "report"
+
+    with output_transaction(destination) as transaction:
+        assert transaction.destination == destination.resolve()
+        with (
+            pytest.raises(OutputBusyError, match="already updating"),
+            output_transaction(destination),
+        ):
+            pass
+
+
 def test_publish_replaces_owned_artifacts_and_preserves_unknown_files(tmp_path: Path):
     target = tmp_path / "report"
     target.mkdir()

@@ -17,11 +17,18 @@ finding semantics, and output ownership do not always change together.
 | Song-project schema | `0.1.0` | local project index/configuration structure changes incompatibly |
 | Output manifest | `1` | ownership/publication manifest structure changes incompatibly |
 | macOS app | Apple Silicon, macOS 14+ | a signed desktop architecture or minimum OS is added or removed |
+| Windows desktop foundation | Windows 10 22H2 x64 and Windows 11 x64 | a packaged Windows app completes separate client acceptance |
 
 A package release may therefore keep an earlier ruleset version when it changes
 tooling, documentation, or delivery behavior without changing the rules. That
 is deliberate, not version drift.
 
+
+The Windows entry describes shared-controller and filesystem compatibility, not
+a currently distributed Windows GUI. Windows 11 is recommended. Windows 10
+22H2 is a best-effort application target for local/offline use because Microsoft
+ended ordinary Windows 10 support on 2025-10-14. Pre-22H2 Windows 10, 32-bit
+Windows, and Windows ARM64 are outside the current target.
 
 ## Comparability signatures
 

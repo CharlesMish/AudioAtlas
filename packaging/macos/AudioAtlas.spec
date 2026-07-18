@@ -14,6 +14,21 @@ version = metadata["project"]["version"]
 bundle_build_version = os.environ.get("AUDIOATLAS_BUNDLE_BUILD_NUMBER", "1")
 if not bundle_build_version.isdigit() or int(bundle_build_version) <= 0:
     raise ValueError("AUDIOATLAS_BUNDLE_BUILD_NUMBER must be a positive integer")
+PACKAGING_CONTRACT = {
+    "bundle_identifier": "com.charlesmish.audioatlas",
+    "minimum_macos": "14.0",
+    "architectures": ["arm64"],
+    "hardened_runtime": True,
+    "entitlements": {
+        "com.apple.security.cs.allow-jit": True,
+        "com.apple.security.cs.allow-unsigned-executable-memory": True,
+    },
+    "runtime_checks": [
+        "no extra-bundle-root",
+        "arm64-only Mach-O binaries",
+        "non-system dependencies resolved inside app bundle",
+    ],
+}
 codesign_identity = os.environ.get("AUDIOATLAS_CODESIGN_IDENTITY") or None
 entitlements = root / "packaging" / "macos" / "AudioAtlas.entitlements"
 source_root = root / "src"
@@ -36,7 +51,7 @@ analysis = Analysis(
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[str(root / "packaging" / "macos" / "audioatlas_runtime_hook.py")],
+    runtime_hooks=[str(root / "packaging" / "common" / "audioatlas_runtime_hook.py")],
     excludes=["sklearn", "pandas", "bokeh", "numba.np.ufunc.omppool"],
     noarchive=False,
     optimize=1,
@@ -71,13 +86,13 @@ collection = COLLECT(
 app = BUNDLE(
     collection,
     name="AudioAtlas.app",
-    bundle_identifier="com.charlesmish.audioatlas",
+    bundle_identifier=PACKAGING_CONTRACT["bundle_identifier"],
     version=version,
     info_plist={
         "CFBundleDisplayName": "AudioAtlas",
         "CFBundleShortVersionString": version,
         "CFBundleVersion": bundle_build_version,
-        "LSMinimumSystemVersion": "14.0",
+        "LSMinimumSystemVersion": PACKAGING_CONTRACT["minimum_macos"],
         "NSHighResolutionCapable": True,
         "CFBundleDocumentTypes": [
             {

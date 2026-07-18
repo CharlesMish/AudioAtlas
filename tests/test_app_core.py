@@ -15,6 +15,7 @@ from audioatlas.app_core import (
     default_report_directory,
     friendly_error_message,
     inspect_app_input,
+    preflight_app_output,
     prepare_and_analyze_for_app,
     safe_report_directory,
     validate_app_input,
@@ -90,6 +91,18 @@ def test_analyze_for_app_can_retry_under_selected_parent(
     app_core.analyze_for_app(source, output_parent=destination)
 
     assert calls[0][1] == destination / "AudioAtlas Report – song"
+
+
+def test_preflight_proves_destination_and_removes_staging(tmp_path: Path) -> None:
+    source = tmp_path / "song.wav"
+    source.touch()
+    output_parent = tmp_path / "reports"
+
+    destination = preflight_app_output(source, output_parent=output_parent)
+
+    assert destination == output_parent / "AudioAtlas Report – song"
+    assert output_parent.is_dir()
+    assert list(output_parent.iterdir()) == []
 
 
 def test_safe_report_directory_reuses_only_a_report_for_the_same_filename(tmp_path: Path):

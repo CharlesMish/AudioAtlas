@@ -54,9 +54,12 @@ jobs:
         shell: bash
         run: |
           version="$(uv run python -c 'import audioatlas; print(audioatlas.__version__)')"
-          test "${version}" = "0.2.0a7"
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+$ ]]; then
+            echo "Unexpected version format: ${version}" >&2
+            exit 1
+          fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
-          uv run pytest tests/test_app_core.py tests/test_macos_app.py tests/test_pipeline.py
+          uv run pytest tests/test_app_core.py tests/test_desktop_controller.py tests/test_desktop_runtime.py tests/test_macos_app.py tests/test_pipeline.py
 
       - name: Preflight signing and notarization credentials
         env:
@@ -210,10 +213,13 @@ jobs:
           dmg="AudioAtlas-${version}-build-${AUDIOATLAS_BUNDLE_BUILD_NUMBER}-${short_sha}-macOS-arm64.dmg"
           mkdir "${kit}"
           cp "${dmg}" "${kit}/"
+          cp "${dmg}.sha256" "${kit}/"
           cp examples/demo_audio/audioatlas_demo.wav "${kit}/"
           cp AUDIO_RIGHTS.md "${kit}/"
           cp docs/MACOS_DEMO_GUIDE.md "${kit}/DEMO_AND_ACCEPTANCE_GUIDE.md"
           cp macos-candidate-manifest.json "${kit}/"
+          cp notarization-submission.json "${kit}/"
+          cp notarization-log.json "${kit}/"
           (
             cd "${kit}"
             shasum -a 256 "${dmg}" audioatlas_demo.wav > SHA256SUMS.txt
