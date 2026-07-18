@@ -32,6 +32,7 @@ song_projects/
 !tests/fixtures/malformed/
 !tests/fixtures/malformed/*.wav
 !tests/fixtures/malformed/*.flac
+!examples/demo_audio/audioatlas_demo.wav
 !examples/demo_audio/guitar.wav
 !examples/demo_audio/guitar_koto_cello_drums.wav
 

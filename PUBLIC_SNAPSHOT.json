@@ -14,7 +14,7 @@
     },
     {
       "path": ".github/workflows/pages.yml",
-      "sha256": "407340234cbc8af62c8287ecda6e5a7b596b308172ab52792a1d9d06480b2978"
+      "sha256": "d74cb9420fcd7b378d725b76e30373ea10ac09c7f4a9614438406b4f79622936"
     },
     {
       "path": ".github/workflows/release.yml",
@@ -26,11 +26,11 @@
     },
     {
       "path": ".gitignore",
-      "sha256": "0ad5afbaf09142bc53b15e26868b35a64e9e8eec259551217299cd6ad0c0c56f"
+      "sha256": "48fd4c6c620a7d4c191e3d28ae1a9f6693cb47799f0608ac8f4f7df461179724"
     },
     {
       "path": "AUDIO_RIGHTS.md",
-      "sha256": "d9b6445e2d83e9ebf9d7c8cc92964135c319c23fe06e4cd238484d1cc66b99eb"
+      "sha256": "0901aebb6f06f6b209179c77f11182f5797f3b599e6310bbf26c0324d4121845"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -38,7 +38,7 @@
     },
     {
       "path": "DEMO_AUDIO_PROVENANCE.txt",
-      "sha256": "ba8f122b95f2d0c5a41e7e04553b68ebc0334c61f2eb95a8cb4d123a6a17f284"
+      "sha256": "94ed19ecbab770078d4af3f3714d3819e7c5e44b8d8506a84d88ef1b1cacd435"
     },
     {
       "path": "LICENSE",
@@ -50,7 +50,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "e03d3e335c875e55eee1378ebaeec767bf3b8c13ec7b23ce2aaaa8409f189ba7"
+      "sha256": "cff618090aa583c0b9791fe91ab260fd0ba91c2287693f58b1e714804315833b"
     },
     {
       "path": "README_EASY_RUN.md",
@@ -70,7 +70,7 @@
     },
     {
       "path": "docs/CHANGELOG.md",
-      "sha256": "ed749feae79826f29ba9f32874a343b9dc239bfd5c890fbf3204eecd6f2c85e8"
+      "sha256": "f226ca5f591b4af0384dadcd15c1c37742ab0cea19d0a9e0789a68eb51adac40"
     },
     {
       "path": "docs/COMPATIBILITY.md",
@@ -106,11 +106,15 @@
     },
     {
       "path": "examples/README.md",
-      "sha256": "48a4422b906b492d00d6ebb635029dcd4b5c4d5fbe76a0ece54c739db86a81b4"
+      "sha256": "fdc7780b2d0e65eee8bcdaa99132ff4698425126de60085c54bd3c8752e6b9a4"
     },
     {
       "path": "examples/demo_audio/README.md",
-      "sha256": "641d1dd1f21207de14a5059ef48e2e10a1db056c82935f50d4a76ec60327b119"
+      "sha256": "f0172ffdd84e7a99460836114e6e44ff54769075079cdf7da92f3606e8eca698"
+    },
+    {
+      "path": "examples/demo_audio/audioatlas_demo.wav",
+      "sha256": "e1a7da67c45523beb8b39f5a6ac10560ff47a49297e517f39e87ba19fbae22de"
     },
     {
       "path": "examples/demo_audio/guitar.wav",
@@ -438,7 +442,7 @@
     },
     {
       "path": "tests/test_demo_audio_source.py",
-      "sha256": "0ee29e13935f342cdc0a61231992ddfc5f9aa4884954ed1a0ece2c9322c4f985"
+      "sha256": "ac2b7ef35c4b166cc0a1782165b39c156f8cce175343a406df3e371ca3cc8500"
     },
     {
       "path": "tests/test_distribution_artifacts.py",
@@ -530,7 +534,7 @@
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "a819bec7984f32e55696434b8eeeb240004d4b7bd51ed95e40e18687020bf8f7"
+      "sha256": "ae733d3c2a819926d8ac10380d2ff4f0203b6e1333e48f638c41ad9301bae195"
     },
     {
       "path": "tests/test_report.py",
@@ -566,8 +570,8 @@
     }
   ],
   "format_version": 1,
-  "included_file_count": 141,
+  "included_file_count": 142,
   "package_version": "0.2.0a7",
-  "public_tree_sha256": "2435da4bdbe9be7a86cb62dbe56c5ed6ec2f801ad5aed9d2f0eb0ae746cb9466",
-  "source_commit": "0289900550ce50571086989658874317a4e9594a"
+  "public_tree_sha256": "8b22713e3727607441e141a683abc76f5081fe977f4af7a5441b75b43d3bc907",
+  "source_commit": "fd5ad96687ed6c922170f3c1864687bcc49dab79"
 }

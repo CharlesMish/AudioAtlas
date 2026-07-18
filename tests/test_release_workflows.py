@@ -25,8 +25,11 @@ def test_live_demo_deploys_only_from_main_or_manual_dispatch() -> None:
     }
     assert workflow["jobs"]["deploy"]["environment"]["name"] == "github-pages"
     text = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
-    assert "examples/demo_audio/guitar.wav" in text
+    assert "examples/demo_audio/audioatlas_demo.wav" in text
     assert "--graphs-profile standard" in text
+    assert "--theme midnight_studio" in text
+    assert 'summary["metadata"]["filename"] == "audioatlas_demo.wav"' in text
+    assert 'len(summary["graphs"]["selected_filenames"]) == 14' in text
     assert "assert not list(site.rglob(\"*.wav\"))" in text
 
 

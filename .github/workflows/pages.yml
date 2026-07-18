@@ -37,11 +37,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install .
 
-      - name: Generate share-safe guitar report
+      - name: Generate share-safe AudioAtlas demo report
         run: |
-          audioatlas analyze examples/demo_audio/guitar.wav \
+          audioatlas analyze examples/demo_audio/audioatlas_demo.wav \
             --out site \
-            --graphs-profile standard
+            --graphs-profile standard \
+            --theme midnight_studio
           mv site/report.html site/index.html
           touch site/.nojekyll
 
@@ -62,8 +63,14 @@ jobs:
           assert not list(site.rglob("*.wav"))
 
           summary = json.loads((site / "summary.json").read_text(encoding="utf-8"))
+          assert summary["metadata"]["filename"] == "audioatlas_demo.wav"
           assert summary["metadata"]["path_kind"] == "basename"
           assert summary["metadata"]["local_paths_included"] is False
+          assert summary["graphs"]["profile"] == "standard"
+          assert len(summary["graphs"]["selected_filenames"]) == 14
+          html = (site / "index.html").read_text(encoding="utf-8")
+          assert "--bg: #0b1120;" in html
+          assert 'data-presentation="studio"' in html
           forbidden = (
               "/home/runner/",
               "C:\\Users\\",

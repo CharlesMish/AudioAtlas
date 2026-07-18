@@ -9,6 +9,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEMO_DIR = ROOT / "examples" / "demo_audio"
 EXPECTED = {
+    "audioatlas_demo.wav": {
+        "sha256": "e1a7da67c45523beb8b39f5a6ac10560ff47a49297e517f39e87ba19fbae22de",
+        "frames": 3_130_411,
+    },
     "guitar.wav": {
         "sha256": "1ecba759cf090f06dc6446cba8ec392e2a10aeaa0dd2a6ad6e7b863a32ddc3b0",
         "frames": 607_131,

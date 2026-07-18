@@ -3,12 +3,25 @@
 Copyright © 2026 Charles Mish.
 
 Charles Mish's composition, performance, recording, arrangement, and mix
-contributions to the recordings in `examples/demo_audio/` are licensed under
-the [Creative Commons Attribution 4.0 International License][cc-by].
+contributions to `guitar.wav` and `guitar_koto_cello_drums.wav` are licensed
+under the [Creative Commons Attribution 4.0 International License][cc-by].
 
 When reusing an authorized contribution, use this attribution format:
 
 > “<track title>” by Charles Mish, licensed under CC BY 4.0.
+
+## AudioAtlas demo track
+
+`audioatlas_demo.wav` is the AudioAtlas trailer/demo track assembled by Charles
+Mish from multiple AI-assisted source generations created under a paid Suno
+subscription. Charles edited, arranged, mixed, mastered, and post-processed the
+finished recording specifically for AudioAtlas demonstrations.
+
+The repository makes this finished WAV available as an AudioAtlas demo input
+and to reproduce the project's live static report. It is not licensed under CC
+BY 4.0, is not offered as general-purpose stock music, and may not be reused or
+redistributed as a standalone music asset without separate permission from
+Charles Mish.
 
 ## Third-party sound exception
 
@@ -18,10 +31,10 @@ original licenses. They may not be extracted, repackaged, sublicensed, or
 redistributed as standalone samples, loops, instruments, sound effects, or
 sample-library material.
 
-CC BY 4.0 applies only to material Charles Mish is authorized to license. It
-does not replace, expand, or relicense rights in any embedded third-party
-content. The recording is distributed as a finished musical production/New
-Recording, not as a sample pack.
+CC BY 4.0 applies only to material Charles Mish is authorized to license in the
+two recordings named above. It does not replace, expand, or relicense rights in
+embedded third-party content. The recordings are distributed as finished
+musical productions/New Recordings, not as sample packs.
 
 The applicable third-party terms permit licensed sounds in finished music
 productions while restricting standalone sample redistribution:

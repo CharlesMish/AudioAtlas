@@ -2,7 +2,7 @@
 
 This directory contains two kinds of example input:
 
-- `demo_audio/` contains two intentionally public musical recordings. Read its
+- `demo_audio/` contains three intentionally public musical recordings. Read its
   [recording notes](demo_audio/README.md) and the repository's
   [audio rights notice](../AUDIO_RIGHTS.md).
 - `tests/fixtures/` contains project-generated signals for deterministic
@@ -14,18 +14,19 @@ or threshold-calibration evidence.
 ## Analyze one real recording
 
 ```bash
-uv run audioatlas analyze examples/demo_audio/guitar.wav \
-  --out reports/demo-guitar \
-  --graphs-profile full
-python -m webbrowser reports/demo-guitar/report.html
+uv run audioatlas analyze examples/demo_audio/audioatlas_demo.wav \
+  --out reports/audioatlas-demo \
+  --graphs-profile standard \
+  --theme midnight_studio
+python -m webbrowser reports/audioatlas-demo/report.html
 ```
 
 The generated HTML opens in Studio and still offers the Focus/Studio switch.
 
-## Build a clean two-track catalog
+## Build a clean three-track catalog
 
 Batch catalogs record non-audio files as skipped. Make an audio-only working
-folder so the catalog contains exactly two tracks and zero skipped files:
+folder so the catalog contains exactly three tracks and zero skipped files:
 
 ```bash
 rm -rf reports/demo-audio-input
@@ -36,6 +37,7 @@ uv run audioatlas batch reports/demo-audio-input \
   --graphs-profile full
 
 python -m webbrowser reports/demo-catalog/catalog.html
+python -m webbrowser reports/demo-catalog/audioatlas_demo/report.html
 python -m webbrowser reports/demo-catalog/guitar/report.html
 python -m webbrowser reports/demo-catalog/guitar_koto_cello_drums/report.html
 ```
