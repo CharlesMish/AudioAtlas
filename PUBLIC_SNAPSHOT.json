@@ -13,12 +13,20 @@
       "sha256": "89de59d8f5c9b497bef20164fed148587d60b459a26b4b83723fb4542af31537"
     },
     {
+      "path": ".github/workflows/macos-app.yml",
+      "sha256": "4ffee4b4ec3cb246959e8c43699292068f3f02d81871ccf6b8eb43610e6a9ee3"
+    },
+    {
+      "path": ".github/workflows/macos-demo-candidate.yml",
+      "sha256": "d51c1f4ec58e0177184814f53acc984201098fb526be3289064d601045627eaa"
+    },
+    {
       "path": ".github/workflows/pages.yml",
       "sha256": "d74cb9420fcd7b378d725b76e30373ea10ac09c7f4a9614438406b4f79622936"
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "1731996ac4c07d16c3316a081d6edc5df29abcca846fc8a037becd64c6571993"
+      "sha256": "61f52adf4874b9171ae74aaed9acebfb96e7026a83cf6629d917353d8c38cdbf"
     },
     {
       "path": ".github/workflows/testpypi.yml",
@@ -50,11 +58,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "cff618090aa583c0b9791fe91ab260fd0ba91c2287693f58b1e714804315833b"
+      "sha256": "941d06ca0f46008fe3ea317fe15add75e720010155acfd70125be7a69cdd8d3f"
     },
     {
       "path": "README_EASY_RUN.md",
-      "sha256": "ff4c74a290c5683388f8c189d39968413efc15764ef68ff156eea70351479b1b"
+      "sha256": "6d4c54f9aa7664e97deee61fb8701bd01295456ffb18e1df6bcdc27871a9b035"
     },
     {
       "path": "SECURITY.md",
@@ -62,23 +70,31 @@
     },
     {
       "path": "docs/ALPHA_LIMITATIONS.md",
-      "sha256": "09510ff920a8cd846cbdca31aea3317ad08408adbd91430754602ece672cb480"
+      "sha256": "4024963a455dc4dacdb50c2490a0a950dee0c7ac10bedadd9a0f0a1859105572"
     },
     {
       "path": "docs/ARCHITECTURE.md",
-      "sha256": "16a8ed525659bfe86b9ca089b4f6946daf47ee04d946172be5e53a30ae465c9b"
+      "sha256": "4fd376ff2752681df74a7dad7b22f86a5b8bb39e2914ebef1b2896f89a8f4faa"
     },
     {
       "path": "docs/CHANGELOG.md",
-      "sha256": "f226ca5f591b4af0384dadcd15c1c37742ab0cea19d0a9e0789a68eb51adac40"
+      "sha256": "39d2eae36951e70ff9fd6f418075bcee752abc6d7ebc80eb8c799fc374f4b7d7"
     },
     {
       "path": "docs/COMPATIBILITY.md",
-      "sha256": "c96cd1e21cf5d8186030e845c98d76138d3bf717486a86aee064115e6d0a7a30"
+      "sha256": "47731c734648850406b4a35787e6c91be05bd5afe588859b101e7f4b7c12460b"
     },
     {
       "path": "docs/FINDING_RULES.md",
       "sha256": "c421c6f0be88b69fe96f209d6897f9b473b1caaa65103d48a9d2781713bcdc4b"
+    },
+    {
+      "path": "docs/MACOS_APP_RELEASE.md",
+      "sha256": "c0e11394d181c814a0b8d314bc3fdd0ed3155da2986fe2225e4ef4dcefc1a7bb"
+    },
+    {
+      "path": "docs/MACOS_DEMO_GUIDE.md",
+      "sha256": "1c0997cf66ddbb8e3ca0495291cd74a73fbfbc3ed7571c961cbd9531a07919e7"
     },
     {
       "path": "docs/PROJECT_SCHEMA.md",
@@ -90,7 +106,7 @@
     },
     {
       "path": "docs/USER_GUIDE.md",
-      "sha256": "a4dcc3d620966e90f0aad591752a206b228eed9a956eb0f6c7f9ca8c8722207f"
+      "sha256": "ea71acd457f6ff9d4dd348714c96b6e440bd489547389c892b94ea6470952543"
     },
     {
       "path": "docs/assets/readme/README.md",
@@ -125,16 +141,36 @@
       "sha256": "3735e5a3bf10d6038811643a65b2c6fde0a1cc704810fd73e843d568fc3c9d84"
     },
     {
+      "path": "packaging/macos/AudioAtlas.entitlements",
+      "sha256": "25b6fc4500ac7bb2e8021a88dcbaeaeb8cc02cb14e36c88b228ba1a16749a30f"
+    },
+    {
+      "path": "packaging/macos/AudioAtlas.spec",
+      "sha256": "f54ff0d8e5b19296668da89ddb6e488506849a2b97658c80ab3d12d876406228"
+    },
+    {
+      "path": "packaging/macos/audioatlas_runtime_hook.py",
+      "sha256": "e9f112518759e151fde7be97d61264e08bae1a097c5bbb100d91079b203a8636"
+    },
+    {
       "path": "pyproject.toml",
-      "sha256": "bb85452ac61fbd44f36a112c68be9ec97ca73893e44b00a80c18ea1ad7b5992e"
+      "sha256": "f7cdc07cba10c6c87196f0d737703a900fc89f6b0f599da6c95274807640b094"
     },
     {
       "path": "scripts/__init__.py",
       "sha256": "be55f9cb31086a9f473c9471cd4c7c509f4cf6443c8abc3c016c7ed84b49a797"
     },
     {
+      "path": "scripts/build_macos_app.py",
+      "sha256": "05376adbfef4f1820e90248c56c872eb3db33ad41f107a107f4e22156e3617f4"
+    },
+    {
       "path": "scripts/check_package_index.py",
       "sha256": "c04af831e46f1ef91aeef677fd27d24304b9c43e54a3fcee9a1d3abe3731afd3"
+    },
+    {
+      "path": "scripts/package_macos_dmg.py",
+      "sha256": "e6e761fe5fc4ef6197eb5e89f9d75162ae45c25f4d41c60ddb83d4795344426d"
     },
     {
       "path": "scripts/public_snapshot.py",
@@ -201,8 +237,12 @@
       "sha256": "e48b6ca04a53f3b2a64e15ad4c2a66316a67ddcd3ba9d3b94a0259dc14220fef"
     },
     {
+      "path": "src/audioatlas/app_core.py",
+      "sha256": "a9477274a84ea8b4f120b6bbd382c9ed7c132268a76c2cc77d6a5c6d4c34b1fc"
+    },
+    {
       "path": "src/audioatlas/batch.py",
-      "sha256": "80062c1a85fe23a63abdeed5a211a123a4d2cb9bfdc997fa16ef53246dc62a0c"
+      "sha256": "83b3b91a93b365b36f02a899bc639985da3ecf87db76e78eb43e10af27c9e2db"
     },
     {
       "path": "src/audioatlas/catalog_report.py",
@@ -218,7 +258,7 @@
     },
     {
       "path": "src/audioatlas/errors.py",
-      "sha256": "78d42e9d6035c7e463fcbbcae0011b4e0097a6d6c8dd2b6ee1355699482346cd"
+      "sha256": "5b54c94afd4d36697c9ab0c76aeeffd2c693c6809dd800d437774a8daadad052"
     },
     {
       "path": "src/audioatlas/graph_profiles.py",
@@ -246,7 +286,11 @@
     },
     {
       "path": "src/audioatlas/io.py",
-      "sha256": "e89e72a1b01580a5d19f2745fb1159e5aeb381dd34084c2c3aea0317822cb877"
+      "sha256": "2a8c9148027f03b2900494e84d6107592911c4f44526bc87e563e4f747cccc23"
+    },
+    {
+      "path": "src/audioatlas/macos_app.py",
+      "sha256": "ed629919a20ebdccf864d952128101daf5e59375d12abc6fce0c193c7b8750ce"
     },
     {
       "path": "src/audioatlas/markdown.py",
@@ -254,11 +298,11 @@
     },
     {
       "path": "src/audioatlas/output.py",
-      "sha256": "422c6e46f7791b661e41979836518d9f547ada50c0d02b10732f052b73af62a9"
+      "sha256": "6d6c77b5f42fbdcbacd918a7c6e949ef3e99e16c869a1d468dda093bf13f098c"
     },
     {
       "path": "src/audioatlas/pipeline.py",
-      "sha256": "7f58cafcecc7f3cc15792ed695555b357fb238072d087d0820cb17ca881711bf"
+      "sha256": "13ea73db378b781eedc4690b17f40a7a60c7c4922fc7a858ef935b7246c4ea12"
     },
     {
       "path": "src/audioatlas/plot_theme.py",
@@ -270,7 +314,7 @@
     },
     {
       "path": "src/audioatlas/project.py",
-      "sha256": "12d6d63bc2e78011a3654cc81df446cbec779ee97d85ef3529febf9510cee565"
+      "sha256": "22b1a2f380c19fe75d16f1ba639e65688449780a02ad9b22bdd5c7af894eb57b"
     },
     {
       "path": "src/audioatlas/provenance.py",
@@ -286,7 +330,7 @@
     },
     {
       "path": "src/audioatlas/revision_diff.py",
-      "sha256": "d16b70ee72086438707422285c4f0495cb2b9e54a590f31e6f7277bbb9402e05"
+      "sha256": "3177c3b93de4d2d74a9ec59fd372c4070171ed54b1961617286d605c14734fe4"
     },
     {
       "path": "src/audioatlas/theme.py",
@@ -421,8 +465,12 @@
       "sha256": "c658fe4c617544d7fedb85ddb04692194c84006f166f3f5f7aa6fbcbc70b545a"
     },
     {
+      "path": "tests/test_app_core.py",
+      "sha256": "95dd26ac2e523b27e630538151e6c5a908e05f16d520b4d62cacf868d2701c33"
+    },
+    {
       "path": "tests/test_batch.py",
-      "sha256": "c067a8f4d2cd3db10d17b750589d0eb15ae98116f8ee482b23d470f2ea7f67eb"
+      "sha256": "fd746f59b03243d592d52f450cfdc9ff6214ead1062611d44b0684a3c6232125"
     },
     {
       "path": "tests/test_cli.py",
@@ -446,7 +494,7 @@
     },
     {
       "path": "tests/test_distribution_artifacts.py",
-      "sha256": "d7c8d09d8681f848cb5bd4dec6851c572b78812835d02134ef8d341fcdcc93b7"
+      "sha256": "f1feebaf6f447ecbc9a3b9c00660c8924916f45d075adc2a11630ee1e3175317"
     },
     {
       "path": "tests/test_dynamics.py",
@@ -474,7 +522,7 @@
     },
     {
       "path": "tests/test_io.py",
-      "sha256": "832ee86b5448ea45577676c816727aeecc9bb2e2f3417773dc80a20f17af033e"
+      "sha256": "564b20639ed2f3ab768803f5e36d527921c7303653c85700927dabe5352760e9"
     },
     {
       "path": "tests/test_launchers.py",
@@ -489,6 +537,10 @@
       "sha256": "873a54cd51af9f9ee877e8f689f52bdf5a79b7d3b49955629908734e333f2fe4"
     },
     {
+      "path": "tests/test_macos_app.py",
+      "sha256": "188676e793a78c940c0d0b0bdf4e93b00777d471e286f2b083c9a1e0b28b5104"
+    },
+    {
       "path": "tests/test_malformed_audio.py",
       "sha256": "9b5085056ae1080ef386c3414645204f07a6bc236b4948d3dc1199106bfe3b14"
     },
@@ -498,15 +550,19 @@
     },
     {
       "path": "tests/test_output.py",
-      "sha256": "09ef3dd2536d888f8bcb792e549e28aea924b81ed8b6e476bdbe96af03447be0"
+      "sha256": "7466987b54b4b6b7bc41999fc9789f250bc884581bd99eae60a393d5b330fe56"
     },
     {
       "path": "tests/test_package_index.py",
       "sha256": "83b69d57d347ef887702041b27f2866040e64aef514a1be3cd34312ea7826d9d"
     },
     {
+      "path": "tests/test_package_macos_dmg.py",
+      "sha256": "2ee902eb7131ea1fb62bb4213ce31cdc0b627f28d990e0af81f220be5611f6e7"
+    },
+    {
       "path": "tests/test_pipeline.py",
-      "sha256": "57ca9372999075f2b34fbbac92c59b077e3b6f99a3478b7506c8237472ed6b9b"
+      "sha256": "53552e0a01fb778df9ce3439a1c2f2848a625d905d683acdc5c44a3d26316791"
     },
     {
       "path": "tests/test_plot_theme.py",
@@ -534,7 +590,7 @@
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "ae733d3c2a819926d8ac10380d2ff4f0203b6e1333e48f638c41ad9301bae195"
+      "sha256": "93a16d51987d1109b75bfa879338eea94e58e62d6c46a1096f7d31c91f75b91b"
     },
     {
       "path": "tests/test_report.py",
@@ -542,7 +598,7 @@
     },
     {
       "path": "tests/test_revision_diff.py",
-      "sha256": "4d943e1408359ab2e257d7a91fbd65c01cae30f5bd86e300a49ecb115188ff11"
+      "sha256": "b4431a7abb2fe1612dc5092120b7b1f1dc7f24a44b3211478ae4109a9e7231e5"
     },
     {
       "path": "tests/test_spectral.py",
@@ -566,12 +622,12 @@
     },
     {
       "path": "uv.lock",
-      "sha256": "d11588b0205e0b184cee0603b9c42d1bc3e95ade0ac652c4bb20fbd024f525e9"
+      "sha256": "f7c6d124a98367bd4627b812889d28507576634adad964772a61a10215e31a41"
     }
   ],
   "format_version": 1,
-  "included_file_count": 142,
+  "included_file_count": 156,
   "package_version": "0.2.0a7",
-  "public_tree_sha256": "8b22713e3727607441e141a683abc76f5081fe977f4af7a5441b75b43d3bc907",
-  "source_commit": "fd5ad96687ed6c922170f3c1864687bcc49dab79"
+  "public_tree_sha256": "89d58b1db9affaf1d9fb1a0ce2f047833b3d316b38a357a7df10bc36ebb43b17",
+  "source_commit": "89c9b3b62c90080df8f6e84f28322cfbf3c37354"
 }

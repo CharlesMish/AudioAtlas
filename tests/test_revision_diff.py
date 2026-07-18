@@ -10,7 +10,7 @@ from click.testing import CliRunner
 from audioatlas.cli import main
 from audioatlas.config import AnalysisConfig
 from audioatlas.errors import RevisionDiffError
-from audioatlas.output import OUTPUT_MARKER_FILENAME
+from audioatlas.output import OUTPUT_MARKER_FILENAME, write_output_manifest
 from audioatlas.provenance import build_analysis_provenance, track_identity_block
 from audioatlas.revision_diff import generate_revision_diff, write_revision_diff
 
@@ -229,6 +229,15 @@ def test_revision_diff_writes_static_owned_report_and_cli_uses_guardrails(tmp_pa
     human.write_text("keep", encoding="utf-8")
     (out / "summary.json").write_text("stale report", encoding="utf-8")
     (out / "waveform_rms.png").write_bytes(b"stale plot")
+    write_output_manifest(
+        out,
+        kind="single-track-report",
+        generated_files=[
+            "summary.json",
+            "waveform_rms.png",
+            OUTPUT_MARKER_FILENAME,
+        ],
+    )
 
     payload = generate_revision_diff(report_a, report_b, label_a="Revision 3", label_b="Revision 4")
     paths = write_revision_diff(payload, out)

@@ -21,6 +21,7 @@ from audioatlas.output import (
     ALL_GENERATED_FILENAMES,
     CATALOG_FILENAMES,
     OUTPUT_MARKER_FILENAME,
+    output_transaction,
     publish_staged_output,
     staged_output_directory,
     write_output_manifest,
@@ -75,7 +76,7 @@ def analyze_folder(
     used_names: set[str] = set()
     track_directories: list[str] = []
 
-    with staged_output_directory(out) as staging:
+    with output_transaction(out) as transaction, staged_output_directory(out) as staging:
         for path in sorted(input_path.iterdir(), key=lambda item: item.name.lower()):
             if not path.is_file():
                 continue
@@ -147,7 +148,12 @@ def analyze_folder(
         # Clear only known single-report roots/plots if the same destination is
         # intentionally repurposed as a catalog. Human files remain untouched.
         owned_names = set(ALL_GENERATED_FILENAMES)
-        publish_staged_output(staging, out, owned_filenames=owned_names)
+        publish_staged_output(
+            staging,
+            out,
+            owned_filenames=owned_names,
+            transaction=transaction,
+        )
 
     return BatchRunResult(
         out_dir=out,

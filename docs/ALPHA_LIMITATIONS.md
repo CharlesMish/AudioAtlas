@@ -20,11 +20,19 @@ listening. It is not a mastering assistant or quality judge.
   establish what occurred in the original master.
 - Batch discovery recognizes `.wav`, `.wave`, `.flac`, `.ogg`, `.aif`,
   `.aiff`, and `.mp3`; actual decoding depends on the local audio stack.
-- The launcher kit requires a prior installation and PATH setup. Native
-  Windows/macOS double-click behavior has not been claimed as fully rehearsed.
+- The desktop app currently targets Apple Silicon and macOS 14 or newer. Intel
+  and Windows desktop packages remain future evidence gates.
+- The app intentionally analyzes one file with the standard graph profile and
+  default Studio theme. Batch, project, section, diff, and custom-presentation
+  workflows remain in the Python CLI.
+- The `.command` and `.bat` launcher kit still requires a prior CLI installation
+  and PATH setup; it is not the standalone desktop app.
 - A fresh environment can have a noticeable first-analysis initialization
   delay from the scientific Python stack. Lightweight discovery commands avoid
   importing that stack, but report generation still requires it.
+- Cooperative cancellation occurs between decoder, measurement, rendering, and
+  writer steps. A single active decoder or measurement call may take time to
+  return; publication is intentionally completed rather than interrupted.
 - The `0.2.0a7` dependency contract temporarily constrains Numba to
   `>=0.65.1,<0.66`. A clean Python 3.13 smoke with Numba 0.66.0 /
   llvmlite 0.48.0 stalled in LLVM code generation; the same workflow

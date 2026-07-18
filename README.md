@@ -23,7 +23,23 @@ generated from the 70.98-second project demo track. The hosted sample contains
 the static report only; AudioAtlas itself does not upload user audio or
 generated reports.
 
-AudioAtlas supports Python 3.11 or newer.
+### Easiest path: Apple Silicon Mac app
+
+The friend-facing macOS beta needs no Python, Terminal, account, or installer.
+Download `AudioAtlas-<version>-macOS-arm64.dmg` from the matching
+[GitHub prerelease](https://github.com/CharlesMish/AudioAtlas/releases), drag
+AudioAtlas into Applications, and open it. Drop one track or choose a file;
+AudioAtlas writes `AudioAtlas Report – <track>` beside the audio and opens the
+finished themed HTML report automatically.
+
+The signed/notarized DMG is the supported low-setup path. Workflow artifacts
+labeled `beta` are ad-hoc owner-test builds, not substitutes for that release.
+The first app beta supports Apple Silicon and macOS 14 or newer.
+
+### CLI and advanced workflows
+
+The Python CLI supports Python 3.11 or newer and exposes themes, graph profiles,
+batch reports, manual sections, revision diffs, and song projects.
 
 ```bash
 python -m pip install audioatlas
@@ -236,11 +252,11 @@ surface no prioritized prompts at all.
 
 ## Alpha status
 
-AudioAtlas `0.2.0a7` is a public alpha. The report pipeline, comparison tools,
-and local song-project workflow
-are usable, but the default review prompts are still being calibrated on real
-music. Native double-click launchers also remain convenience wrappers for an
-already installed AudioAtlas environment, not a standalone desktop installer.
+AudioAtlas `0.2.0a7` is a public alpha. The report pipeline, macOS app,
+comparison tools, and local song-project workflow are usable, but the default
+review prompts are still being calibrated on real music. The first app release
+is Apple Silicon-only. The older `.command` and `.bat` launchers remain
+convenience wrappers for an already installed CLI, not desktop installers.
 
 The temporary Numba compatibility range is documented in
 [Compatibility](docs/COMPATIBILITY.md).
@@ -248,7 +264,7 @@ The temporary Numba compatibility range is documented in
 ## Learn more
 
 - [Friendly user guide](docs/USER_GUIDE.md)
-- [Easy-run launchers](README_EASY_RUN.md)
+- [Desktop app and legacy launchers](README_EASY_RUN.md)
 - [Examples](examples/README.md)
 - [Finding rules](docs/FINDING_RULES.md)
 - [Alpha limitations](docs/ALPHA_LIMITATIONS.md)
@@ -256,6 +272,7 @@ The temporary Numba compatibility range is documented in
 - [Schemas](docs/SUMMARY_SCHEMA.md)
 - [Song-project schema](docs/PROJECT_SCHEMA.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [macOS app release and clean-machine gate](docs/MACOS_APP_RELEASE.md)
 - [Changelog](docs/CHANGELOG.md)
 - [Security policy](SECURITY.md)
 

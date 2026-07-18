@@ -14,11 +14,15 @@ from matplotlib.colors import to_rgb
 import audioatlas.pipeline as pipeline_module
 from audioatlas.batch import analyze_folder
 from audioatlas.config import AnalysisConfig
-from audioatlas.errors import AudioLoadError
+from audioatlas.errors import AnalysisCancelled, AudioLoadError
 from audioatlas.graphs import all_graphs
 from audioatlas.graphs.selection import GraphSelection
-from audioatlas.output import OUTPUT_MARKER_FILENAME, SINGLE_REPORT_FILENAMES
-from audioatlas.pipeline import analyze_file
+from audioatlas.output import (
+    OUTPUT_MARKER_FILENAME,
+    SINGLE_REPORT_FILENAMES,
+    write_output_manifest,
+)
+from audioatlas.pipeline import AnalysisProgress, CancellationToken, analyze_file
 from audioatlas.release import (
     FINDING_RULESET_VERSION,
     FINDINGS_SCHEMA_VERSION,
@@ -88,6 +92,8 @@ def test_pipeline_writes_expected_outputs(tmp_path: Path, sr: int):
     assert summary["band_energy_timeline"] == summary["band_power_timeline"]
     assert "onset_density" in summary
     assert "chroma_cqt" in summary
+
+
     assert "short_term_lufs" in summary
     assert "stereo_correlation" in summary
     assert "mid_side_energy" in summary
@@ -126,6 +132,132 @@ def test_pipeline_writes_expected_outputs(tmp_path: Path, sr: int):
     image = matplotlib_image.imread(result.out_dir / "rms_timeline.png")
     expected_rgb = np.asarray(to_rgb(get_theme("default").tokens["surface"]))
     assert np.allclose(image[0, 0, :3], expected_rgb, atol=1 / 255)
+
+
+def test_pipeline_reports_coarse_progress_in_order(tmp_path: Path, sr: int):
+    path = tmp_path / "song.wav"
+    _write_short_sine(path, sr)
+    updates: list[AnalysisProgress] = []
+
+    analyze_file(
+        path,
+        tmp_path / "report",
+        config=_small_config(),
+        selection=GraphSelection(profile="compact"),
+        progress_callback=updates.append,
+    )
+
+    assert [update.stage for update in updates if update.stage != "rendering"] == [
+        "loading",
+        "measuring",
+        "publishing",
+        "complete",
+    ]
+    rendering = [update for update in updates if update.stage == "rendering"]
+    assert rendering[0].completed == 0
+    assert rendering[-1].completed == rendering[-1].total == 4
+    assert all(update.total == 4 for update in rendering)
+
+
+def test_progress_listener_failure_does_not_change_analysis(tmp_path: Path, sr: int):
+    path = tmp_path / "song.wav"
+    _write_short_sine(path, sr)
+
+    def broken_listener(update: AnalysisProgress) -> None:
+        raise RuntimeError(f"listener failed during {update.stage}")
+
+    result = analyze_file(
+        path,
+        tmp_path / "report",
+        config=_small_config(),
+        selection=GraphSelection(profile="compact"),
+        progress_callback=broken_listener,
+    )
+
+    assert result.html_report_path.is_file()
+
+
+def test_cancellation_before_analysis_leaves_existing_report_unchanged(
+    tmp_path: Path, sr: int
+):
+    path = tmp_path / "song.wav"
+    _write_short_sine(path, sr)
+    out = tmp_path / "report"
+    out.mkdir()
+    prior = out / "report.html"
+    prior.write_text("prior report", encoding="utf-8")
+    write_output_manifest(
+        out,
+        kind="single-track-report",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+    )
+    token = CancellationToken()
+    token.cancel()
+
+    with pytest.raises(AnalysisCancelled, match="previous report was unchanged"):
+        analyze_file(path, out, config=_small_config(), cancellation_token=token)
+
+    assert prior.read_text(encoding="utf-8") == "prior report"
+    assert not list(tmp_path.glob(".report.audioatlas-*"))
+
+
+def test_cancellation_during_rendering_cleans_staging_and_preserves_prior_report(
+    tmp_path: Path, sr: int
+):
+    path = tmp_path / "song.wav"
+    _write_short_sine(path, sr)
+    out = tmp_path / "report"
+    out.mkdir()
+    prior = out / "report.html"
+    prior.write_text("prior report", encoding="utf-8")
+    write_output_manifest(
+        out,
+        kind="single-track-report",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+    )
+    token = CancellationToken()
+
+    def cancel_after_first_plot(update: AnalysisProgress) -> None:
+        if update.stage == "rendering" and update.completed == 1:
+            token.cancel()
+
+    with pytest.raises(AnalysisCancelled):
+        analyze_file(
+            path,
+            out,
+            config=_small_config(),
+            selection=GraphSelection(profile="compact"),
+            progress_callback=cancel_after_first_plot,
+            cancellation_token=token,
+        )
+
+    assert prior.read_text(encoding="utf-8") == "prior report"
+    assert not list(tmp_path.glob(".report.audioatlas-*"))
+
+
+def test_cancellation_requested_during_publication_finishes_complete_report(
+    tmp_path: Path, sr: int
+):
+    path = tmp_path / "song.wav"
+    _write_short_sine(path, sr)
+    token = CancellationToken()
+
+    def cancel_at_publish(update: AnalysisProgress) -> None:
+        if update.stage == "publishing":
+            token.cancel()
+
+    result = analyze_file(
+        path,
+        tmp_path / "report",
+        config=_small_config(),
+        selection=GraphSelection(profile="minimal"),
+        progress_callback=cancel_at_publish,
+        cancellation_token=token,
+    )
+
+    assert token.is_cancelled
+    assert result.html_report_path.is_file()
+    assert result.summary_path.is_file()
 
 
 def test_pipeline_applies_dark_report_theme_to_plot_canvas(tmp_path: Path, sr: int):

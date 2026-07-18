@@ -8,15 +8,18 @@ not contain DSP interpretation logic.
 from __future__ import annotations
 
 import gc
+import threading
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from matplotlib import rc_context
 
 from audioatlas.analysis.bundle import AnalysisBundle
 from audioatlas.analysis.findings import generate_findings
 from audioatlas.config import AnalysisConfig
+from audioatlas.errors import AnalysisCancelled
 from audioatlas.graphs import all_graphs
 from audioatlas.graphs.selection import GraphSelection
 from audioatlas.html_report import write_report_html
@@ -25,6 +28,7 @@ from audioatlas.output import (
     ALL_GENERATED_FILENAMES,
     OUTPUT_MARKER_FILENAME,
     SINGLE_REPORT_FILENAMES,
+    output_transaction,
     publish_staged_output,
     staged_output_directory,
     write_output_manifest,
@@ -53,6 +57,48 @@ class AnalysisRunResult:
     findings: dict[str, Any]
 
 
+AnalysisProgressStage = Literal[
+    "loading",
+    "measuring",
+    "rendering",
+    "publishing",
+    "complete",
+]
+
+
+@dataclass(frozen=True)
+class AnalysisProgress:
+    """A coarse, presentation-neutral update from one analysis run."""
+
+    stage: AnalysisProgressStage
+    message: str
+    completed: int | None = None
+    total: int | None = None
+
+
+ProgressCallback = Callable[[AnalysisProgress], None]
+
+
+class CancellationToken:
+    """Thread-safe cooperative cancellation shared with UI callers."""
+
+    def __init__(self) -> None:
+        self._event = threading.Event()
+
+    def cancel(self) -> None:
+        """Request cancellation at the next safe analysis checkpoint."""
+
+        self._event.set()
+
+    @property
+    def is_cancelled(self) -> bool:
+        return self._event.is_set()
+
+    def raise_if_cancelled(self) -> None:
+        if self.is_cancelled:
+            raise AnalysisCancelled("Analysis canceled. The previous report was unchanged.")
+
+
 def analyze_file(
     input_path: str | Path,
     out_dir: str | Path,
@@ -66,6 +112,8 @@ def analyze_file(
     selection: GraphSelection | None = None,
     include_local_paths: bool = False,
     track_id: str | None = None,
+    progress_callback: ProgressCallback | None = None,
+    cancellation_token: CancellationToken | None = None,
 ) -> AnalysisRunResult:
     """Analyze one file, publish its report, and release renderer cycles.
 
@@ -88,6 +136,8 @@ def analyze_file(
             selection=selection,
             include_local_paths=include_local_paths,
             track_id=track_id,
+            progress_callback=progress_callback,
+            cancellation_token=cancellation_token,
         )
     finally:
         gc.collect()
@@ -106,6 +156,8 @@ def _analyze_file_impl(
     selection: GraphSelection | None = None,
     include_local_paths: bool = False,
     track_id: str | None = None,
+    progress_callback: ProgressCallback | None = None,
+    cancellation_token: CancellationToken | None = None,
 ) -> AnalysisRunResult:
     """Implement one analysis run inside a collectable lifecycle frame.
 
@@ -121,33 +173,41 @@ def _analyze_file_impl(
     selected_graphs = graph_selection.resolve(graph_specs)
     out = Path(out_dir)
 
-    # Complete loading and analysis before touching a previous report. A bad
-    # input therefore cannot erase a known-good output folder.
-    audio = load_audio(
-        input_path,
-        max_duration_seconds=max_duration_seconds,
-        start_seconds=start_seconds,
-        end_seconds=end_seconds,
-        include_local_paths=include_local_paths,
-    )
+    token = cancellation_token or CancellationToken()
+    token.raise_if_cancelled()
 
-    bundle = AnalysisBundle(audio, cfg)
-    levels = bundle.get("levels")
-    rms = bundle.get("rms")
-    crest = bundle.get("crest")
-    short_term = bundle.get("short_term")
-    peaks = bundle.get("peaks")
-    avg = bundle.get("average_spectrum")
-    spectral_shape = bundle.get("spectral_shape")
-    band_power = bundle.get("band_power")
-    onset = bundle.get("onset")
-    chroma = bundle.get("chroma")
-    stereo = bundle.get("stereo")
-    mid_side = bundle.get("mid_side")
+    # Lock and preflight the destination before expensive work. Staging is the
+    # only filesystem mutation until publication, so bad input and cancellation
+    # still leave a previous completed report untouched.
+    with output_transaction(out) as transaction, staged_output_directory(out) as staging:
+        _emit_progress(progress_callback, "loading", "Loading audio")
+        audio = load_audio(
+            input_path,
+            max_duration_seconds=max_duration_seconds,
+            start_seconds=start_seconds,
+            end_seconds=end_seconds,
+            include_local_paths=include_local_paths,
+        )
+        token.raise_if_cancelled()
 
-    selected_filenames = [graph.filename for graph in selected_graphs]
-    band_power_summary = band_power.to_summary_dict()
-    summary: dict[str, Any] = {
+        _emit_progress(progress_callback, "measuring", "Measuring track")
+        bundle = AnalysisBundle(audio, cfg)
+        levels = _measurement(bundle, "levels", token)
+        rms = _measurement(bundle, "rms", token)
+        crest = _measurement(bundle, "crest", token)
+        short_term = _measurement(bundle, "short_term", token)
+        peaks = _measurement(bundle, "peaks", token)
+        avg = _measurement(bundle, "average_spectrum", token)
+        spectral_shape = _measurement(bundle, "spectral_shape", token)
+        band_power = _measurement(bundle, "band_power", token)
+        onset = _measurement(bundle, "onset", token)
+        chroma = _measurement(bundle, "chroma", token)
+        stereo = _measurement(bundle, "stereo", token)
+        mid_side = _measurement(bundle, "mid_side", token)
+
+        selected_filenames = [graph.filename for graph in selected_graphs]
+        band_power_summary = band_power.to_summary_dict()
+        summary: dict[str, Any] = {
         "schema_version": SUMMARY_SCHEMA_VERSION,
         "metadata": audio.metadata.to_dict(),
         "source_identity": track_identity_block(track_id),
@@ -174,21 +234,40 @@ def _analyze_file_impl(
             "available": [graph.key for graph in graph_specs],
             "selected_filenames": selected_filenames,
         },
-    }
-    findings = generate_findings(summary).to_dict()
+        }
+        findings = generate_findings(summary).to_dict()
 
-    # A destination may legitimately be reused for any generated artifact kind.
-    # Treat every predictable root artifact as AudioAtlas-owned so switching
-    # among reports, catalogs, and revision diffs cannot leave a mixed folder.
-    owned_names = set(ALL_GENERATED_FILENAMES)
-    with staged_output_directory(out) as staging:
+        # A destination may legitimately be reused for any generated artifact kind.
+        # Treat every predictable root artifact as AudioAtlas-owned so switching
+        # among reports, catalogs, and revision diffs cannot leave a mixed folder.
+        owned_names = set(ALL_GENERATED_FILENAMES)
+        graph_total = len(selected_graphs)
+        _emit_progress(
+            progress_callback,
+            "rendering",
+            "Rendering plots",
+            completed=0,
+            total=graph_total,
+        )
         with rc_context(plot_style):
-            for graph in selected_graphs:
+            for index, graph in enumerate(selected_graphs, start=1):
+                token.raise_if_cancelled()
                 graph.render(bundle, staging / graph.filename, cfg)
+                _emit_progress(
+                    progress_callback,
+                    "rendering",
+                    f"Rendering plots ({index} of {graph_total})",
+                    completed=index,
+                    total=graph_total,
+                )
 
+        token.raise_if_cancelled()
         write_summary_json(summary, staging)
+        token.raise_if_cancelled()
         write_findings_json(findings, staging)
+        token.raise_if_cancelled()
         write_report_md(summary, selected_filenames, staging, findings)
+        token.raise_if_cancelled()
         write_report_html(
             summary,
             selected_filenames,
@@ -197,6 +276,7 @@ def _analyze_file_impl(
             theme_name=theme_name,
             presentation_mode=presentation_mode,
         )
+        token.raise_if_cancelled()
         write_output_manifest(
             staging,
             kind="single-track-report",
@@ -206,9 +286,18 @@ def _analyze_file_impl(
                 OUTPUT_MARKER_FILENAME,
             ],
         )
-        publish_staged_output(staging, out, owned_filenames=owned_names)
+        token.raise_if_cancelled()
+        _emit_progress(progress_callback, "publishing", "Publishing report")
+        # Publication deliberately has no cancellation checkpoint. Once the first
+        # prior artifact moves aside, rollback or a complete new report must win.
+        publish_staged_output(
+            staging,
+            out,
+            owned_filenames=owned_names,
+            transaction=transaction,
+        )
 
-    return AnalysisRunResult(
+    result = AnalysisRunResult(
         out_dir=out,
         summary_path=out / "summary.json",
         findings_path=out / "findings.json",
@@ -218,3 +307,43 @@ def _analyze_file_impl(
         summary=summary,
         findings=findings,
     )
+    _emit_progress(progress_callback, "complete", "Report ready")
+    return result
+
+
+def _measurement(
+    bundle: AnalysisBundle,
+    name: str,
+    token: CancellationToken,
+) -> Any:
+    token.raise_if_cancelled()
+    value = bundle.get(name)
+    token.raise_if_cancelled()
+    return value
+
+
+def _emit_progress(
+    callback: ProgressCallback | None,
+    stage: AnalysisProgressStage,
+    message: str,
+    *,
+    completed: int | None = None,
+    total: int | None = None,
+) -> None:
+    """Deliver best-effort UI progress without changing analysis behavior."""
+
+    if callback is None:
+        return
+    try:
+        callback(
+            AnalysisProgress(
+                stage=stage,
+                message=message,
+                completed=completed,
+                total=total,
+            )
+        )
+    except Exception:
+        # Progress is observational. A broken UI/listener must not invalidate a
+        # complete report or change the analysis exception contract.
+        return

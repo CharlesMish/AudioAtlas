@@ -18,7 +18,7 @@ from audioatlas.catalog_report import (
     write_catalog_md,
 )
 from audioatlas.cli import main
-from audioatlas.output import OUTPUT_MARKER_FILENAME
+from audioatlas.output import OUTPUT_MARKER_FILENAME, write_output_manifest
 from audioatlas.release import CATALOG_SCHEMA_VERSION
 
 
@@ -495,6 +495,11 @@ def test_batch_strict_failure_leaves_previous_catalog_untouched(tmp_path: Path):
     previous = '{"known_good": true}\n'
     (out_dir / "catalog_summary.json").write_text(previous, encoding="utf-8")
     (out_dir / "human-notes.txt").write_text("keep", encoding="utf-8")
+    write_output_manifest(
+        out_dir,
+        kind="batch-catalog",
+        generated_files=["catalog_summary.json", OUTPUT_MARKER_FILENAME],
+    )
 
     result = CliRunner().invoke(
         main,
