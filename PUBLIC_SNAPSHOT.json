@@ -274,7 +274,7 @@
     },
     {
       "path": "src/audioatlas/errors.py",
-      "sha256": "5b54c94afd4d36697c9ab0c76aeeffd2c693c6809dd800d437774a8daadad052"
+      "sha256": "5a6a726382b3eb9e11019f78e5912137177eac76ce787e4e33fd848778d79b96"
     },
     {
       "path": "src/audioatlas/graph_profiles.py",
@@ -554,7 +554,7 @@
     },
     {
       "path": "tests/test_launchers.py",
-      "sha256": "d9a0fe7b6620df6b8277854539648b87e2dfbf5447b50051457b76a2daf82ffd"
+      "sha256": "b5659b7a1dcac3abd26c4725a30abdec4cbfa339c07d24bd4dbc6d4a01c2df18"
     },
     {
       "path": "tests/test_levels.py",
@@ -656,6 +656,6 @@
   "format_version": 1,
   "included_file_count": 163,
   "package_version": "0.2.0a7",
-  "public_tree_sha256": "1de78e3ddc46fe3d6ebaf32f5215d9d8e1d6a4140980c637706805c8856bd3f7",
-  "source_commit": "e4ace687a569ebcf56ebf315d50391253943831c"
+  "public_tree_sha256": "f3340c523f3980acf68f6a72833f81783add7fa0ba34996c901f6f9dcfa384ed",
+  "source_commit": "4c283780f6777eff9d3a714650e774c81b7e333c"
 }

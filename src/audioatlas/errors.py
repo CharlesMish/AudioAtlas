@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from contextlib import suppress
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
 class AudioAtlasError(Exception):
@@ -52,6 +53,14 @@ def _safe_reason(path: Path, value: str) -> str:
     # Longest first prevents replacing a relative suffix before the full path.
     for candidate in sorted((item for item in candidates if item), key=len, reverse=True):
         text = text.replace(candidate, path.name)
+    # Some Windows decoders rewrite separators, drive casing, or path prefixes
+    # before returning an error. Redact any quoted path whose final component is
+    # the selected filename rather than relying only on byte-for-byte equality.
+    for quote, value in re.findall(r"(['\"])(.*?)\1", text):
+        windows_name = PureWindowsPath(value).name
+        posix_name = PurePosixPath(value).name
+        if path.name.casefold() in {windows_name.casefold(), posix_name.casefold()}:
+            text = text.replace(f"{quote}{value}{quote}", f"{quote}{path.name}{quote}")
     return text or "the decoder did not provide a reason"
 
 

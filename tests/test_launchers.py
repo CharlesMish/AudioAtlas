@@ -3,9 +3,13 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="macOS launcher contract")
 
 
 def _launcher_tree(tmp_path: Path) -> tuple[Path, Path]:
