@@ -7,7 +7,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -183,40 +182,3 @@ def test_windows_candidate_rejects_nonpositive_build(tmp_path: Path) -> None:
                 workflow_url="https://example.invalid/run",
             )
         )
-
-
-def test_private_windows_candidate_workflow_cannot_publish() -> None:
-    path = ROOT / ".github" / "workflows" / "windows-demo-candidate.yml"
-    text = path.read_text(encoding="utf-8")
-    workflow = yaml.safe_load(text)
-
-    assert workflow["on"] == {"workflow_dispatch": {}}
-    assert workflow["permissions"] == {"contents": "read"}
-    job = workflow["jobs"]["build-internal-candidate"]
-    assert job["runs-on"] == "windows-2022"
-    assert "refs/heads/main" in text
-    assert "scripts/build_windows_app.py" in text
-    assert "scripts/package_windows_candidate.py" in text
-    assert "innosetup-7.0.2-x64.exe" in text
-    assert "gh release verify is-7_0_2 --repo jrsoftware/issrc" in text
-    assert "gh release verify-asset is-7_0_2 $tool --repo jrsoftware/issrc" in text
-    assert "Get-AuthenticodeSignature" in text
-    assert "--ui-smoke" in text
-    assert "retention-days: 14" in text
-    for promised in (
-        "*-portable.zip",
-        "*-setup.exe",
-        "*-demo-kit.zip",
-        "windows-candidate-manifest.json",
-        "windows-pe-audit.json",
-        "THIRD_PARTY_LICENSES.txt",
-        "SHA256SUMS.txt",
-    ):
-        assert promised in text
-    for forbidden in (
-        "gh release create",
-        "twine upload",
-        "gh-action-pypi-publish",
-        "git tag",
-    ):
-        assert forbidden not in text

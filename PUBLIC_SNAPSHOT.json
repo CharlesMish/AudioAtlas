@@ -646,7 +646,7 @@
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "eb35f80f6dc3fd975260325d9f6d0c5cdf1f90c332f6e667f47236e0d5b56184"
+      "sha256": "7ee3ff33d32d296c022f0b33c63f97485f0d459513d20d37f8c3f9801895a032"
     },
     {
       "path": "tests/test_report.py",
@@ -682,7 +682,7 @@
     },
     {
       "path": "tests/test_windows_packaging.py",
-      "sha256": "57218569184c400aef0de4327b5f42a7c69c6d0ce29dcaa488b202d7f732e35d"
+      "sha256": "d3d98d7119ed3ddebe46e132a0a7bda9cac95191e990eecc26e9df4c55dfe20a"
     },
     {
       "path": "uv.lock",
@@ -692,6 +692,6 @@
   "format_version": 1,
   "included_file_count": 172,
   "package_version": "0.2.0a7",
-  "public_tree_sha256": "3afe60ad156d83852f6fa30d08f725abd8eeb22d6a5d00b479d0d85d97676760",
-  "source_commit": "44f0d42ad90f00b60ea7ea8ff73ba6db8c58bc92"
+  "public_tree_sha256": "bf9c0946d69e57d35f74b3f23186a94f87af79b6ab364f52938203c18595f46e",
+  "source_commit": "6c06c1a178b4de58312956fc39e562e47c5a665e"
 }
