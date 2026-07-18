@@ -368,11 +368,11 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> None:
     args = _parser().parse_args(sys.argv[1:] if argv is None else argv)
-    configure_scientific_cache_environment()
 
     if args.smoke_analyze is not None:
         if args.output_parent is None:
             raise SystemExit("--output-parent is required with --smoke-analyze")
+        configure_scientific_cache_environment()
         from audioatlas.desktop_smoke import run_frozen_smoke
 
         try:
@@ -394,6 +394,7 @@ def main(argv: list[str] | None = None) -> None:
     if sys.platform != "win32":
         raise SystemExit("The AudioAtlas Windows app requires 64-bit Windows.")
 
+    configure_scientific_cache_environment()
     import tkinter as tk
 
     root = tk.Tk()

@@ -34,7 +34,7 @@
     },
     {
       "path": ".github/workflows/windows-demo-candidate.yml",
-      "sha256": "c705d104e662451552a576f4a8dd06c2acc01ee49df82c054f9d8520b1b31d05"
+      "sha256": "533671f5f79ae919a8024aa62728dde9957c8fdda0fa1ce53a79c55298d561e1"
     },
     {
       "path": ".gitignore",
@@ -170,7 +170,7 @@
     },
     {
       "path": "packaging/windows/AudioAtlas.spec",
-      "sha256": "3306cbef0699a4b4ca5afbe1214fb24c85a4e81ba6b60f9f45a6502f15d976aa"
+      "sha256": "123abfc9f5457f7647640a63f232b2cfea733484013fef52945c94e30564bdec"
     },
     {
       "path": "pyproject.toml",
@@ -438,7 +438,7 @@
     },
     {
       "path": "src/audioatlas/windows_app.py",
-      "sha256": "24aaafe77929ec3cf28af5fa47d8f57ecba788db304f07bc6871c0ea24be3e4f"
+      "sha256": "b77220b18a240f58ab94c1152d45402e2bfb11cb72864b29fc363794f5bd2a66"
     },
     {
       "path": "starter_kit/PUT_AUDIO_HERE/.gitkeep",
@@ -646,7 +646,7 @@
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "7ee3ff33d32d296c022f0b33c63f97485f0d459513d20d37f8c3f9801895a032"
+      "sha256": "9eb912e045a1b037e70d0e252355d35305437b9781d89296cfc66b13d44b244a"
     },
     {
       "path": "tests/test_report.py",
@@ -682,7 +682,7 @@
     },
     {
       "path": "tests/test_windows_packaging.py",
-      "sha256": "6322e8a602675b62f0782c6030fd506cd76d4d9cd72747499e1243601c7a87cf"
+      "sha256": "6a847cba520faf5afd4f08c6e3d5d4aa927639bf45258fa0ef5dc773a78d4265"
     },
     {
       "path": "uv.lock",
@@ -692,6 +692,6 @@
   "format_version": 1,
   "included_file_count": 172,
   "package_version": "0.2.0a7",
-  "public_tree_sha256": "608bf5133e9f875e95e07991eed28e1972ae78be71b33a672d0988d829034ce9",
-  "source_commit": "71deab6bbd54b512526885f87d46fefbef756cda"
+  "public_tree_sha256": "c37cae2fb53306300edfc521658a5ac214edeb4154f5b4dc9840e3d40de92b0f",
+  "source_commit": "ad4212ef3542e5f71f4629e505494601c417bb1b"
 }

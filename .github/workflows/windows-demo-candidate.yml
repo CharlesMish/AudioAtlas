@@ -29,6 +29,8 @@ jobs:
         id: identity
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           if ($env:GITHUB_REF -ne 'refs/heads/main') { throw 'Candidate must run from main' }
           git fetch origin main
           if ($env:GITHUB_SHA -ne (git rev-parse origin/main)) { throw 'Candidate is not current main' }
@@ -49,6 +51,8 @@ jobs:
         id: package
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           $version = uv run python -c "import audioatlas; print(audioatlas.__version__)"
           if ($version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+$') { throw "Unexpected version: $version" }
           "version=$version" >> $env:GITHUB_OUTPUT
@@ -59,6 +63,8 @@ jobs:
       - name: Exercise frozen analysis and UI boundary
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           function Start-AudioAtlas([string]$Executable, [string[]]$Arguments) {
             $info = [System.Diagnostics.ProcessStartInfo]::new()
             $info.FileName = $Executable
@@ -115,6 +121,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           $tool = "$env:RUNNER_TEMP/innosetup-7.0.2-x64.exe"
           gh release download is-7_0_2 --repo jrsoftware/issrc --pattern innosetup-7.0.2-x64.exe --dir $env:RUNNER_TEMP
           gh release verify is-7_0_2 --repo jrsoftware/issrc
@@ -130,6 +138,8 @@ jobs:
       - name: Build per-user installer and internal demo kit
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           $version = '${{ steps.package.outputs.version }}'
           $rawOutput = (New-Item -ItemType Directory -Force -Path 'dist/windows/installer').FullName
           $source = (Resolve-Path 'dist/windows/AudioAtlas').Path
@@ -153,6 +163,8 @@ jobs:
       - name: Exercise install, upgrade, and uninstall lifecycle
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           function Invoke-AudioAtlas([string]$Executable, [string[]]$Arguments) {
             $info = [System.Diagnostics.ProcessStartInfo]::new()
             $info.FileName = $Executable
