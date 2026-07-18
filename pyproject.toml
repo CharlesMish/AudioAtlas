@@ -65,6 +65,11 @@ app-build = [
   "pyobjc-core>=11,<13",
   "pyobjc-framework-Cocoa>=11,<13",
 ]
+windows-app-build = [
+  "pyinstaller==6.21.0",
+  "pefile>=2024.8.26,<2027",
+  "pip-licenses>=5,<6",
+]
 
 [project.scripts]
 audioatlas = "audioatlas.cli:main"

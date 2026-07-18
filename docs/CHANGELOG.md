@@ -13,6 +13,9 @@ tracked separately in `src/audioatlas/release.py`.
 - Added platform-standard per-user caches/logs, a shared frozen runtime hook,
   portable Win32-safe report naming, and full Windows CI on Python 3.11/3.14 in
   preparation for Windows 10 22H2 x64 and Windows 11 x64 packaging.
+- Added a lightweight Tkinter Windows adapter, audited Python 3.11 x64 onedir
+  build, private portable demo kit, and no-admin Inno Setup candidate. Unsigned
+  Windows artifacts are labeled internal-only pending client security acceptance.
 
 - Added a native Apple Silicon macOS app that accepts one dropped or chosen
   track, displays coarse analysis progress, writes a standard themed report

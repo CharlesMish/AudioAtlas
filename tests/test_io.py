@@ -107,3 +107,14 @@ def test_load_audio_rejects_source_changed_during_decode(
 
     with pytest.raises(SourceChangedError, match="changed while it was being read"):
         load_audio(path)
+def test_audio_load_error_redacts_decoder_rewritten_windows_path(tmp_path) -> None:
+    source = tmp_path / "broken.wav"
+
+    error = AudioLoadError(
+        source,
+        r"audio metadata could not be decoded (Error opening 'C:\Private\User\broken.wav')",
+    )
+
+    assert "Private" not in str(error)
+    assert "User" not in str(error)
+    assert "'broken.wav'" in str(error)

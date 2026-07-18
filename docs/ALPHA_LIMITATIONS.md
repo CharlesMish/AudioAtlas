@@ -20,8 +20,10 @@ listening. It is not a mastering assistant or quality judge.
   establish what occurred in the original master.
 - Batch discovery recognizes `.wav`, `.wave`, `.flac`, `.ogg`, `.aif`,
   `.aiff`, and `.mp3`; actual decoding depends on the local audio stack.
-- The desktop app currently targets Apple Silicon and macOS 14 or newer. Intel
-  and Windows desktop packages remain future evidence gates.
+- The friend-ready desktop app currently targets Apple Silicon and macOS 14 or
+  newer. Private unsigned Windows portable/installer candidates are internal
+  evidence only and may be blocked by Windows reputation controls. Intel and
+  friend-ready Windows packages remain external evidence gates.
 - The app intentionally analyzes one file with the standard graph profile and
   default Studio theme. Batch, project, section, diff, and custom-presentation
   workflows remain in the Python CLI.
