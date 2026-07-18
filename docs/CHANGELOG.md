@@ -5,6 +5,15 @@ tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
+### Live demo
+
+- Restored the full 70.98-second AudioAtlas trailer/demo track as a documented
+  public demo input with distinct AI-assisted provenance and demo-only reuse
+  terms, while retaining the existing CC BY terms for the two human-made demos.
+- Switched the GitHub Pages example to a standard-profile Midnight Studio
+  report generated from that track, with the source audio excluded from the
+  deployed static site.
+
 ## `0.2.0a7` — 2026-07-15
 
 ### Easier adoption and local song workspaces

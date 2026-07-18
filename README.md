@@ -17,10 +17,11 @@ theme and opens the finished report in Studio.
 
 ## Try it, then make your first report
 
-Open the [live guitar report](https://charlesmish.github.io/AudioAtlas/) to see
-the complete local-first experience before installing anything. The hosted
-sample contains the static report only; AudioAtlas itself does not upload user
-audio or generated reports.
+Open the [live Midnight Studio report](https://charlesmish.github.io/AudioAtlas/)
+to see the complete local-first experience before installing anything. It is
+generated from the 70.98-second project demo track. The hosted sample contains
+the static report only; AudioAtlas itself does not upload user audio or
+generated reports.
 
 AudioAtlas supports Python 3.11 or newer.
 
@@ -50,16 +51,18 @@ scientific libraries initialize. Lightweight commands such as `--version`,
 
 ## Try the real demo recordings
 
-The repository includes two intentionally public musical demos: a short solo
-guitar recording and a fuller guitar, koto, cello, and drums arrangement.
+The repository includes three intentionally public musical demos: the complete
+AudioAtlas trailer/demo track, a short solo-guitar recording, and a fuller
+guitar, koto, cello, and drums arrangement.
 
 ```bash
-# One full Studio report
-uv run audioatlas analyze examples/demo_audio/guitar.wav \
-  --out reports/demo-guitar \
-  --graphs-profile full
+# Reproduce the standard Midnight Studio report used by the live site
+uv run audioatlas analyze examples/demo_audio/audioatlas_demo.wav \
+  --out reports/audioatlas-demo \
+  --graphs-profile standard \
+  --theme midnight_studio
 
-# Make a clean audio-only input folder, then build an exact two-track catalog
+# Make a clean audio-only input folder, then build an exact three-track catalog
 rm -rf reports/demo-audio-input
 mkdir -p reports/demo-audio-input
 cp examples/demo_audio/*.wav reports/demo-audio-input/
@@ -67,8 +70,8 @@ uv run audioatlas batch reports/demo-audio-input \
   --out reports/demo-catalog \
   --graphs-profile full
 
-# Open the solo report, catalog, and arrangement report
-python -m webbrowser reports/demo-guitar/report.html
+# Open the live-demo-style report, catalog, and arrangement report
+python -m webbrowser reports/audioatlas-demo/report.html
 python -m webbrowser reports/demo-catalog/catalog.html
 python -m webbrowser reports/demo-catalog/guitar_koto_cello_drums/report.html
 ```
@@ -260,4 +263,5 @@ The temporary Numba compatibility range is documented in
 
 AudioAtlas software and software documentation use the [MIT License](LICENSE).
 The published demo recordings have a separate [audio rights notice](AUDIO_RIGHTS.md),
-including CC BY 4.0 attribution terms and a third-party sound exception.
+including recording-specific CC BY 4.0 terms, an AI-assisted demo-only track,
+and third-party sound exceptions.
