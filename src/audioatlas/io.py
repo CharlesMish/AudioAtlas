@@ -7,6 +7,7 @@ Internal convention throughout AudioAtlas:
 from __future__ import annotations
 
 import math
+import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -14,7 +15,7 @@ import numpy as np
 import soundfile as sf
 from numpy.typing import NDArray
 
-from audioatlas.errors import AudioLoadError
+from audioatlas.errors import AudioLoadError, SourceChangedError
 from audioatlas.utils import ensure_2d_audio
 
 
@@ -90,6 +91,11 @@ def load_audio(
         raise AudioLoadError(p, "path is not a regular file")
 
     try:
+        source_before = _source_identity(p)
+    except OSError as exc:
+        raise AudioLoadError(p, f"file metadata could not be inspected ({exc})") from exc
+
+    try:
         info = sf.info(str(p))
     except (OSError, sf.SoundFileError) as exc:
         raise AudioLoadError(p, f"audio metadata could not be decoded ({exc})") from exc
@@ -146,6 +152,12 @@ def load_audio(
         )
     except (OSError, sf.SoundFileError) as exc:
         raise AudioLoadError(p, f"audio samples could not be decoded ({exc})") from exc
+    try:
+        source_after = _source_identity(p)
+    except OSError as exc:
+        raise SourceChangedError(p) from exc
+    if source_after != source_before:
+        raise SourceChangedError(p)
     y = ensure_2d_audio(y)
     if y.shape[0] == 0:
         raise AudioLoadError(p, "the selected range contains no decodable audio frames")
@@ -167,3 +179,10 @@ def load_audio(
         local_paths_included=include_local_paths,
     )
     return AudioData(y=y, sr=int(sr), metadata=metadata)
+
+
+def _source_identity(path: Path) -> tuple[int, int, int, int]:
+    """Return stable fields that reveal ordinary replacement or mutation."""
+
+    stat = os.stat(path)
+    return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns)

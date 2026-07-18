@@ -54,6 +54,96 @@ def test_release_requires_version_tag_and_uses_trusted_publishing() -> None:
     assert "--require-present" in text
 
 
+def test_macos_app_has_separate_beta_and_notarized_release_gates() -> None:
+    beta = _workflow("macos-app.yml")
+    release = _workflow("release.yml")
+
+    assert beta["jobs"]["build-and-smoke"]["runs-on"] == "macos-14"
+    beta_text = (ROOT / ".github" / "workflows" / "macos-app.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "scripts/build_macos_app.py" in beta_text
+    assert "--smoke-analyze" in beta_text
+    assert "assert frozen == wheel" in beta_text
+    assert "compressed_bytes" in beta_text
+    assert 'MACOSX_DEPLOYMENT_TARGET: "14.0"' in beta_text
+    assert "AUDIOATLAS_BUNDLE_BUILD_NUMBER" in beta_text
+    assert "omppool" in beta_text
+
+    app_job = release["jobs"]["macos-app"]
+    assert app_job["environment"]["name"] == "macos-release"
+    release_text = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "MACOS_CERTIFICATE_P12" in release_text
+    assert "Preflight signing and notarization credentials" in release_text
+    assert "scripts/package_macos_dmg.py" in release_text
+    assert "notarization-log.json" in release_text
+    assert "MACOS_TEAM_ID" in release_text
+    assert "flags=.*runtime" in release_text
+    assert "com.apple.security.get-task-allow" in release_text
+    assert "Clean signing material" in release_text
+    assert 'name: macos-acceptance' in release_text
+    assert release["jobs"]["macos-acceptance"]["needs"] == ["prepare", "macos-app"]
+    assert release["jobs"]["draft-release"]["needs"] == [
+        "prepare",
+        "macos-app",
+        "macos-acceptance",
+    ]
+
+    packaging = (ROOT / "scripts" / "package_macos_dmg.py").read_text(encoding="utf-8")
+    assert '"notarytool"' in packaging
+    assert '"submit"' in packaging
+    assert '"log"' in packaging
+    assert 'log_payload.get("status") != "Accepted"' in packaging
+    assert '"stapler", "validate"' in packaging
+    assert '"spctl",' in packaging
+    assert "DMG must contain exactly AudioAtlas.app and Applications" in packaging
+
+
+def test_private_macos_demo_candidate_cannot_publish() -> None:
+    workflow = _workflow("macos-demo-candidate.yml")
+    text = (ROOT / ".github" / "workflows" / "macos-demo-candidate.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert workflow["on"] == {"workflow_dispatch": {}}
+    assert workflow["permissions"] == {"contents": "read"}
+    job = workflow["jobs"]["build-private-candidate"]
+    assert job["runs-on"] == "macos-14"
+    assert job["environment"]["name"] == "macos-release"
+    assert 'test "${GITHUB_REF}" = "refs/heads/main"' in text
+    assert 'test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"' in text
+    assert 'test "${version}" = "0.2.0a7"' in text
+    assert "scripts/package_macos_dmg.py" in text
+    assert "audioatlas_demo.wav" in text
+    assert "docs/MACOS_DEMO_GUIDE.md" in text
+    assert "macos-candidate-manifest.json" in text
+    assert "retention-days: 14" in text
+    assert "Clean signing material" in text
+    assert "gh release" not in text
+    assert "twine upload" not in text
+    assert "gh-action-pypi-publish" not in text
+
+    release_text = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "scripts/package_macos_dmg.py" in release_text
+
+
+def test_macos_demo_guide_is_a_fillable_clean_machine_gate() -> None:
+    guide = (ROOT / "docs" / "MACOS_DEMO_GUIDE.md").read_text(encoding="utf-8")
+
+    assert "Candidate ID:" in guide
+    assert "Mac model:" in guide
+    assert "Apple chip:" in guide
+    assert "Cold launch time:" in guide
+    assert "First report time:" in guide
+    assert "Do not bypass or disable macOS security checks" in guide
+    assert "No Python, Terminal, administrator access" in guide
+    assert "macos-acceptance" in guide
+
+
 def test_testpypi_is_manual_and_uses_separate_environment() -> None:
     workflow = _workflow("testpypi.yml")
 

@@ -1,0 +1,125 @@
+name: macOS app
+
+"on":
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - "src/**"
+      - "packaging/macos/**"
+      - "scripts/build_macos_app.py"
+      - "tests/test_app_core.py"
+      - "tests/test_macos_app.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/macos-app.yml"
+
+permissions:
+  contents: read
+
+env:
+  AUDIOATLAS_BUNDLE_BUILD_NUMBER: ${{ github.run_number }}
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+  MPLBACKEND: Agg
+  PYTHONUTF8: "1"
+
+jobs:
+  build-and-smoke:
+    runs-on: macos-14
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+          architecture: arm64
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+
+      - name: Install app and test dependencies
+        run: uv sync --locked --extra dev --extra app-build
+
+      - name: Test app contract
+        run: uv run pytest tests/test_app_core.py tests/test_macos_app.py tests/test_pipeline.py
+
+      - name: Build Apple Silicon app
+        run: uv run python scripts/build_macos_app.py
+
+      - name: Exercise the frozen report engine
+        run: |
+          uv run audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav \
+            --out /tmp/audioatlas-wheel-parity --graphs-profile standard \
+            --theme default --presentation studio
+          uv run audioatlas analyze examples/demo_audio/audioatlas_demo.wav \
+            --out /tmp/audioatlas-demo-wheel-parity --graphs-profile standard \
+            --theme default --presentation studio
+          dist/macos/AudioAtlas.app/Contents/MacOS/AudioAtlas \
+            --smoke-analyze tests/fixtures/sine_1k_-6dbfs_2s.wav \
+            --output-parent /tmp/audioatlas-app-smoke
+          dist/macos/AudioAtlas.app/Contents/MacOS/AudioAtlas \
+            --smoke-analyze examples/demo_audio/audioatlas_demo.wav \
+            --output-parent /tmp/audioatlas-demo-app-smoke
+          mkdir -p "/tmp/AudioAtlas Unicode ü"
+          cp tests/fixtures/sine_1k_-6dbfs_2s.wav \
+            "/tmp/AudioAtlas Unicode ü/track space 音.wav"
+          dist/macos/AudioAtlas.app/Contents/MacOS/AudioAtlas \
+            --smoke-analyze "/tmp/AudioAtlas Unicode ü/track space 音.wav" \
+            --output-parent "/tmp/AudioAtlas Unicode ü/reports"
+          test -f "/tmp/AudioAtlas Unicode ü/reports/AudioAtlas Report – track space 音/report.html"
+          if dist/macos/AudioAtlas.app/Contents/MacOS/AudioAtlas \
+            --smoke-analyze tests/fixtures/malformed/invalid_data.wav \
+            --output-parent /tmp/audioatlas-malformed-smoke; then
+            exit 1
+          fi
+          test ! -e "/tmp/audioatlas-malformed-smoke/AudioAtlas Report – invalid_data"
+          test -f "/tmp/audioatlas-app-smoke/AudioAtlas Report – sine_1k_-6dbfs_2s/report.html"
+          test "$(find "/tmp/audioatlas-app-smoke/AudioAtlas Report – sine_1k_-6dbfs_2s" -name '*.png' | wc -l | tr -d ' ')" = 14
+          uv run python - <<'PY'
+          import json
+          from pathlib import Path
+
+          wheel = json.loads(Path('/tmp/audioatlas-wheel-parity/summary.json').read_text())
+          frozen = json.loads(Path(
+              '/tmp/audioatlas-app-smoke/AudioAtlas Report – sine_1k_-6dbfs_2s/summary.json'
+          ).read_text())
+          assert frozen == wheel
+          demo_wheel = json.loads(Path(
+              '/tmp/audioatlas-demo-wheel-parity/summary.json'
+          ).read_text())
+          demo_frozen = json.loads(Path(
+              '/tmp/audioatlas-demo-app-smoke/AudioAtlas Report – audioatlas_demo/summary.json'
+          ).read_text())
+          assert demo_frozen == demo_wheel
+          PY
+          set +e
+          dist/macos/AudioAtlas.app/Contents/MacOS/AudioAtlas \
+            --smoke-analyze examples/demo_audio/audioatlas_demo.wav \
+            --output-parent /tmp/audioatlas-contention > /tmp/audioatlas-first.log 2>&1 &
+          first_pid="$!"
+          dist/macos/AudioAtlas.app/Contents/MacOS/AudioAtlas \
+            --smoke-analyze examples/demo_audio/audioatlas_demo.wav \
+            --output-parent /tmp/audioatlas-contention > /tmp/audioatlas-second.log 2>&1
+          second_status="$?"
+          wait "${first_pid}"
+          first_status="$?"
+          set -e
+          test "$(( (first_status == 0) + (second_status == 0) ))" = 1
+          test -f "/tmp/audioatlas-contention/AudioAtlas Report – audioatlas_demo/report.html"
+          codesign --verify --deep --strict --verbose=2 dist/macos/AudioAtlas.app
+          test ! -e dist/macos/AudioAtlas.app/Contents/Frameworks/numba/np/ufunc/omppool.cpython-311-darwin.so
+
+      - name: Enforce activation-size budgets
+        shell: bash
+        run: |
+          installed_kib="$(du -sk dist/macos/AudioAtlas.app | awk '{print $1}')"
+          test "${installed_kib}" -le 281600
+          ditto -c -k --sequesterRsrc --keepParent \
+            dist/macos/AudioAtlas.app AudioAtlas-${{ github.sha }}-arm64-beta.zip
+          compressed_bytes="$(stat -f '%z' AudioAtlas-${{ github.sha }}-arm64-beta.zip)"
+          test "${compressed_bytes}" -le 115343360
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: AudioAtlas-arm64-beta
+          path: AudioAtlas-${{ github.sha }}-arm64-beta.zip
+          if-no-files-found: error
+          retention-days: 14

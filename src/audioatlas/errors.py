@@ -19,6 +19,29 @@ class AudioLoadError(AudioAtlasError):
         super().__init__(f"Could not read audio file '{self.path.name}': {self.reason}")
 
 
+class SourceChangedError(AudioAtlasError):
+    """Raised when an input changes while AudioAtlas is decoding it."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        super().__init__(
+            f"Audio file '{self.path.name}' changed while it was being read. "
+            "Wait for it to finish copying or exporting, then try again."
+        )
+
+
+class AnalysisCancelled(AudioAtlasError):
+    """Raised when a cooperative analysis cancellation is observed."""
+
+
+class OutputBusyError(AudioAtlasError):
+    """Raised when another process owns the destination transaction."""
+
+
+class OutputOwnershipError(AudioAtlasError):
+    """Raised when a destination cannot be proven safe to update."""
+
+
 def _safe_reason(path: Path, value: str) -> str:
     """Collapse decoder text and remove machine-local path disclosure."""
 
