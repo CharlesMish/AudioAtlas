@@ -91,6 +91,11 @@ def test_windows_installer_is_strictly_per_user_and_has_no_app_registry() -> Non
     )
     for marker in required:
         assert marker in installer
+    assert "VersionInfoVersion=0.2.0.7" in installer
+    assert "VersionInfoProductVersion=0.2.0.7" in installer
+    assert "VersionInfoTextVersion={#MyAppVersion}" in installer
+    assert "VersionInfoProductTextVersion={#MyAppVersion}" in installer
+    assert "internal Windows candidate build {#MyBuildNumber}" in installer
     for forbidden in ("[Registry]", "runascurrentuser", "PrivilegesRequired=admin"):
         assert forbidden not in installer
 

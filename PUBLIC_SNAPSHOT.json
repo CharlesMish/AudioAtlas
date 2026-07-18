@@ -166,7 +166,7 @@
     },
     {
       "path": "packaging/windows/AudioAtlas.iss",
-      "sha256": "741ab029274e1dd5bd3a9d39b90f21d8faa37cc60a2619fd31d8960ac7dcdc4c"
+      "sha256": "a5855d5d3dcb3d343b4bb0c5976cae045089363f21e572f8c24de97b619b30e3"
     },
     {
       "path": "packaging/windows/AudioAtlas.spec",
@@ -682,7 +682,7 @@
     },
     {
       "path": "tests/test_windows_packaging.py",
-      "sha256": "d3d98d7119ed3ddebe46e132a0a7bda9cac95191e990eecc26e9df4c55dfe20a"
+      "sha256": "6322e8a602675b62f0782c6030fd506cd76d4d9cd72747499e1243601c7a87cf"
     },
     {
       "path": "uv.lock",
@@ -692,6 +692,6 @@
   "format_version": 1,
   "included_file_count": 172,
   "package_version": "0.2.0a7",
-  "public_tree_sha256": "bf9c0946d69e57d35f74b3f23186a94f87af79b6ab364f52938203c18595f46e",
-  "source_commit": "6c06c1a178b4de58312956fc39e562e47c5a665e"
+  "public_tree_sha256": "608bf5133e9f875e95e07991eed28e1972ae78be71b33a672d0988d829034ce9",
+  "source_commit": "71deab6bbd54b512526885f87d46fefbef756cda"
 }
