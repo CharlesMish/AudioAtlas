@@ -5,6 +5,31 @@ tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
+### Lower activation cost
+
+- Added a native Apple Silicon macOS app that accepts one dropped or chosen
+  track, displays coarse analysis progress, writes a standard themed report
+  beside the source, opens it automatically, and reveals it in Finder without
+  requiring Python or Terminal.
+- Added presentation-neutral progress events to the shared analysis pipeline;
+  listener failures cannot change report generation or artifact semantics.
+- Added a reproducible PyInstaller app bundle, frozen librosa/Numba runtime
+  adaptation, persistent scientific caches, size gates, a headless frozen smoke,
+  and ad-hoc beta artifacts.
+- Added Developer ID signing, hardened-runtime entitlements, notarized/stapled
+  DMG publication, and GitHub prerelease attachment to the release workflow.
+- Split onboarding into the friend-facing Mac app and the advanced PyPI CLI,
+  while retaining older PATH-dependent launchers as explicit legacy helpers.
+- Hardened report publication with destination ownership checks, cross-process
+  locks, source-mutation detection, collision-safe app folder selection, and
+  cooperative Cancel/Quit behavior that never interrupts publication.
+- Raised the honest desktop floor to Apple Silicon macOS 14, removed the unused
+  OpenMP runtime path, added Mach-O closure audits, and tightened signing,
+  notarization-log, clean-Mac approval, and credential-cleanup gates.
+- Added a non-publishing notarized friend-demo workflow and self-contained demo
+  kit, shared DMG packaging audits, background input inspection, explicit cold
+  engine startup feedback, and a fillable separate-Mac acceptance record.
+
 ### Live demo
 
 - Restored the full 70.98-second AudioAtlas trailer/demo track as a documented

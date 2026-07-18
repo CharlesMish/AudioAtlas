@@ -8,6 +8,8 @@ There is no server, plugin system, hidden state, or cloud dependency.
 ## Layer map
 
 ```text
+macos_app.py + app_core.py ── one-drop native shell
+             ↓
 cli.py
   ├── pipeline.py      ── one-track/section orchestration
   ├── batch.py         ── folder orchestration
@@ -50,6 +52,8 @@ scripts/prepare_calibration_review.py
 | `output.py` | staged publication and owned-artifact cleanup | analysis or interpretation |
 | calibration scripts | anonymous review/replay evidence and hash verification | opening audio or replacing human listening |
 | `cli.py` | arguments, lightweight discovery, and friendly user errors | business logic |
+| `app_core.py` | fixed friend-facing defaults, input validation, and output naming | DSP, Cocoa, alternate analysis behavior |
+| `macos_app.py` | Cocoa interaction, worker lifecycle, progress, open/reveal actions | measurements or report serialization |
 
 ## CLI loading boundary
 
@@ -60,6 +64,29 @@ feedback and launcher checks without changing numerical behavior or replacing
 the scientific dependencies. Graph-profile names live in the lightweight
 `graph_profiles.py` module so command discovery does not initialize the graph
 registry.
+
+The macOS window follows the same boundary: it imports Cocoa and the lightweight
+app contract before importing the scientific pipeline. The analysis stack is
+loaded only on the worker thread after a file is accepted, so the window can
+provide immediate feedback. `AnalysisProgress` events are observational and a
+listener failure cannot fail or modify an analysis.
+
+Each destination is protected by a canonical per-user output transaction.
+Staging begins before decoding to detect storage failures early; cancellation
+is cooperative until publication starts, after which rollback or a complete
+new report must win. Nonempty roots require a recognized ownership manifest.
+
+## Frozen macOS boundary
+
+PyInstaller packages the same `audioatlas` modules as an Apple Silicon onedir
+application. The runtime hook changes only librosa's Numba decorator option
+from `cache=True` to `cache=False`, because frozen modules lack the source-file
+locator required by Numba's disk cache. JIT remains enabled. Matplotlib and
+Numba use persistent user-writable caches under `~/Library/Caches/AudioAtlas`.
+The frozen runtime forces Numba's tested `workqueue` backend and excludes its
+unused OpenMP pool, so the bundle has no undeclared `libomp` dependency.
+The signed app carries hardened-runtime JIT entitlements and is exercised with
+the same deterministic report fixture before a DMG may be notarized.
 
 ## Internal audio contract
 

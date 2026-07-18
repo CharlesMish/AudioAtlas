@@ -20,6 +20,7 @@ from audioatlas.output import (
     ALL_GENERATED_FILENAMES,
     OUTPUT_MARKER_FILENAME,
     REVISION_DIFF_FILENAMES,
+    output_transaction,
     publish_staged_output,
     staged_output_directory,
     write_output_manifest,
@@ -177,7 +178,7 @@ def write_revision_diff(
     out = Path(out_dir)
     selected_theme = validate_theme_name(theme_name or default_theme_name())
     selected_presentation = validate_presentation_mode(presentation_mode)
-    with staged_output_directory(out) as staging:
+    with output_transaction(out) as transaction, staged_output_directory(out) as staging:
         json_path = staging / "revision_diff.json"
         json_path.write_text(
             json.dumps(payload, indent=2, sort_keys=True) + "\n",
@@ -199,6 +200,7 @@ def write_revision_diff(
             staging,
             out,
             owned_filenames=set(ALL_GENERATED_FILENAMES),
+            transaction=transaction,
         )
     return {
         "json": out / "revision_diff.json",

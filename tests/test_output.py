@@ -6,8 +6,10 @@ from pathlib import Path
 import pytest
 
 import audioatlas.output as output_module
+from audioatlas.errors import OutputBusyError, OutputOwnershipError
 from audioatlas.output import (
     OUTPUT_MARKER_FILENAME,
+    output_transaction,
     publish_staged_output,
     staged_output_directory,
     write_output_manifest,
@@ -82,7 +84,8 @@ def test_unrecognized_marker_cannot_claim_user_directories(tmp_path: Path):
     staging.mkdir()
     write_output_manifest(staging, kind="test", generated_files=[])
 
-    publish_staged_output(staging, target, owned_filenames=set())
+    with pytest.raises(OutputOwnershipError, match="not owned"):
+        publish_staged_output(staging, target, owned_filenames=set())
 
     assert (target / "user-folder" / "keep.txt").exists()
 
@@ -136,6 +139,11 @@ def test_publish_refuses_to_replace_unowned_directory_before_mutation(tmp_path: 
     (target / "report.html").write_text("old report", encoding="utf-8")
     (target / "track").mkdir()
     (target / "track" / "keep.txt").write_text("human data", encoding="utf-8")
+    write_output_manifest(
+        target,
+        kind="batch-catalog",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+    )
 
     staging = tmp_path / "staging"
     staging.mkdir()
@@ -149,7 +157,7 @@ def test_publish_refuses_to_replace_unowned_directory_before_mutation(tmp_path: 
         generated_directories=["track"],
     )
 
-    with pytest.raises(ValueError, match="unowned output directory"):
+    with pytest.raises(OutputOwnershipError, match="unowned output directory"):
         publish_staged_output(staging, target, owned_filenames={"report.html"})
 
     assert (target / "report.html").read_text(encoding="utf-8") == "old report"
@@ -162,13 +170,18 @@ def test_publish_refuses_file_over_directory_before_mutation(tmp_path: Path):
     (target / "summary.json").mkdir()
     (target / "summary.json" / "keep.txt").write_text("human data", encoding="utf-8")
     (target / "old_plot.png").write_bytes(b"old")
+    write_output_manifest(
+        target,
+        kind="single-track-report",
+        generated_files=["old_plot.png", OUTPUT_MARKER_FILENAME],
+    )
 
     staging = tmp_path / "staging"
     staging.mkdir()
     (staging / "summary.json").write_text("{}", encoding="utf-8")
     write_output_manifest(staging, kind="single-track-report", generated_files=["summary.json"])
 
-    with pytest.raises(ValueError, match="replace an output directory with a file"):
+    with pytest.raises(OutputOwnershipError, match="replace an output directory with a file"):
         publish_staged_output(
             staging,
             target,
@@ -221,6 +234,16 @@ def test_publish_rolls_back_files_after_mid_publication_failure(
     target = tmp_path / "report"
     target.mkdir()
     (target / "report.html").write_text("old report", encoding="utf-8")
+    write_output_manifest(
+        target,
+        kind="single-track-report",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+    )
+    write_output_manifest(
+        target,
+        kind="single-track-report",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+    )
     (target / "old_plot.png").write_bytes(b"old plot")
     (target / "notes.txt").write_text("human notes", encoding="utf-8")
     write_output_manifest(
@@ -331,6 +354,11 @@ def test_publish_refuses_unowned_staged_file_before_mutation(tmp_path: Path):
     target = tmp_path / "report"
     target.mkdir()
     (target / "report.html").write_text("old report", encoding="utf-8")
+    write_output_manifest(
+        target,
+        kind="single-track-report",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+    )
 
     staging = tmp_path / "staging"
     staging.mkdir()
@@ -366,8 +394,34 @@ def test_normal_report_cannot_replace_song_project_root(tmp_path: Path) -> None:
         generated_files=["report.html", OUTPUT_MARKER_FILENAME],
     )
 
-    with pytest.raises(ValueError, match="song-project root"):
+    with pytest.raises(OutputOwnershipError, match="song-project root"):
         publish_staged_output(staging, destination, owned_filenames={"report.html"})
 
     assert (destination / "audioatlas-project.yaml").is_file()
     assert not (destination / "report.html").exists()
+
+
+def test_output_transaction_rejects_concurrent_destination(tmp_path: Path) -> None:
+    destination = tmp_path / "report"
+
+    with (
+        output_transaction(destination),
+        pytest.raises(OutputBusyError, match="already updating"),
+        output_transaction(destination),
+    ):
+        raise AssertionError("contended transaction unexpectedly acquired")
+
+
+def test_publish_refuses_output_folder_symlink(tmp_path: Path) -> None:
+    real = tmp_path / "real"
+    real.mkdir()
+    destination = tmp_path / "report"
+    destination.symlink_to(real, target_is_directory=True)
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    write_output_manifest(staging, kind="single-track-report", generated_files=[])
+
+    with pytest.raises(OutputOwnershipError, match="symlink"):
+        publish_staged_output(staging, destination, owned_filenames=set())
+
+    assert not list(real.iterdir())

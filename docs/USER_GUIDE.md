@@ -6,6 +6,25 @@ not grade the track or tell you what artistic choice to make.
 
 ## Installation
 
+### Apple Silicon macOS app
+
+For the lowest-setup path, download the signed/notarized
+`AudioAtlas-<version>-macOS-arm64.dmg` from the matching GitHub prerelease. Drag
+AudioAtlas into Applications and open it. Drop one supported audio file or use
+**Choose Audio File**. The app uses the standard graph set and default Studio
+theme, writes `AudioAtlas Report – <track>` beside the source, and opens the
+finished report automatically. It does not need Python, Terminal, an account,
+or a network connection after download.
+
+If the source folder cannot be written, choose another report location when
+prompted. The first app beta supports Apple Silicon and macOS 14 or newer.
+Cancel, Quit, and closing the window request a safe stop; once publication has
+started, AudioAtlas finishes the complete report before exiting. Existing
+unowned folders are never adopted, and same-stem files receive distinct report
+folders when needed.
+
+### Python CLI
+
 AudioAtlas supports Python 3.11 and newer. For a normal installation:
 
 ```bash

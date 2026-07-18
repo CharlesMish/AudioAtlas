@@ -1,0 +1,255 @@
+name: macOS Demo Candidate
+
+"on":
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audioatlas-macos-demo-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AUDIOATLAS_BUNDLE_BUILD_NUMBER: ${{ github.run_number }}
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+  MPLBACKEND: Agg
+  PYTHONUTF8: "1"
+
+jobs:
+  build-private-candidate:
+    runs-on: macos-14
+    timeout-minutes: 50
+    environment:
+      name: macos-release
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Require the committed main revision
+        id: identity
+        shell: bash
+        run: |
+          test "${GITHUB_REF}" = "refs/heads/main"
+          git fetch origin main
+          test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"
+          test -z "$(git status --short)"
+          short_sha="${GITHUB_SHA:0:12}"
+          echo "short_sha=${short_sha}" >> "${GITHUB_OUTPUT}"
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+          architecture: arm64
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+
+      - name: Install app and test dependencies
+        run: uv sync --locked --extra dev --extra app-build
+
+      - name: Verify candidate version and app contract
+        id: package
+        shell: bash
+        run: |
+          version="$(uv run python -c 'import audioatlas; print(audioatlas.__version__)')"
+          test "${version}" = "0.2.0a7"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          uv run pytest tests/test_app_core.py tests/test_macos_app.py tests/test_pipeline.py
+
+      - name: Preflight signing and notarization credentials
+        env:
+          CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          MACOS_TEAM_ID: ${{ secrets.MACOS_TEAM_ID }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        shell: bash
+        run: |
+          test -n "${CERTIFICATE_P12}"
+          test -n "${CERTIFICATE_PASSWORD}"
+          test -n "${MACOS_SIGNING_IDENTITY}"
+          test -n "${MACOS_TEAM_ID}"
+          test -n "${APPLE_API_KEY_P8}"
+          test -n "${APPLE_API_KEY_ID}"
+          test -n "${APPLE_API_ISSUER_ID}"
+
+      - name: Import Developer ID certificate
+        env:
+          CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        shell: bash
+        run: |
+          keychain="${RUNNER_TEMP}/audioatlas-signing.keychain-db"
+          certificate="${RUNNER_TEMP}/audioatlas-certificate.p12"
+          password="$(openssl rand -hex 24)"
+          echo "${CERTIFICATE_P12}" | base64 --decode > "${certificate}"
+          security create-keychain -p "${password}" "${keychain}"
+          security set-keychain-settings -lut 21600 "${keychain}"
+          security unlock-keychain -p "${password}" "${keychain}"
+          security import "${certificate}" -P "${CERTIFICATE_PASSWORD}" \
+            -T /usr/bin/codesign -t cert -f pkcs12 -k "${keychain}"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "${password}" "${keychain}"
+          security list-keychains -d user -s "${keychain}"
+
+      - name: Build and exercise the signed frozen app
+        env:
+          AUDIOATLAS_CODESIGN_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          MACOS_TEAM_ID: ${{ secrets.MACOS_TEAM_ID }}
+        shell: bash
+        run: |
+          uv run python scripts/build_macos_app.py
+          uv run audioatlas analyze tests/fixtures/sine_1k_-6dbfs_2s.wav \
+            --out /tmp/audioatlas-candidate-wheel --graphs-profile standard \
+            --theme default --presentation studio
+          uv run audioatlas analyze examples/demo_audio/audioatlas_demo.wav \
+            --out /tmp/audioatlas-candidate-demo-wheel --graphs-profile standard \
+            --theme default --presentation studio
+          app="dist/macos/AudioAtlas.app/Contents/MacOS/AudioAtlas"
+          "${app}" --smoke-analyze tests/fixtures/sine_1k_-6dbfs_2s.wav \
+            --output-parent /tmp/audioatlas-candidate-app
+          "${app}" --smoke-analyze examples/demo_audio/audioatlas_demo.wav \
+            --output-parent /tmp/audioatlas-candidate-demo-app
+          mkdir -p "/tmp/AudioAtlas Candidate Unicode ü"
+          cp tests/fixtures/sine_1k_-6dbfs_2s.wav \
+            "/tmp/AudioAtlas Candidate Unicode ü/track space 音.wav"
+          "${app}" --smoke-analyze "/tmp/AudioAtlas Candidate Unicode ü/track space 音.wav" \
+            --output-parent "/tmp/AudioAtlas Candidate Unicode ü/reports"
+          test -f "/tmp/AudioAtlas Candidate Unicode ü/reports/AudioAtlas Report – track space 音/report.html"
+          if "${app}" --smoke-analyze tests/fixtures/malformed/invalid_data.wav \
+            --output-parent /tmp/audioatlas-candidate-malformed; then
+            exit 1
+          fi
+          test ! -e "/tmp/audioatlas-candidate-malformed/AudioAtlas Report – invalid_data"
+          set +e
+          "${app}" --smoke-analyze examples/demo_audio/audioatlas_demo.wav \
+            --output-parent /tmp/audioatlas-candidate-contention >/tmp/candidate-first.log 2>&1 &
+          first_pid="$!"
+          "${app}" --smoke-analyze examples/demo_audio/audioatlas_demo.wav \
+            --output-parent /tmp/audioatlas-candidate-contention >/tmp/candidate-second.log 2>&1
+          second_status="$?"
+          wait "${first_pid}"
+          first_status="$?"
+          set -e
+          test "$(( (first_status == 0) + (second_status == 0) ))" = 1
+          test -f "/tmp/audioatlas-candidate-contention/AudioAtlas Report – audioatlas_demo/report.html"
+          codesign --verify --deep --strict --verbose=2 dist/macos/AudioAtlas.app
+          signing_details="$(codesign -dvvv dist/macos/AudioAtlas.app 2>&1)"
+          grep -F "Identifier=com.charlesmish.audioatlas" <<<"${signing_details}"
+          grep -F "TeamIdentifier=${MACOS_TEAM_ID}" <<<"${signing_details}"
+          grep -F "Authority=Developer ID Application:" <<<"${signing_details}"
+          grep -E "flags=.*runtime" <<<"${signing_details}"
+          grep -F "Timestamp=" <<<"${signing_details}"
+          codesign -d --entitlements :- dist/macos/AudioAtlas.app \
+            > "${RUNNER_TEMP}/audioatlas-entitlements.plist"
+          test "$(plutil -extract com.apple.security.cs.allow-jit raw \
+            "${RUNNER_TEMP}/audioatlas-entitlements.plist")" = "true"
+          test "$(plutil -extract com.apple.security.cs.allow-unsigned-executable-memory raw \
+            "${RUNNER_TEMP}/audioatlas-entitlements.plist")" = "true"
+          ! plutil -extract com.apple.security.get-task-allow raw \
+            "${RUNNER_TEMP}/audioatlas-entitlements.plist" >/dev/null 2>&1
+          test ! -e dist/macos/AudioAtlas.app/Contents/Frameworks/numba/np/ufunc/omppool.cpython-311-darwin.so
+          uv run python - <<'PY'
+          import json
+          from pathlib import Path
+
+          pairs = (
+              (
+                  Path('/tmp/audioatlas-candidate-wheel/summary.json'),
+                  Path('/tmp/audioatlas-candidate-app/AudioAtlas Report – sine_1k_-6dbfs_2s/summary.json'),
+              ),
+              (
+                  Path('/tmp/audioatlas-candidate-demo-wheel/summary.json'),
+                  Path('/tmp/audioatlas-candidate-demo-app/AudioAtlas Report – audioatlas_demo/summary.json'),
+              ),
+          )
+          for wheel, frozen in pairs:
+              assert json.loads(wheel.read_text()) == json.loads(frozen.read_text())
+          PY
+
+      - name: Package, notarize, staple, and audit the DMG
+        env:
+          SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          MACOS_TEAM_ID: ${{ secrets.MACOS_TEAM_ID }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        shell: bash
+        run: |
+          version="${{ steps.package.outputs.version }}"
+          short_sha="${{ steps.identity.outputs.short_sha }}"
+          dmg="AudioAtlas-${version}-build-${AUDIOATLAS_BUNDLE_BUILD_NUMBER}-${short_sha}-macOS-arm64.dmg"
+          key="${RUNNER_TEMP}/AuthKey_${APPLE_API_KEY_ID}.p8"
+          echo "${APPLE_API_KEY_P8}" | base64 --decode > "${key}"
+          python scripts/package_macos_dmg.py \
+            --app dist/macos/AudioAtlas.app \
+            --dmg "${dmg}" \
+            --version "${version}" \
+            --build-number "${AUDIOATLAS_BUNDLE_BUILD_NUMBER}" \
+            --commit "${GITHUB_SHA}" \
+            --workflow-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --signing-team "${MACOS_TEAM_ID}" \
+            --signing-identity "${SIGNING_IDENTITY}" \
+            --api-key "${key}" \
+            --api-key-id "${APPLE_API_KEY_ID}" \
+            --api-issuer-id "${APPLE_API_ISSUER_ID}" \
+            --submission-json notarization-submission.json \
+            --notarization-log notarization-log.json \
+            --manifest macos-candidate-manifest.json
+
+      - name: Assemble the private demo kit
+        shell: bash
+        run: |
+          version="${{ steps.package.outputs.version }}"
+          short_sha="${{ steps.identity.outputs.short_sha }}"
+          kit="AudioAtlas-${version}-build-${AUDIOATLAS_BUNDLE_BUILD_NUMBER}-macOS-demo-kit"
+          dmg="AudioAtlas-${version}-build-${AUDIOATLAS_BUNDLE_BUILD_NUMBER}-${short_sha}-macOS-arm64.dmg"
+          mkdir "${kit}"
+          cp "${dmg}" "${kit}/"
+          cp examples/demo_audio/audioatlas_demo.wav "${kit}/"
+          cp AUDIO_RIGHTS.md "${kit}/"
+          cp docs/MACOS_DEMO_GUIDE.md "${kit}/DEMO_AND_ACCEPTANCE_GUIDE.md"
+          cp macos-candidate-manifest.json "${kit}/"
+          (
+            cd "${kit}"
+            shasum -a 256 "${dmg}" audioatlas_demo.wav > SHA256SUMS.txt
+          )
+          ditto -c -k --sequesterRsrc --keepParent "${kit}" "${kit}.zip"
+          cat docs/MACOS_DEMO_GUIDE.md >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Clean signing material
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain "${RUNNER_TEMP}/audioatlas-signing.keychain-db" \
+            >/dev/null 2>&1 || true
+          rm -f "${RUNNER_TEMP}/audioatlas-certificate.p12"
+          rm -f "${RUNNER_TEMP}"/AuthKey_*.p8
+          rm -f "${RUNNER_TEMP}/audioatlas-entitlements.plist"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: AudioAtlas-${{ steps.package.outputs.version }}-build-${{ github.run_number }}-${{ steps.identity.outputs.short_sha }}-private-macOS-demo
+          path: |
+            AudioAtlas-*-macOS-arm64.dmg
+            AudioAtlas-*-macOS-arm64.dmg.sha256
+            AudioAtlas-*-macOS-demo-kit.zip
+            macos-candidate-manifest.json
+            notarization-submission.json
+            notarization-log.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: audioatlas-private-demo-notarization-${{ github.run_number }}
+          path: |
+            notarization-submission.json
+            notarization-log.json
+          if-no-files-found: warn
+          retention-days: 14

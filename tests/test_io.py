@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 import soundfile as sf
 
-from audioatlas.errors import AudioLoadError
+import audioatlas.io as io_module
+from audioatlas.errors import AudioLoadError, SourceChangedError
 from audioatlas.io import load_audio
 
 
@@ -94,3 +95,15 @@ def test_load_audio_rejects_non_finite_ranges(tmp_path, sr, kwargs, message):
 
     with pytest.raises(ValueError, match=message):
         load_audio(path, **kwargs)
+
+
+def test_load_audio_rejects_source_changed_during_decode(
+    tmp_path, sr, monkeypatch: pytest.MonkeyPatch
+):
+    path = tmp_path / "exporting.wav"
+    sf.write(path, np.zeros((sr // 10, 1), dtype=np.float32), sr)
+    identities = iter([(1, 2, 3, 4), (1, 2, 5, 6)])
+    monkeypatch.setattr(io_module, "_source_identity", lambda supplied: next(identities))
+
+    with pytest.raises(SourceChangedError, match="changed while it was being read"):
+        load_audio(path)

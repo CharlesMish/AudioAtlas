@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from filelock import FileLock, Timeout
+from platformdirs import user_cache_path
+
 from audioatlas import __version__
+from audioatlas.errors import OutputBusyError, OutputOwnershipError
 
 OUTPUT_MARKER_FILENAME = ".audioatlas-output.json"
 PROJECT_CONFIG_FILENAME = "audioatlas-project.yaml"
@@ -57,6 +63,48 @@ PLOT_FILENAMES = frozenset(
 ALL_GENERATED_FILENAMES = frozenset(ROOT_GENERATED_FILENAMES | PLOT_FILENAMES)
 
 
+@dataclass(frozen=True)
+class OutputTransaction:
+    """Opaque proof that one canonical output destination is locked."""
+
+    destination: Path
+
+
+@contextmanager
+def output_transaction(destination: str | Path) -> Iterator[OutputTransaction]:
+    """Serialize one output destination across threads and processes."""
+
+    target = Path(destination).expanduser()
+    if target.is_symlink():
+        raise OutputOwnershipError("Refusing to publish through an output-folder symlink.")
+    canonical = target.resolve(strict=False)
+    digest = hashlib.sha256(str(canonical).encode("utf-8")).hexdigest()
+    lock_root = user_cache_path("AudioAtlas", "CharlesMish") / "output-locks"
+    try:
+        lock_root.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        user_key = str(getattr(os, "getuid", lambda: "user")())
+        lock_root = Path(tempfile.gettempdir()) / f"audioatlas-output-locks-{user_key}"
+        try:
+            lock_root.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise OutputBusyError(
+                "AudioAtlas could not create its local output lock. "
+                "Check the account's cache-folder permissions and try again."
+            ) from exc
+
+    lock = FileLock(lock_root / f"{digest}.lock", timeout=0)
+    try:
+        with lock:
+            _validate_output_root(target)
+            yield OutputTransaction(destination=canonical)
+    except Timeout as exc:
+        raise OutputBusyError(
+            "Another AudioAtlas operation is already updating this report. "
+            "Wait for it to finish, then try again."
+        ) from exc
+
+
 @contextmanager
 def staged_output_directory(destination: str | Path) -> Iterator[Path]:
     """Yield a sibling staging directory and clean it after use.
@@ -66,7 +114,9 @@ def staged_output_directory(destination: str | Path) -> Iterator[Path]:
     decoder, analysis, plotting, or writer step fails.
     """
 
-    target = Path(destination)
+    target = Path(destination).expanduser()
+    if target.is_symlink():
+        raise OutputOwnershipError("Refusing to stage through an output-folder symlink.")
     parent = target.parent
     parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=f".{target.name}.audioatlas-", dir=parent))
@@ -105,6 +155,7 @@ def publish_staged_output(
     destination: str | Path,
     *,
     owned_filenames: set[str],
+    transaction: OutputTransaction | None = None,
 ) -> None:
     """Publish a completed staging directory while preserving unknown files.
 
@@ -116,13 +167,25 @@ def publish_staged_output(
     """
 
     source = Path(staging)
-    target = Path(destination)
+    target = Path(destination).expanduser()
+    if transaction is None:
+        with output_transaction(target) as acquired:
+            publish_staged_output(
+                source,
+                target,
+                owned_filenames=owned_filenames,
+                transaction=acquired,
+            )
+        return
+    if transaction.destination != target.resolve(strict=False):
+        raise ValueError("Output transaction does not match the publication destination")
+    if source.is_symlink():
+        raise OutputOwnershipError("Refusing to publish from a staging-folder symlink.")
+    _validate_output_root(target)
     if not source.is_dir():
         raise ValueError(f"Staging path is not a folder: {source}")
     if source.resolve() == target.resolve():
         raise ValueError("Staging and destination folders must be different")
-    if target.exists() and not target.is_dir():
-        raise ValueError(f"Output path exists and is not a folder: {target}")
     target.mkdir(parents=True, exist_ok=True)
 
     source_entries = sorted(source.iterdir(), key=lambda item: item.name)
@@ -141,7 +204,7 @@ def publish_staged_output(
         (target / PROJECT_CONFIG_FILENAME).is_file()
         and (staged_manifest or {}).get("kind") != "song-project"
     ):
-        raise ValueError(
+        raise OutputOwnershipError(
             "Refusing to publish a report into an AudioAtlas song-project root. "
             "Choose a separate output folder."
         )
@@ -170,7 +233,7 @@ def publish_staged_output(
     for filename in staged_names:
         destination_path = target / filename
         if destination_path.is_dir() and not destination_path.is_symlink():
-            raise ValueError(
+            raise OutputOwnershipError(
                 "Refusing to replace an output directory with a file: "
                 f"{filename!r}"
             )
@@ -180,7 +243,7 @@ def publish_staged_output(
         if (
             destination_path.exists() or destination_path.is_symlink()
         ) and directory_name not in previous_directories:
-            raise ValueError(
+            raise OutputOwnershipError(
                 "Refusing to replace an unowned output directory: "
                 f"{directory_name!r}"
             )
@@ -274,6 +337,25 @@ def _validate_staging_manifest(
             "Staging manifest does not match generated directories: "
             f"declared={sorted(declared_directories)!r}, "
             f"actual={sorted(staged_directories)!r}"
+        )
+
+
+def _validate_output_root(target: Path) -> None:
+    """Refuse a destination that cannot be safely recognized before work."""
+
+    if target.is_symlink():
+        raise OutputOwnershipError("Refusing to publish through an output-folder symlink.")
+    if target.exists() and not target.is_dir():
+        raise OutputOwnershipError("Output path exists and is not a folder.")
+    if not target.is_dir() or not any(target.iterdir()):
+        return
+    existing_manifest = _read_output_manifest(target / OUTPUT_MARKER_FILENAME)
+    legacy_catalog = bool(_previous_owned_directories(target))
+    legacy_project = (target / PROJECT_CONFIG_FILENAME).is_file()
+    if existing_manifest is None and not legacy_catalog and not legacy_project:
+        raise OutputOwnershipError(
+            "The selected output folder is not owned by AudioAtlas. "
+            "Choose an empty folder or a different report location."
         )
 
 

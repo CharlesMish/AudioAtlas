@@ -27,6 +27,7 @@ from audioatlas.output import (
     OUTPUT_MARKER_FILENAME,
     PROJECT_CONFIG_FILENAME,
     PROJECT_FILENAMES,
+    output_transaction,
     publish_staged_output,
     read_output_manifest,
     staged_output_directory,
@@ -326,7 +327,7 @@ def load_project(directory: str | Path) -> dict[str, Any]:
 
 def _publish_project_root(root: Path, config: dict[str, Any]) -> None:
     payload = _public_project_payload(root, config)
-    with staged_output_directory(root) as staging:
+    with output_transaction(root) as transaction, staged_output_directory(root) as staging:
         config_path = staging / PROJECT_CONFIG_FILENAME
         config_path.write_text(
             yaml.safe_dump(config, sort_keys=False, allow_unicode=True), encoding="utf-8"
@@ -348,7 +349,12 @@ def _publish_project_root(root: Path, config: dict[str, Any]) -> None:
             kind=_PROJECT_KIND,
             generated_files=[*PROJECT_FILENAMES, OUTPUT_MARKER_FILENAME],
         )
-        publish_staged_output(staging, root, owned_filenames=set(PROJECT_FILENAMES))
+        publish_staged_output(
+            staging,
+            root,
+            owned_filenames=set(PROJECT_FILENAMES),
+            transaction=transaction,
+        )
 
 
 def _public_project_payload(root: Path, config: dict[str, Any]) -> dict[str, Any]:

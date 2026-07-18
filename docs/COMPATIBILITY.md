@@ -16,6 +16,7 @@ finding semantics, and output ownership do not always change together.
 | Calibration-replay schema | `0.1.0` | anonymous replay artifact structure changes incompatibly |
 | Song-project schema | `0.1.0` | local project index/configuration structure changes incompatibly |
 | Output manifest | `1` | ownership/publication manifest structure changes incompatibly |
+| macOS app | Apple Silicon, macOS 14+ | a signed desktop architecture or minimum OS is added or removed |
 
 A package release may therefore keep an earlier ruleset version when it changes
 tooling, documentation, or delivery behavior without changing the rules. That
@@ -66,6 +67,11 @@ A future release may widen or remove the ceiling only after clean installed-
 wheel report generation succeeds on the candidate dependency line. The
 resolved Numba version remains part of `analysis_provenance.dependencies` and
 therefore changes report-comparability signatures.
+
+The frozen macOS app uses the same package and engine. Its startup hook disables
+librosa's Numba *disk cache* decorators because frozen modules have no ordinary
+source locator; it does not disable JIT or change the measurements. Frozen-app
+smokes compare the same summary/report contract used by installed-wheel tests.
 
 AudioAtlas also requires `Pillow>=12.3.0` and `msgpack>=1.2.1` as explicit
 security floors for transitive runtime dependencies, plus `filelock>=3.16,<4`
