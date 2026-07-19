@@ -18,7 +18,7 @@ env:
 jobs:
   build-internal-candidate:
     runs-on: windows-2022
-    timeout-minutes: 60
+    timeout-minutes: 75
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -57,7 +57,7 @@ jobs:
           if ($version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+$') { throw "Unexpected version: $version" }
           "version=$version" >> $env:GITHUB_OUTPUT
           uv run pytest tests/test_windows_app.py tests/test_windows_packaging.py tests/test_desktop_controller.py tests/test_desktop_runtime.py tests/test_pipeline.py
-          uv run python scripts/build_windows_app.py
+          uv run python scripts/build_windows_app.py --audit dist/windows/windows-app-pe-audit.json
           uv run pip-licenses --with-license-file --format=plain-vertical --output-file=dist/windows/THIRD_PARTY_LICENSES.txt
 
       - name: Exercise frozen analysis and UI boundary
@@ -142,13 +142,25 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           $version = '${{ steps.package.outputs.version }}'
           $rawOutput = (New-Item -ItemType Directory -Force -Path 'dist/windows/installer').FullName
+          $evidence = (New-Item -ItemType Directory -Force -Path 'dist/windows/evidence').FullName
           $source = (Resolve-Path 'dist/windows/AudioAtlas').Path
-          & $env:INNO_ISCC "/DMyAppVersion=$version" "/DMyBuildNumber=$env:AUDIOATLAS_BUNDLE_BUILD_NUMBER" "/DSourceDir=$source" "/DOutputDir=$rawOutput" '/DOutputBaseFilename=AudioAtlas-unpackaged-setup' packaging/windows/AudioAtlas.iss
+          & $env:INNO_ISCC "/DMyAppVersion=$version" "/DMyBuildNumber=$env:AUDIOATLAS_BUNDLE_BUILD_NUMBER" "/DSourceDir=$source" "/DOutputDir=$rawOutput" '/DOutputBaseFilename=AudioAtlas-unpackaged-setup' packaging/windows/AudioAtlas.iss 2>&1 | Tee-Object -FilePath "$evidence/inno-compile.log"
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed' }
+
+          $setup = (Resolve-Path 'dist/windows/installer/AudioAtlas-unpackaged-setup.exe').Path
+          $setupSignature = Get-AuthenticodeSignature $setup
+          if ($setupSignature.Status -ne 'NotSigned') { throw "Unexpected internal setup signature: $($setupSignature.Status)" }
+          uv run python scripts/audit_windows_distribution.py `
+            --bundle-audit dist/windows/windows-app-pe-audit.json `
+            --installer $setup `
+            --signature-status $setupSignature.Status `
+            --version $version `
+            --build-number $env:AUDIOATLAS_BUNDLE_BUILD_NUMBER `
+            --out dist/windows/windows-pe-audit.json
 
           uv run python scripts/package_windows_candidate.py `
             --app dist/windows/AudioAtlas `
-            --installer dist/windows/installer/AudioAtlas-unpackaged-setup.exe `
+            --installer $setup `
             --audit dist/windows/windows-pe-audit.json `
             --licenses dist/windows/THIRD_PARTY_LICENSES.txt `
             --demo-audio examples/demo_audio/audioatlas_demo.wav `
@@ -159,6 +171,41 @@ jobs:
             --build-number $env:AUDIOATLAS_BUNDLE_BUILD_NUMBER `
             --commit $env:GITHUB_SHA `
             --workflow-url "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+
+          uv run python scripts/verify_windows_candidate.py `
+            --candidate-dir dist/windows/candidate `
+            --extract-root "$env:RUNNER_TEMP/candidate-extracted" `
+            --report dist/windows/evidence/candidate-verification.json
+
+      - name: Exercise the exact extracted portable kits
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          function Invoke-AudioAtlas([string]$Executable, [string[]]$Arguments) {
+            $info = [System.Diagnostics.ProcessStartInfo]::new()
+            $info.FileName = $Executable
+            $info.UseShellExecute = $false
+            foreach ($argument in $Arguments) { $info.ArgumentList.Add($argument) }
+            $process = [System.Diagnostics.Process]::new()
+            $process.StartInfo = $info
+            if (-not $process.Start()) { throw "Could not start $Executable" }
+            $process.WaitForExit()
+            return $process.ExitCode
+          }
+          $portableArchive = (Get-ChildItem "$env:RUNNER_TEMP/candidate-extracted/portable/*-portable.zip").FullName
+          $copyA = "$env:RUNNER_TEMP/delivered-portable-a"
+          $copyB = "$env:RUNNER_TEMP/delivered-portable-b"
+          Expand-Archive -LiteralPath $portableArchive -DestinationPath $copyA
+          Expand-Archive -LiteralPath $portableArchive -DestinationPath $copyB
+          $exeA = (Resolve-Path "$copyA/AudioAtlas/AudioAtlas.exe").Path
+          $exeB = (Resolve-Path "$copyB/AudioAtlas/AudioAtlas.exe").Path
+
+          if ((Invoke-AudioAtlas $exeA @('--ui-smoke')) -ne 0) { throw 'Delivered portable A UI smoke failed' }
+          if ((Invoke-AudioAtlas $exeB @('--ui-smoke')) -ne 0) { throw 'Delivered portable B UI smoke failed' }
+          if ((Invoke-AudioAtlas $exeA @('--smoke-analyze', 'tests/fixtures/sine_1k_-6dbfs_2s.wav', '--output-parent', "$env:RUNNER_TEMP/delivered-portable-sine")) -ne 0) { throw 'Delivered portable sine smoke failed' }
+          if ((Invoke-AudioAtlas $exeB @('--smoke-analyze', 'examples/demo_audio/audioatlas_demo.wav', '--output-parent', "$env:RUNNER_TEMP/delivered-portable-demo")) -ne 0) { throw 'Delivered portable demo smoke failed' }
+          uv run python -c "import json, pathlib; pairs=[(pathlib.Path(r'$env:RUNNER_TEMP/wheel-sine/summary.json'), pathlib.Path(r'$env:RUNNER_TEMP/delivered-portable-sine/AudioAtlas Report – sine_1k_-6dbfs_2s/summary.json')), (pathlib.Path(r'$env:RUNNER_TEMP/wheel-demo/summary.json'), pathlib.Path(r'$env:RUNNER_TEMP/delivered-portable-demo/AudioAtlas Report – audioatlas_demo/summary.json'))]; assert all(json.loads(a.read_text()) == json.loads(b.read_text()) for a,b in pairs)"
 
       - name: Exercise install, upgrade, and uninstall lifecycle
         shell: pwsh
@@ -176,37 +223,104 @@ jobs:
             $process.WaitForExit()
             return $process.ExitCode
           }
-          $setup = (Get-ChildItem 'dist/windows/candidate/*-setup.exe').FullName
-          $installRoot = "$env:RUNNER_TEMP/AudioAtlasInstalled"
+          $setup = (Get-ChildItem "$env:RUNNER_TEMP/candidate-extracted/installer/*-setup.exe").FullName
+          $installRoot = "$env:LOCALAPPDATA/Programs/AudioAtlas"
           $externalReports = "$env:RUNNER_TEMP/AudioAtlasExternalReports"
-          $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$installRoot")
-          foreach ($attempt in 1..2) {
-            $process = Start-Process -FilePath $setup -ArgumentList $arguments -PassThru -Wait
-            if ($process.ExitCode -ne 0) { throw "Install attempt $attempt failed" }
-          }
+          $evidence = (New-Item -ItemType Directory -Force -Path 'dist/windows/evidence').FullName
+          $startShortcut = "$env:APPDATA/Microsoft/Windows/Start Menu/Programs/AudioAtlas.lnk"
+          $desktopShortcut = "$env:USERPROFILE/Desktop/AudioAtlas.lnk"
+          if (Test-Path $installRoot) { throw 'Default AudioAtlas install location was not clean' }
+          $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$evidence/install-fresh.log")
+          $process = Start-Process -FilePath $setup -ArgumentList $arguments -PassThru -Wait
+          if ($process.ExitCode -ne 0) { throw 'Fresh default-path installation failed' }
+          if (-not (Test-Path "$installRoot/AudioAtlas.exe")) { throw 'Default-path executable missing' }
+          if (-not (Test-Path $startShortcut)) { throw 'Per-user Start Menu shortcut missing' }
+          if (Test-Path $desktopShortcut) { throw 'Unchecked desktop shortcut was unexpectedly created' }
+
+          if ((Invoke-AudioAtlas "$installRoot/AudioAtlas.exe" @('--ui-smoke')) -ne 0) { throw 'Fresh installed UI smoke failed' }
           $exitCode = Invoke-AudioAtlas "$installRoot/AudioAtlas.exe" @('--smoke-analyze', 'tests/fixtures/sine_1k_-6dbfs_2s.wav', '--output-parent', $externalReports)
-          if ($exitCode -ne 0) { throw 'Installed app smoke failed' }
+          if ($exitCode -ne 0) { throw 'Fresh installed app smoke failed' }
           $report = "$externalReports/AudioAtlas Report – sine_1k_-6dbfs_2s/report.html"
           if (-not (Test-Path $report)) { throw 'External installed-app report missing' }
+          $reportBeforeUpgrade = (Get-FileHash -Algorithm SHA256 $report).Hash
+
+          $upgradeArguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$evidence/install-upgrade.log")
+          $process = Start-Process -FilePath $setup -ArgumentList $upgradeArguments -PassThru -Wait
+          if ($process.ExitCode -ne 0) { throw 'Replacement installation failed' }
+          if ((Get-FileHash -Algorithm SHA256 $report).Hash -ne $reportBeforeUpgrade) { throw 'Upgrade changed an external report' }
+          if ((Invoke-AudioAtlas "$installRoot/AudioAtlas.exe" @('--ui-smoke')) -ne 0) { throw 'Upgraded installed UI smoke failed' }
+          $exitCode = Invoke-AudioAtlas "$installRoot/AudioAtlas.exe" @('--smoke-analyze', 'tests/fixtures/sine_1k_-6dbfs_2s.wav', '--output-parent', $externalReports)
+          if ($exitCode -ne 0) { throw 'Upgraded installed app smoke failed' }
+
+          $logRoot = "$env:LOCALAPPDATA/AudioAtlas/Logs"
+          $cacheRoot = "$env:LOCALAPPDATA/AudioAtlas/Cache"
+          if (-not (Test-Path "$logRoot/app.log")) { throw 'Per-user troubleshooting log missing' }
+          if (-not (Test-Path $cacheRoot)) { throw 'Per-user cache directory missing' }
           $uninstaller = (Get-ChildItem "$installRoot/unins*.exe").FullName
-          $process = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -PassThru -Wait
+          $uninstallArguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$evidence/uninstall.log")
+          $process = Start-Process -FilePath $uninstaller -ArgumentList $uninstallArguments -PassThru -Wait
           if ($process.ExitCode -ne 0) { throw 'Uninstall failed' }
           if (Test-Path "$installRoot/AudioAtlas.exe") { throw 'Installed executable survived uninstall' }
+          if (Test-Path $startShortcut) { throw 'Start Menu shortcut survived uninstall' }
           if (-not (Test-Path $report)) { throw 'Uninstall removed an external report' }
+          if (-not (Test-Path "$logRoot/app.log")) { throw 'Uninstall removed the troubleshooting log' }
+          if (-not (Test-Path $cacheRoot)) { throw 'Uninstall removed the scientific cache' }
 
-      - name: Upload private internal Windows candidate
+      - name: Collect candidate diagnostics and workflow summary
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $evidence = New-Item -ItemType Directory -Force -Path 'dist/windows/evidence'
+          Get-ChildItem 'build/pyinstaller-windows' -Recurse -Filter 'warn-*.txt' -ErrorAction SilentlyContinue | ForEach-Object { Copy-Item $_.FullName "$evidence/$($_.Name)" -Force }
+          foreach ($path in @('dist/windows/windows-app-pe-audit.json', 'dist/windows/windows-pe-audit.json', 'dist/windows/candidate/windows-candidate-manifest.json')) {
+            if (Test-Path $path) { Copy-Item $path $evidence -Force }
+          }
+          @(
+            "workflow_url=$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            "commit=$env:GITHUB_SHA"
+            "job_status=${{ job.status }}"
+            "signing_status=unsigned-internal"
+          ) | Set-Content "$evidence/workflow-result.txt"
+          if ('${{ job.status }}' -eq 'success') {
+            Add-Content $env:GITHUB_STEP_SUMMARY "## Windows candidate ready for private testing"
+            Add-Content $env:GITHUB_STEP_SUMMARY "Start with the installer test kit. The portable kit is a separate secondary artifact."
+          } else {
+            Add-Content $env:GITHUB_STEP_SUMMARY "## Windows candidate failed"
+            Add-Content $env:GITHUB_STEP_SUMMARY "No tester artifact is approved. Download the diagnostics artifact for the available logs and evidence."
+          }
+          Add-Content $env:GITHUB_STEP_SUMMARY "This candidate remains unsigned-internal; Windows 11 client acceptance must precede Windows 10 22H2 acceptance, with no security bypass."
+
+      - name: Upload installer-first private test kit
+        if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: AudioAtlas-${{ steps.package.outputs.version }}-build-${{ github.run_number }}-${{ steps.identity.outputs.short_sha }}-INTERNAL-Windows-x64
+          name: AudioAtlas-${{ steps.package.outputs.version }}-build-${{ github.run_number }}-${{ steps.identity.outputs.short_sha }}-INTERNAL-Windows-x64-installer-test
           path: |
-            dist/windows/candidate/*-portable.zip
-            dist/windows/candidate/*-portable.zip.sha256
-            dist/windows/candidate/*-setup.exe
-            dist/windows/candidate/*-setup.exe.sha256
-            dist/windows/candidate/*-demo-kit.zip
-            dist/windows/candidate/windows-candidate-manifest.json
-            dist/windows/candidate/SHA256SUMS.txt
-            dist/windows/windows-pe-audit.json
-            dist/windows/THIRD_PARTY_LICENSES.txt
+            dist/windows/candidate/README_FIRST.txt
+            dist/windows/candidate/*-installer-test-kit.zip
+            dist/windows/candidate/*-installer-test-kit.zip.sha256
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload secondary private portable test kit
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: AudioAtlas-${{ steps.package.outputs.version }}-build-${{ github.run_number }}-${{ steps.identity.outputs.short_sha }}-INTERNAL-Windows-x64-portable-test
+          path: |
+            dist/windows/candidate/README_FIRST.txt
+            dist/windows/candidate/*-portable-test-kit.zip
+            dist/windows/candidate/*-portable-test-kit.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload private Windows candidate diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: AudioAtlas-Windows-candidate-build-${{ github.run_number }}-${{ steps.identity.outputs.short_sha }}-diagnostics
+          path: dist/windows/evidence
+          if-no-files-found: warn
           retention-days: 14

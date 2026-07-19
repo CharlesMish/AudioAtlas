@@ -34,7 +34,7 @@
     },
     {
       "path": ".github/workflows/windows-demo-candidate.yml",
-      "sha256": "533671f5f79ae919a8024aa62728dde9957c8fdda0fa1ce53a79c55298d561e1"
+      "sha256": "4110ad6f04f97dfea9b511d1c914dc1a300f404b6ac9ae09cfcb6cd871a2abf9"
     },
     {
       "path": ".gitignore",
@@ -114,7 +114,7 @@
     },
     {
       "path": "docs/WINDOWS_DEMO_GUIDE.md",
-      "sha256": "86f10b56f779ca86c6d678c606512303cbb34761133da70ee1853e65bec0592e"
+      "sha256": "27ec84bbc775376f0d24d5c298aeec362e1b615f079e56402a8576e1a9271a35"
     },
     {
       "path": "docs/WINDOWS_PACKAGING_DESIGN.md",
@@ -181,6 +181,10 @@
       "sha256": "be55f9cb31086a9f473c9471cd4c7c509f4cf6443c8abc3c016c7ed84b49a797"
     },
     {
+      "path": "scripts/audit_windows_distribution.py",
+      "sha256": "c36cec85fe44473af0ac938bba1c12a62fa2cdbdff29d59a966130fe94892020"
+    },
+    {
       "path": "scripts/build_macos_app.py",
       "sha256": "683d2b38b9d244155ee3b00bd6e7613c604cc2d0a13fad4bf9b01a43a6232797"
     },
@@ -198,7 +202,7 @@
     },
     {
       "path": "scripts/package_windows_candidate.py",
-      "sha256": "7ae5d33efb0744ea34bfc94dd92210d2cfcf678435054897122114ca8b0bd12d"
+      "sha256": "8a6a92f52eb452015069bc5774e0d7d5d41ed294314993ea626108d984a2144e"
     },
     {
       "path": "scripts/public_snapshot.py",
@@ -215,6 +219,10 @@
     {
       "path": "scripts/verify_public_snapshot.py",
       "sha256": "f8a40f5c5c52f78587e8070411c8165ea894ca7aadf1e65b95ce977df7a4db67"
+    },
+    {
+      "path": "scripts/verify_windows_candidate.py",
+      "sha256": "577df013856e28ffaed84d4ce042b3b6975a9761234ad2709688a42b986de577"
     },
     {
       "path": "src/audioatlas/__init__.py",
@@ -646,7 +654,7 @@
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "9eb912e045a1b037e70d0e252355d35305437b9781d89296cfc66b13d44b244a"
+      "sha256": "b10149b716e042d655a2ed124ff3999eb30f34ac42dfa30c645c26cbf5b58318"
     },
     {
       "path": "tests/test_report.py",
@@ -681,8 +689,12 @@
       "sha256": "af90e6e1de961f8c2f670de4611f07328882943cbfeccf51ecfad8814ac2e42a"
     },
     {
+      "path": "tests/test_windows_candidate_hardening.py",
+      "sha256": "fd8ef65573b6d92a5bad906f8ffbe422538fd5f03f08306d837a79f6f95a7409"
+    },
+    {
       "path": "tests/test_windows_packaging.py",
-      "sha256": "6a847cba520faf5afd4f08c6e3d5d4aa927639bf45258fa0ef5dc773a78d4265"
+      "sha256": "2fea3be56fe227f96170438a91186493bff5ea8b6c0979e43c2556f850afa9dc"
     },
     {
       "path": "uv.lock",
@@ -690,8 +702,8 @@
     }
   ],
   "format_version": 1,
-  "included_file_count": 172,
+  "included_file_count": 175,
   "package_version": "0.2.0a7",
-  "public_tree_sha256": "c37cae2fb53306300edfc521658a5ac214edeb4154f5b4dc9840e3d40de92b0f",
-  "source_commit": "ad4212ef3542e5f71f4629e505494601c417bb1b"
+  "public_tree_sha256": "daf4a782db39c8735adbdc03c33dd9ccf0f2bbe5e1e0063977590ce18f376abd",
+  "source_commit": "e69fb41fd5a368e1867b50e6567261d3c5ed921a"
 }
