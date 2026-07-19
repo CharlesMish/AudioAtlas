@@ -100,6 +100,19 @@ def test_windows_installer_is_strictly_per_user_and_has_no_app_registry() -> Non
         assert forbidden not in installer
 
 
+def test_windows_acceptance_guide_is_installer_first_and_security_preserving() -> None:
+    guide = (ROOT / "docs" / "WINDOWS_DEMO_GUIDE.md").read_text(encoding="utf-8")
+
+    assert "Get-FileHash -Algorithm SHA256" in guide
+    assert "installer-test-kit.zip" in guide
+    assert "%LOCALAPPDATA%\\Programs\\AudioAtlas" in guide
+    assert guide.index("Windows 11 compatibility evidence") < guide.index(
+        "Windows 10 22H2 compatibility evidence"
+    )
+    assert "Do not disable or bypass Windows security controls" in guide
+    assert "must not request administrator access" in guide
+
+
 def test_windows_spec_is_onedir_x64_and_uses_shared_runtime_hook() -> None:
     spec = (ROOT / "packaging" / "windows" / "AudioAtlas.spec").read_text(
         encoding="utf-8"
@@ -151,10 +164,25 @@ def test_windows_candidate_kit_contains_every_promised_file(tmp_path: Path) -> N
 
     assert manifest["signing_status"] == "unsigned-internal"
     assert manifest["bundle_build"] == 42
-    kit = next(out.glob("*-demo-kit.zip"))
-    with zipfile.ZipFile(kit) as archive:
-        basenames = {Path(name).name for name in archive.namelist()}
-    promised = {
+    assert manifest["schema_version"] == 2
+    assert manifest["minimum_windows_build"] == 19045
+    assert manifest["installation_scope"] == "per-user"
+    assert manifest["default_install_location"] == r"%LOCALAPPDATA%\Programs\AudioAtlas"
+    assert manifest["requires_administrator"] is False
+    assert set(manifest["components"]) == {
+        "installer",
+        "portable",
+        "demo_audio",
+        "pe_audit",
+        "license_inventory",
+        "rights_notice",
+        "acceptance_guide",
+    }
+    kits = {
+        "installer": next(out.glob("*-installer-test-kit.zip")),
+        "portable": next(out.glob("*-portable-test-kit.zip")),
+    }
+    common = {
         "audioatlas_demo.wav",
         "AUDIO_RIGHTS.md",
         "DEMO_AND_ACCEPTANCE_GUIDE.md",
@@ -163,9 +191,18 @@ def test_windows_candidate_kit_contains_every_promised_file(tmp_path: Path) -> N
         "THIRD_PARTY_LICENSES.txt",
         "SHA256SUMS.txt",
     }
-    assert promised <= basenames
-    assert any(name.endswith("-portable.zip") for name in basenames)
-    assert any(name.endswith("-setup.exe") for name in basenames)
+    for role, kit in kits.items():
+        with zipfile.ZipFile(kit) as archive:
+            basenames = {Path(name).name for name in archive.namelist()}
+        assert common <= basenames
+        assert Path(f"{kit}.sha256").is_file()
+        if role == "installer":
+            assert any(name.endswith("-setup.exe") for name in basenames)
+            assert not any(name.endswith("-portable.zip") for name in basenames)
+        else:
+            assert any(name.endswith("-portable.zip") for name in basenames)
+            assert not any(name.endswith("-setup.exe") for name in basenames)
+    assert "installer-test-kit" in (out / "README_FIRST.txt").read_text(encoding="utf-8")
 
 
 def test_windows_candidate_rejects_nonpositive_build(tmp_path: Path) -> None:

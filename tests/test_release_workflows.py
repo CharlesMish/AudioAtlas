@@ -197,6 +197,15 @@ def test_private_windows_candidate_workflow_cannot_publish() -> None:
     assert "gh release verify-asset is-7_0_2 $tool --repo jrsoftware/issrc" in text
     assert "Get-AuthenticodeSignature" in text
     assert "--ui-smoke" in text
+    assert "scripts/audit_windows_distribution.py" in text
+    assert "scripts/verify_windows_candidate.py" in text
+    assert "candidate-extracted" in text
+    assert "$env:LOCALAPPDATA/Programs/AudioAtlas" in text
+    assert "/DIR=$installRoot" not in text
+    assert "install-fresh.log" in text
+    assert "install-upgrade.log" in text
+    assert "uninstall.log" in text
+    assert "if: always()" in text
     assert "retention-days: 14" in text
     for step in job["steps"]:
         if step.get("shell") == "pwsh":
@@ -204,15 +213,29 @@ def test_private_windows_candidate_workflow_cannot_publish() -> None:
             assert "$ErrorActionPreference = 'Stop'" in run
             assert "$PSNativeCommandUseErrorActionPreference = $true" in run
     for promised in (
-        "*-portable.zip",
-        "*-setup.exe",
-        "*-demo-kit.zip",
-        "windows-candidate-manifest.json",
-        "windows-pe-audit.json",
-        "THIRD_PARTY_LICENSES.txt",
-        "SHA256SUMS.txt",
+        "README_FIRST.txt",
+        "*-installer-test-kit.zip",
+        "*-installer-test-kit.zip.sha256",
+        "*-portable-test-kit.zip",
+        "*-portable-test-kit.zip.sha256",
+        "candidate-verification.json",
     ):
         assert promised in text
+    uploads = [step for step in job["steps"] if "actions/upload-artifact@" in step.get("uses", "")]
+    assert len(uploads) == 3
+    diagnostic_upload = next(
+        step for step in uploads if step["with"]["name"].endswith("-diagnostics")
+    )
+    assert diagnostic_upload["if"] == "always()"
+    assert diagnostic_upload["with"]["path"] == "dist/windows/evidence"
+    successful_uploads = [step for step in uploads if step is not diagnostic_upload]
+    assert all(step["if"] == "success()" for step in successful_uploads)
+    assert "*-setup.exe" not in "\n".join(
+        str(step["with"]["path"]) for step in successful_uploads
+    )
+    assert "*-portable.zip\n" not in "\n".join(
+        str(step["with"]["path"]) for step in successful_uploads
+    )
     for forbidden in (
         "gh release create",
         "twine upload",
