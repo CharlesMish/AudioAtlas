@@ -44,17 +44,39 @@ def test_live_demo_deploys_only_from_main_or_manual_dispatch() -> None:
     assert workflow["jobs"]["deploy"]["environment"]["name"] == "github-pages"
     text = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
     assert "examples/demo_audio/audioatlas_demo.wav" in text
-    assert "--graphs-profile standard" in text
-    assert "--theme midnight_studio" in text
+    assert "--graphs-profile compact" in text
+    assert "--graphs-profile full" in text
+    assert "--theme default" in text
+    assert "--presentation studio" in text
     assert 'summary["metadata"]["filename"] == "audioatlas_demo.wav"' in text
-    assert 'len(summary["graphs"]["selected_filenames"]) == 14' in text
+    assert 'profiles = {"compact": 4, "full": 17}' in text
+    assert 'href="compact/"' in text
+    assert 'href="full/"' in text
+    assert ".github/pages-assets/audioatlas-0.2.0a8-release-hero.png" in text
+    assert "rm site/compact/.audioatlas-output.json" in text
+    assert "rm site/full/.audioatlas-output.json" in text
+    assert "if path.is_file() and path.name != \".nojekyll\"" in text
+    assert 'assert not list(site.rglob(".audioatlas-*"))' in text
     assert "assert not list(site.rglob(\"*.wav\"))" in text
 
 
 def test_release_requires_version_tag_and_uses_trusted_publishing() -> None:
     workflow = _workflow("release.yml")
 
-    assert workflow["on"] == {"push": {"tags": ["v*"]}}
+    assert workflow["on"] == {
+        "push": {"tags": ["v*", "!v0.2.0a8"]},
+        "workflow_dispatch": {
+            "inputs": {
+                "release_mode": {
+                    "description": "Publication route",
+                    "required": True,
+                    "type": "choice",
+                    "default": "python-only",
+                    "options": ["python-only"],
+                }
+            }
+        },
+    }
     assert workflow["jobs"]["pypi"]["permissions"] == {
         "actions": "read",
         "id-token": "write",
@@ -74,6 +96,65 @@ def test_release_requires_version_tag_and_uses_trusted_publishing() -> None:
     assert "uv run python -m build" in text
     assert "uv run pytest" in text
     assert "uv run pip-audit --require-hashes" in text
+
+
+def test_python_only_release_is_manual_exact_and_native_free() -> None:
+    workflow = _workflow("release.yml")
+    jobs = workflow["jobs"]
+    text = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert jobs["prepare"]["outputs"]["release_mode"] == (
+        "${{ steps.package.outputs.release_mode }}"
+    )
+    assert 'test "${GITHUB_REF}" = "refs/tags/v0.2.0a8"' in text
+    assert 'test "${version}" = "0.2.0a8"' in text
+    assert 'release_mode="python-only"' in text
+    assert 'release_mode="native"' in text
+    assert 'test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"' in text
+
+    for native_job in ("macos-app", "macos-evidence", "macos-acceptance", "draft-release"):
+        assert jobs[native_job]["if"] == "needs.prepare.outputs.release_mode == 'native'"
+
+    python_assets = jobs["python-release-assets"]
+    assert python_assets["needs"] == [
+        "prepare",
+        "macos-app",
+        "macos-evidence",
+        "macos-acceptance",
+    ]
+    assert python_assets["permissions"] == {"contents": "read", "actions": "read"}
+    assert "needs.prepare.outputs.release_mode == 'python-only'" in python_assets["if"]
+    assert 'test "${MACOS_APP_RESULT}" = "skipped"' in text
+    assert 'test "${MACOS_EVIDENCE_RESULT}" = "skipped"' in text
+    assert 'test "${MACOS_ACCEPTANCE_RESULT}" = "skipped"' in text
+    assert jobs["pypi"]["needs"] == ["prepare", "index-state", "release-assets-ready"]
+
+    expected_assets = {
+        "audioatlas-0.2.0a8-py3-none-any.whl",
+        "audioatlas-0.2.0a8.tar.gz",
+        "AudioAtlas-0.2.0a8-public-source-3c9841e.zip",
+        "AudioAtlas-0.2.0a8-canonical-compact-example-3c9841e.zip",
+        "AudioAtlas-0.2.0a8-canonical-full-example-3c9841e.zip",
+        "SHA256SUMS.txt",
+        "ARTIFACT_MANIFEST.json",
+    }
+    for asset in expected_assets:
+        assert text.count(f'"{asset}"') >= 2
+    for digest in (
+        "f4546ca18499299a8108312a95f9e1d527565ecc8e8fea62f64144b7b5a7fde7",
+        "9ccb7566ac5c8cf4c5eaaaa8728b99a80f7f4b3da283350901b9754a83733c0c",
+        "d9f83ec1c3a88fe72db0a89ae64d5eb3442cb95bbdc799a0a2b84a3261e50968",
+        "4e13a63daa1307c5798035c75b334d7bc5a84a294f8a4bebeb0bf263f62cfa1c",
+        "9d6bff6a6018c6040bdb3e74e4e9d6e5066e3ea3dbf153fd6e9478145ea4c296",
+        "ef43619285432430e5bb8565b0b2d476fe1882d96818a9c044770a5b22b12ade",
+        "6c039a367ed5cf3569d3de2b83eb6361c945404d33f033928469ff2f128d61ca",
+    ):
+        assert text.count(digest) == 2
+    assert "Release asset boundary mismatch" in text
+    assert "Release asset boundary changed after PyPI verification" in text
+    assert "AudioAtlas 0.2.0a8 — Public Alpha" in text
 
 
 def test_macos_app_has_separate_beta_and_notarized_release_gates() -> None:
@@ -156,7 +237,7 @@ def test_private_macos_demo_candidate_cannot_publish() -> None:
     assert 'test "${GITHUB_REF}" = "refs/heads/main"' in text
     assert 'test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"' in text
     assert r'if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+$ ]]' in text
-    assert "0.2.0a7" not in text
+    assert "0.2.0a8" not in text
     assert "scripts/package_macos_dmg.py" in text
     assert "audioatlas_demo.wav" in text
     assert "docs/MACOS_DEMO_GUIDE.md" in text
@@ -214,6 +295,7 @@ def test_private_windows_candidate_workflow_cannot_publish() -> None:
             assert "$PSNativeCommandUseErrorActionPreference = $true" in run
     for promised in (
         "README_FIRST.txt",
+        "windows-candidate-manifest.json",
         "*-installer-test-kit.zip",
         "*-installer-test-kit.zip.sha256",
         "*-portable-test-kit.zip",
@@ -230,6 +312,9 @@ def test_private_windows_candidate_workflow_cannot_publish() -> None:
     assert diagnostic_upload["with"]["path"] == "dist/windows/evidence"
     successful_uploads = [step for step in uploads if step is not diagnostic_upload]
     assert all(step["if"] == "success()" for step in successful_uploads)
+    assert all(
+        "windows-candidate-manifest.json" in step["with"]["path"] for step in successful_uploads
+    )
     assert "*-setup.exe" not in "\n".join(
         str(step["with"]["path"]) for step in successful_uploads
     )

@@ -1,29 +1,39 @@
-# AudioAtlas desktop app and legacy launchers
+# AudioAtlas installation routes and legacy launchers
 
-## Recommended: Apple Silicon Mac app
+## Recommended: Python package and CLI
 
-Download the signed/notarized DMG from the matching GitHub prerelease, drag
-AudioAtlas into Applications, and open it normally. Drop or choose one audio
-file. The app shows analysis progress, creates a themed report folder beside
-the track, opens `report.html`, and can reveal the folder in Finder.
-
-The app runs locally and does not need Python, Terminal, PATH setup, an account,
-or a network connection after download. If the source folder is read-only, it
-asks for another report location. The first beta supports macOS 14 or newer on
-Apple Silicon.
-
-## Advanced CLI installation
-
-## Install and verify once
-
-Install the published package:
+AudioAtlas `0.2.0a8` supports Python 3.11 or newer. Install and verify the public
+alpha package:
 
 ```bash
-python -m pip install audioatlas
+python -m pip install audioatlas==0.2.0a8
 audioatlas --version
+audioatlas analyze song.wav --graphs-profile compact
 ```
 
+The report appears in `audioatlas-report-song/` unless `--out` selects another
+folder. Open `report.html`. Use `--graphs-profile full` for every registered
+plot.
+
 An editable source checkout may use `python -m pip install -e .` instead.
+
+## Optional: unsigned Apple Silicon technical preview
+
+Any `0.2.0a8` native preview supplied with the owner-approved release must be
+labeled **UNSIGNED APPLE SILICON TECHNICAL PREVIEW**. It requires Apple Silicon
+and macOS 14 or newer. It is not signed, notarized, Gatekeeper-approved, or the
+recommended installation path, and Apple cannot authenticate its developer.
+It is intended only for experienced testers.
+
+Verify its published SHA-256 before testing and launch it only through ordinary
+macOS behavior. If macOS blocks it, stop and use the Python CLI. Do not bypass
+Gatekeeper, remove quarantine metadata, or weaken security settings.
+
+## Windows desktop status
+
+No Windows desktop download is included in the `0.2.0a8` public alpha. A genuine
+native Windows build and client acceptance remain pending. Windows users can
+use the Python CLI.
 
 ## Legacy folder launcher
 

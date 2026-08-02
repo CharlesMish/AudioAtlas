@@ -5,9 +5,9 @@ finding semantics, and output ownership do not always change together.
 
 ## Version axes
 
-| Axis | Current value in `0.2.0a7` | Changes when |
+| Axis | Current value in `0.2.0a8` | Changes when |
 |---|---:|---|
-| Python package | `0.2.0a7` | any release is published |
+| Python package | `0.2.0a8` | any release is published |
 | Summary schema | `0.2.1` | documented summary fields are removed, retyped, renamed without an alias, or change meaning; `0.2.1` adds identity/provenance |
 | Findings schema | `0.2.0` | finding object structure changes incompatibly |
 | Catalog schema | `0.2.0` | catalog object structure changes incompatibly |
@@ -16,17 +16,17 @@ finding semantics, and output ownership do not always change together.
 | Calibration-replay schema | `0.1.0` | anonymous replay artifact structure changes incompatibly |
 | Song-project schema | `0.1.0` | local project index/configuration structure changes incompatibly |
 | Output manifest | `1` | ownership/publication manifest structure changes incompatibly |
-| macOS app | Apple Silicon, macOS 14+ | a signed desktop architecture or minimum OS is added or removed |
-| Windows internal desktop candidate | Windows 10 22H2 x64 and Windows 11 x64 | a signed/Store package completes separate client acceptance |
+| Optional unsigned macOS preview | Apple Silicon, macOS 14+; not signed or notarized | a signed desktop architecture or minimum OS is added or removed |
+| Windows desktop | Not included in the `0.2.0a8` public alpha | a genuine native build and client acceptance complete |
 
 A package release may therefore keep an earlier ruleset version when it changes
 tooling, documentation, or delivery behavior without changing the rules. That
 is deliberate, not version drift.
 
 
-The Windows entry includes a Tkinter adapter and private unsigned packaging
-candidate, not a friend-ready or currently distributed Windows GUI. Windows 11
-is recommended. Windows 10
+The repository includes a Tkinter adapter and private unsigned Windows
+packaging path, not a public Windows desktop download. Windows 11 is recommended
+for future acceptance. Windows 10
 22H2 is a best-effort application target for local/offline use because Microsoft
 ended ordinary Windows 10 support on 2025-10-14. Pre-22H2 Windows 10, 32-bit
 Windows, and Windows ARM64 are outside the current target.
@@ -68,7 +68,7 @@ content. Reports retain both views through a local CSS/JavaScript switch.
 
 ## Runtime dependency compatibility
 
-AudioAtlas `0.2.0a7` directly requires `numba>=0.65.1,<0.66`. This is a
+AudioAtlas `0.2.0a8` directly requires `numba>=0.65.1,<0.66`. This is a
 temporary evidence-backed compatibility band, not an assertion that every
 Numba 0.66 installation is defective. In a clean Python 3.13 installation,
 Numba 0.66.0 with llvmlite 0.48.0 stalled inside LLVM code generation and

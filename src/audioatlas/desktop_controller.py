@@ -11,7 +11,9 @@ from pathlib import Path
 
 from audioatlas.app_core import (
     AppInputInfo,
+    AppOutputPreflight,
     analyze_for_app,
+    compute_app_source_binding,
     friendly_error_message,
     inspect_app_input,
     preflight_app_output,
@@ -57,7 +59,7 @@ class DesktopRunController:
         *,
         logger: logging.Logger | None = None,
         inspector: Callable[[str | Path], AppInputInfo] | None = None,
-        output_preflight: Callable[..., Path] | None = None,
+        output_preflight: Callable[..., Path | AppOutputPreflight] | None = None,
         analyzer: Callable[..., AnalysisRunResult] | None = None,
     ) -> None:
         self._callback = state_callback
@@ -191,11 +193,14 @@ class DesktopRunController:
                 self._logger.info("Waiting for large-file confirmation")
                 self._wait_for_confirmation(token)
 
+            source_binding = compute_app_source_binding(source)
+            token.raise_if_cancelled()
             while True:
                 try:
                     preflighted_output_dir = self._output_preflight(
                         source,
                         output_parent=output_parent,
+                        source_binding=source_binding,
                     )
                     break
                 except OSError as error:

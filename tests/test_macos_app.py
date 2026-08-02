@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -16,6 +17,7 @@ def _build_script():
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -63,10 +65,77 @@ def test_bundle_contract_is_arm64_macos_14_and_has_no_openmp_pool() -> None:
     assert '"CFBundleVersion": bundle_build_version' in spec
     assert '"numba.np.ufunc.omppool"' in spec
     assert hook.index('NUMBA_THREADING_LAYER", "workqueue') < hook.index("import numba")
-    assert 'dependency.startswith(("/System/", "/usr/lib/"))' in build
+    assert "MACH_O_MAGICS" in build
+    assert "_resolve_dependency(" in build
+    assert "def _verify_code_signature" in build
     assert 'requires macOS {minimum_version}' in build
     assert "PYINSTALLER_TIMEOUT_SECONDS = 900" in build
     assert "shutil.rmtree" not in build
+    assert "disable_windowed_traceback=True" in spec
+
+
+def test_macos_startup_failure_is_logged_without_exposing_private_details(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import audioatlas.macos_app as macos_app
+
+    private_detail = "/Users/private-user/Music/secret.wav"
+    records = []
+    shown = []
+    previous_hook = sys.excepthook
+    logger = SimpleNamespace(
+        error=lambda message, *, exc_info: records.append((message, exc_info)),
+        exception=lambda message: records.append((message, True)),
+    )
+
+    def fail_during_application_construction() -> None:
+        assert sys.excepthook is not previous_hook
+        raise RuntimeError(f"application construction failed at {private_detail}")
+
+    monkeypatch.setattr(macos_app.sys, "platform", "darwin")
+    monkeypatch.setattr(macos_app, "_logger", logger)
+    monkeypatch.setattr(macos_app, "_run_native_gui", fail_during_application_construction)
+    monkeypatch.setattr(macos_app, "_show_generic_error", lambda: shown.append(True))
+
+    with pytest.raises(SystemExit) as exc_info:
+        macos_app.main()
+
+    assert exc_info.value.code == 1
+    assert sys.excepthook is previous_hook
+    assert shown == [True]
+    assert private_detail in str(records[0][1][1])
+    output = capsys.readouterr()
+    assert output.out == output.err == ""
+
+
+def test_macos_callback_failure_uses_controlled_excepthook(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import audioatlas.macos_app as macos_app
+
+    records = []
+    shown = []
+    logger = SimpleNamespace(
+        error=lambda message, *, exc_info: records.append((message, exc_info)),
+        exception=lambda message: records.append((message, True)),
+    )
+
+    def dispatch_callback_failure() -> None:
+        error = RuntimeError("callback at /Users/private-user/song.wav")
+        sys.excepthook(type(error), error, error.__traceback__)
+
+    monkeypatch.setattr(macos_app.sys, "platform", "darwin")
+    monkeypatch.setattr(macos_app, "_logger", logger)
+    monkeypatch.setattr(macos_app, "_run_native_gui", dispatch_callback_failure)
+    monkeypatch.setattr(macos_app, "_show_generic_error", lambda: shown.append(True))
+
+    macos_app.main()
+
+    assert len(records) == 1
+    assert shown == [True]
+    output = capsys.readouterr()
+    assert "Traceback" not in output.out + output.err
+    assert "private-user" not in output.out + output.err
 
 
 def test_build_preserves_a_preexisting_custom_work_directory(
@@ -86,7 +155,8 @@ def test_build_preserves_a_preexisting_custom_work_directory(
     monkeypatch.setattr(build.sys, "platform", "darwin")
     monkeypatch.setattr(build.platform, "machine", lambda: "arm64")
     monkeypatch.setattr(build, "_run", fake_run)
-    monkeypatch.setattr(build, "_audit_bundle", lambda app: None)
+    monkeypatch.setattr(build, "_audit_bundle", lambda app: ())
+    monkeypatch.setattr(build, "_verify_code_signature", lambda app: None)
 
     assert build.main(["--dist", str(dist), "--work", str(work)]) == 0
     assert sentinel.read_text(encoding="utf-8") == "keep me"

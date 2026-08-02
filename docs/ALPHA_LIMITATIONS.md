@@ -1,6 +1,6 @@
 # AudioAtlas alpha limitations
 
-AudioAtlas `0.2.0a7` is a measurement and report-generation tool for structured
+AudioAtlas `0.2.0a8` is a measurement and report-generation tool for structured
 listening. It is not a mastering assistant or quality judge.
 
 ## Current limitations
@@ -20,10 +20,12 @@ listening. It is not a mastering assistant or quality judge.
   establish what occurred in the original master.
 - Batch discovery recognizes `.wav`, `.wave`, `.flac`, `.ogg`, `.aif`,
   `.aiff`, and `.mp3`; actual decoding depends on the local audio stack.
-- The friend-ready desktop app currently targets Apple Silicon and macOS 14 or
-  newer. Private unsigned Windows portable/installer candidates are internal
-  evidence only and may be blocked by Windows reputation controls. Intel and
-  friend-ready Windows packages remain external evidence gates.
+- The recommended public-alpha route is the Python 3.11+ package and CLI. Any
+  included Apple Silicon macOS 14+ application is an optional unsigned,
+  unnotarized technical preview for experienced testers; Apple cannot
+  authenticate its developer, and security controls should not be bypassed.
+  No Windows desktop download is included. A genuine Windows build, native
+  audit, platform-security handling, and clean-client acceptance remain pending.
 - The app intentionally analyzes one file with the standard graph profile and
   default Studio theme. Batch, project, section, diff, and custom-presentation
   workflows remain in the Python CLI.
@@ -35,7 +37,7 @@ listening. It is not a mastering assistant or quality judge.
 - Cooperative cancellation occurs between decoder, measurement, rendering, and
   writer steps. A single active decoder or measurement call may take time to
   return; publication is intentionally completed rather than interrupted.
-- The `0.2.0a7` dependency contract temporarily constrains Numba to
+- The `0.2.0a8` dependency contract temporarily constrains Numba to
   `>=0.65.1,<0.66`. A clean Python 3.13 smoke with Numba 0.66.0 /
   llvmlite 0.48.0 stalled in LLVM code generation; the same workflow
   completed with Numba 0.65.1 / llvmlite 0.47.0. This ceiling should be

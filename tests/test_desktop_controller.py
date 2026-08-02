@@ -179,6 +179,7 @@ def test_controller_retries_permission_with_selected_parent_without_reinspection
     source.touch()
     inspections = []
     preflight_parents = []
+    preflight_bindings = []
     analysis_destinations = []
     waiting = threading.Event()
 
@@ -188,6 +189,7 @@ def test_controller_retries_permission_with_selected_parent_without_reinspection
 
     def preflight(path: Path, **kwargs: object) -> Path:
         preflight_parents.append(kwargs["output_parent"])
+        preflight_bindings.append(kwargs["source_binding"])
         if len(preflight_parents) == 1:
             raise OSError(errno.EROFS, "read-only filesystem")
         return tmp_path / "report"
@@ -214,6 +216,7 @@ def test_controller_retries_permission_with_selected_parent_without_reinspection
     assert controller.wait(2)
     assert inspections == [source]
     assert preflight_parents == [None, alternate]
+    assert preflight_bindings[0] is preflight_bindings[1]
     assert analysis_destinations == [(alternate, tmp_path / "report")]
     assert controller.state.previous_result == _result(tmp_path)
     assert controller.state.phase is DesktopRunPhase.SUCCEEDED

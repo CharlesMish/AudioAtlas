@@ -7,6 +7,8 @@ exact wording - just structure and presence of key sections.
 
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
 import re
 from html.parser import HTMLParser
@@ -606,7 +608,8 @@ def test_graph_registry_captions_avoid_verdict_and_advice_phrases():
         "mix health",
         "loudness score",
         "score",
-        "pass/fail",
+        "is a pass/fail",
+        "provides a pass/fail",
         "mastering advice",
         "too much",
         "too little",
@@ -801,7 +804,7 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
     assert "Measurement-based findings, not quality judgments." in text
     assert RELEASE_LABEL in text
     assert f"AudioAtlas</strong> {__version__}" in text
-    assert "Use this alpha report as a workflow" in text
+    assert "Start with Key metrics for level and headroom context" in text
     assert ">Findings<" in text
     assert "Listening prompts" not in text
     assert "Integrated LUFS" in text
@@ -885,6 +888,23 @@ def test_slice3_report_html_captions_include_product_boundary_language(tmp_path:
     assert "not a dynamics judgment" in text
     assert "not a loudness target" in text
     assert "not a mono-compatibility verdict" in text
+
+
+def test_report_html_captions_include_conservative_context_boundaries(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    for boundary in (
+        "It is amplitude context, not a quality judgment.",
+        "It describes energy movement within this track, not a loudness target.",
+        "Threshold markers do not prove audible distortion.",
+        "Low-correlation passages are listening prompts, not defects.",
+        "Side-heavy passages can be intentional; this is context, not a width judgment.",
+        "It shows shape within this track, not brightness quality.",
+        "It is descriptive context, not a delivery pass/fail result.",
+    ):
+        assert boundary in text
 
 
 def test_write_report_html_keeps_polished_visual_structure(tmp_path: Path):
@@ -975,7 +995,10 @@ def test_dark_report_theme_uses_theme_variables_for_report_text_sections(tmp_pat
     assert ".plot-desc { font-size: 12.5px; color: var(--text-muted);" in text
     assert "details summary { padding: 12px 15px;" in text
     assert "details summary { padding: 12px 15px; font-weight: 600; cursor: pointer; user-select: none; font-size: 14px; color: var(--text);" in text
-    assert ".metrics-table td { padding: 6px 0; border-bottom: 1px solid var(--border-soft);" in text
+    assert (
+        ".metrics-table td { padding: 7px 8px 7px 0; "
+        "border-bottom: 1px solid var(--border-soft);"
+    ) in text
     assert ".lightbox-title" in text
     assert "color: var(--text);" in text
 
@@ -1024,8 +1047,77 @@ def test_write_report_html_avoids_banned_judgment_words(tmp_path: Path):
     path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
     text = path.read_text(encoding="utf-8")
 
-    for word in ("bad", "good", "professional", "amateur", "ai", "score", "fix", "broken"):
+    for word in ("bad", "good", "amateur", "ai", "score", "fix", "broken"):
         assert not re.search(rf"\b{word}\b", text, flags=re.IGNORECASE), word
+    assert "professional mastering approval" in text
+    assert "provides professional mastering approval" not in text
+
+
+@pytest.mark.parametrize(("profile", "label"), [("compact", "Compact"), ("full", "Full")])
+def test_report_html_exposes_graph_profile_chip(
+    tmp_path: Path, profile: str, label: str
+):
+    summary = _make_summary()
+    summary["graphs"] = {"profile": profile}
+
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert f"<strong>Profile</strong> {label}" in text
+
+
+def test_report_html_ux_copy_heading_order_and_print_rules(tmp_path: Path):
+    summary = _make_summary()
+    summary["graphs"] = {"profile": "standard"}
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert (
+        "Local-first listening context: measurements, not grades. AudioAtlas analyzes "
+        "the selected file on this machine and does not intentionally upload it."
+    ) in text
+    assert "is not uploaded" not in text
+    assert '<h2 class="how-to-read-title">How to read this report</h2>' in text
+    assert "Start with Key metrics for level and headroom context" in text
+    assert "review Delivery / headroom context" not in text
+    assert (
+        "This report provides descriptive context, not professional mastering approval "
+        "or a universal pass/fail result."
+    ) in text
+    heading_levels = [int(value) for value in re.findall(r"<h([1-6])(?:\s|>)", text)]
+    assert heading_levels[0:2] == [1, 2]
+    assert all(
+        current - previous <= 1
+        for previous, current in zip(heading_levels, heading_levels[1:], strict=False)
+    )
+    assert 'class="why why-limit"' in text
+    assert ".checks li::marker { color: var(--accent); }" in text
+    assert "h2 { break-after: avoid; }" in text
+    assert ".metrics-grid, .plot-card, .finding-card { break-inside: avoid; }" in text
+    assert ".back-to-top { display: none !important; }" in text
+
+
+def test_report_html_preserves_inputs_and_embedded_scripts(tmp_path: Path):
+    summary = _make_summary()
+    summary["graphs"] = {"profile": "full"}
+    findings = _html_findings()
+    summary_before = copy.deepcopy(summary)
+    findings_before = copy.deepcopy(findings)
+
+    path = write_report_html(summary, summary["plots"], tmp_path, findings)
+    text = path.read_text(encoding="utf-8")
+    script_hashes = [
+        hashlib.sha256(script.encode("utf-8")).hexdigest()
+        for script in re.findall(r"<script[^>]*>(.*?)</script>", text, flags=re.DOTALL)
+    ]
+
+    assert summary == summary_before
+    assert findings == findings_before
+    assert script_hashes == [
+        "2f5c3ab91017396d68324c9f31bee53b072a0c69ddfff2e3f7033567c11fb4d6",
+        "b129f70e0d2de33a68ec70ed420460a6c55fa7cf9aab0349853d9708b3da7955",
+        "a470b19e879637636618d4148f1e40c67773b7fd792157b7baf393c3d2ee1a1a",
+    ]
 
 
 def test_write_report_html_renders_friendly_no_findings_state(tmp_path: Path):
@@ -1192,6 +1284,8 @@ def test_report_html_has_complete_local_navigation_and_related_links(tmp_path: P
     assert len(parser.ids) == len(set(parser.ids))
     assert set(parser.targets).issubset(set(parser.ids))
     assert 'class="skip-link" href="#main-content"' in text
+    assert '<a href="#how-to-read">Overview</a>' in text
+    assert text.count('<a href="#top">Back to top</a>') == 5
     assert 'id="glossary-lufs"' in text
     assert 'href="#glossary-lufs">Integrated LUFS</a>' in text
     assert 'id="plot-waveform_rms"' in text

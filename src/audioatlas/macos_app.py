@@ -7,15 +7,17 @@ from pathlib import Path
 from typing import Any
 
 from audioatlas.desktop_runtime import (
+    GENERIC_GUI_ERROR_MESSAGE,
+    GENERIC_GUI_ERROR_TITLE,
+    DesktopExceptionBoundary,
     configure_desktop_logger,
     configure_scientific_cache_environment,
+    installed_desktop_excepthook,
     log_path,
 )
 
-# Choose writable caches before any path can import the scientific engine.
-configure_scientific_cache_environment()
-_log_path = log_path()
 _logger = configure_desktop_logger("audioatlas.macos_app")
+_log_path = log_path()
 
 
 def main() -> None:
@@ -23,11 +25,26 @@ def main() -> None:
         raise SystemExit("The AudioAtlas desktop app currently supports macOS only.")
 
     if "--smoke-analyze" in sys.argv:
+        configure_scientific_cache_environment()
         from audioatlas.desktop_smoke import run_frozen_smoke
 
         run_frozen_smoke(sys.argv[1:])
         return
 
+    boundary = DesktopExceptionBoundary(_logger, _show_generic_error)
+    with installed_desktop_excepthook(boundary):
+        try:
+            # Choose writable caches before any path can import the scientific engine.
+            configure_scientific_cache_environment()
+            _run_native_gui()
+        except Exception:
+            exception_type, exception, traceback = sys.exc_info()
+            assert exception_type is not None and exception is not None
+            boundary(exception_type, exception, traceback)
+            raise SystemExit(1) from None
+
+
+def _run_native_gui() -> None:
     from AppKit import (  # type: ignore[import-not-found]
         NSApplication,
         NSApplicationActivationPolicyRegular,
@@ -39,6 +56,16 @@ def main() -> None:
     delegate = _make_app_delegate()
     app.setDelegate_(delegate)
     AppHelper.runEventLoop()
+
+
+def _show_generic_error() -> None:
+    from AppKit import NSAlert  # type: ignore[import-not-found]
+
+    alert = NSAlert.alloc().init()
+    alert.setMessageText_(GENERIC_GUI_ERROR_TITLE)
+    alert.setInformativeText_(GENERIC_GUI_ERROR_MESSAGE)
+    alert.addButtonWithTitle_("OK")
+    alert.runModal()
 
 
 def _run_frozen_smoke(argv: list[str]) -> None:

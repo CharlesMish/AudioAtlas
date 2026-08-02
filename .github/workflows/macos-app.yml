@@ -12,6 +12,7 @@ name: macOS app
       - "tests/test_desktop_controller.py"
       - "tests/test_desktop_runtime.py"
       - "tests/test_macos_app.py"
+      - "tests/test_macos_native_audit.py"
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/macos-app.yml"
@@ -46,6 +47,11 @@ jobs:
 
       - name: Build Apple Silicon app
         run: uv run python scripts/build_macos_app.py
+
+      - name: Exercise the real macOS native dependency audit
+        env:
+          AUDIOATLAS_TEST_APP: dist/macos/AudioAtlas.app
+        run: uv run pytest tests/test_macos_native_audit.py -k real_built_app
 
       - name: Exercise the frozen report engine
         run: |

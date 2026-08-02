@@ -5,6 +5,21 @@ tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
+## `0.2.0a8` — 2026-07-20
+
+### Public alpha release positioning
+
+- Made the Python 3.11+ package and CLI the recommended public-alpha route,
+  with source archives and canonical reports available for inspection.
+- Labeled the optional Apple Silicon macOS application as an unsigned,
+  unnotarized technical preview for experienced testers, not a signed or
+  Gatekeeper-approved release.
+- Excluded a Windows desktop download from this alpha while its genuine native
+  build and client acceptance remain pending.
+- Refined static report navigation and context boundaries with an explicit
+  analysis-profile label, local-first framing, calmer finding guidance, and
+  more reliable narrow-screen and print layout behavior.
+
 ### Lower activation cost
 
 - Moved desktop preparation, confirmation, cancellation, output retry, prior
@@ -16,7 +31,6 @@ tracked separately in `src/audioatlas/release.py`.
 - Added a lightweight Tkinter Windows adapter, audited Python 3.11 x64 onedir
   build, private portable demo kit, and no-admin Inno Setup candidate. Unsigned
   Windows artifacts are labeled internal-only pending client security acceptance.
-
 - Added a native Apple Silicon macOS app that accepts one dropped or chosen
   track, displays coarse analysis progress, writes a standard themed report
   beside the source, opens it automatically, and reveals it in Finder without
@@ -28,8 +42,8 @@ tracked separately in `src/audioatlas/release.py`.
   and ad-hoc beta artifacts.
 - Added Developer ID signing, hardened-runtime entitlements, notarized/stapled
   DMG publication, and GitHub prerelease attachment to the release workflow.
-- Split onboarding into the friend-facing Mac app and the advanced PyPI CLI,
-  while retaining older PATH-dependent launchers as explicit legacy helpers.
+- Clarified onboarding around the recommended PyPI CLI and explicit native-app
+  status, while retaining older PATH-dependent launchers as legacy helpers.
 - Hardened report publication with destination ownership checks, cross-process
   locks, source-mutation detection, collision-safe app folder selection, and
   cooperative Cancel/Quit behavior that never interrupts publication.
@@ -48,6 +62,36 @@ tracked separately in `src/audioatlas/release.py`.
 - Switched the GitHub Pages example to a standard-profile Midnight Studio
   report generated from that track, with the source audio excluded from the
   deployed static site.
+
+### Desktop release hardening
+
+- Made output cleanup manifest-derived so only owned generated files are
+  replaceable, while undeclared reserved names and unrelated staged collisions
+  are refused and interrupted replacements roll back safely.
+- Added a private source binding for safe report reuse, distinguishing identical
+  basenames and changed bytes at the same path without exposing source paths in
+  generated artifacts or producing needless numbered rerun folders.
+- Contained startup and callback tracebacks in both GUI adapters without losing
+  diagnostic logs, and guaranteed cleanup for malformed and multi-entity DMG
+  attachment results.
+- Made macOS Mach-O closure path-aware, including importer-specific loader and
+  run-path token expansion, so unrelated same-basename dylibs cannot satisfy an
+  import.
+- Made the Windows PE/import inventory exhaustive and path-aware, including PE
+  files with unconventional extensions and refusal of missing or ambiguous DLLs.
+- Bound Windows candidates to the exact native inventory audited before
+  packaging, including acceptance-guide sidecars, and reject stale inventory or
+  changed candidate inputs.
+- Bounded ZIP member counts, expanded sizes, and compression ratios before
+  extraction, then streamed verification rather than performing unbounded reads.
+
+### Desktop release status
+
+- All eight reviewed findings are source-closed, and the committed mocked
+  native-tool adversarial suites pass.
+- Real signed/notarized macOS artifacts, Authenticode-signed Windows artifacts,
+  and clean-machine acceptance remain required separate gates. No desktop
+  binary should yet be represented as generally release-ready.
 
 ## `0.2.0a7` — 2026-07-15
 

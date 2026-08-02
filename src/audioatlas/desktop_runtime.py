@@ -4,11 +4,63 @@ from __future__ import annotations
 
 import logging
 import os
-from contextlib import suppress
+import sys
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager, suppress
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from types import TracebackType
 
 from platformdirs import user_cache_path, user_log_path
+
+GENERIC_GUI_ERROR_TITLE = "AudioAtlas encountered an error"
+GENERIC_GUI_ERROR_MESSAGE = (
+    "AudioAtlas could not continue. Full details were saved to the troubleshooting log."
+)
+
+
+class DesktopExceptionBoundary:
+    """Log complete GUI failures while exposing only a fixed native message."""
+
+    def __init__(self, logger: logging.Logger, show_generic_error: Callable[[], None]) -> None:
+        self._logger = logger
+        self._show_generic_error = show_generic_error
+        self._showing_error = False
+
+    def __call__(
+        self,
+        exception_type: type[BaseException],
+        exception: BaseException,
+        traceback: TracebackType | None,
+    ) -> None:
+        self._logger.error(
+            "Unhandled desktop GUI exception",
+            exc_info=(exception_type, exception, traceback),
+        )
+        if self._showing_error:
+            return
+        self._showing_error = True
+        try:
+            self._show_generic_error()
+        except Exception:
+            self._logger.exception("Could not display the generic desktop error message")
+        finally:
+            self._showing_error = False
+
+
+@contextmanager
+def installed_desktop_excepthook(
+    boundary: DesktopExceptionBoundary,
+) -> Iterator[None]:
+    """Install a controlled process hook for the lifetime of a native event loop."""
+
+    previous = sys.excepthook
+    sys.excepthook = boundary
+    try:
+        yield
+    finally:
+        if sys.excepthook is boundary:
+            sys.excepthook = previous
 
 
 def cache_directory() -> Path:

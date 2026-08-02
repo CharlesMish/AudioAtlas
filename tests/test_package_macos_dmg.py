@@ -22,7 +22,7 @@ SPEC.loader.exec_module(package_macos_dmg)
 def _write_info(app: Path, **overrides: str) -> None:
     info = {
         "CFBundleIdentifier": package_macos_dmg.BUNDLE_IDENTIFIER,
-        "CFBundleShortVersionString": "0.2.0a7",
+        "CFBundleShortVersionString": "0.2.0a8",
         "CFBundleVersion": "42",
         "LSMinimumSystemVersion": package_macos_dmg.MINIMUM_MACOS,
     }
@@ -75,7 +75,7 @@ def test_verify_app_identity_checks_plist_and_developer_id(
 
     package_macos_dmg._verify_app_identity(
         app,
-        version="0.2.0a7",
+        version="0.2.0a8",
         build_number="42",
         signing_team="TEAM123",
     )
@@ -88,7 +88,7 @@ def test_verify_app_identity_rejects_a_mismatched_build(tmp_path: Path) -> None:
     with pytest.raises(SystemExit, match="CFBundleVersion"):
         package_macos_dmg._verify_app_identity(
             app,
-            version="0.2.0a7",
+            version="0.2.0a8",
             build_number="42",
             signing_team="TEAM123",
         )
@@ -135,6 +135,130 @@ def test_exact_entitlements_accept_only_approved_jit_set(
     )
 
     package_macos_dmg._verify_exact_app_entitlements(app)
+
+
+@pytest.mark.parametrize(
+    ("scenario", "message"),
+    [
+        ("malformed-plist", "invalid plist"),
+        ("invalid-entities", "invalid system-entities"),
+        ("multiple-mounts", "Expected one mounted DMG volume"),
+        ("bad-contents", "must contain exactly"),
+        ("bad-symlink", "must link to /Applications"),
+    ],
+)
+def test_mounted_dmg_failures_always_detach_private_mountpoint(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    scenario: str,
+    message: str,
+) -> None:
+    calls = []
+
+    def run(*args: str, **kwargs: object) -> SimpleNamespace:
+        calls.append(args)
+        if args[1] == "detach":
+            return SimpleNamespace(stdout="", stderr="")
+        mount = Path(args[args.index("-mountpoint") + 1])
+        (mount / "AudioAtlas.app").mkdir()
+        if scenario == "bad-contents":
+            (mount / "unexpected.txt").write_text("unexpected", encoding="utf-8")
+        elif scenario == "bad-symlink":
+            (mount / "Applications").symlink_to("/WrongApplications")
+        else:
+            (mount / "Applications").symlink_to("/Applications")
+
+        if scenario == "malformed-plist":
+            stdout = "not a plist"
+        elif scenario == "invalid-entities":
+            stdout = plistlib.dumps({"system-entities": "not-a-list"}).decode("utf-8")
+        else:
+            entities = [{"mount-point": str(mount)}]
+            if scenario == "multiple-mounts":
+                entities.append({"mount-point": str(mount.parent / "other")})
+            stdout = plistlib.dumps({"system-entities": entities}).decode("utf-8")
+        return SimpleNamespace(stdout=stdout, stderr="")
+
+    monkeypatch.setattr(package_macos_dmg, "_run", run)
+
+    with pytest.raises(SystemExit, match=message):
+        package_macos_dmg._verify_mounted_dmg(tmp_path / "candidate.dmg")
+
+    attach, detach = calls
+    assert "-mountpoint" in attach
+    requested_mount = attach[attach.index("-mountpoint") + 1]
+    assert detach[:2] == ("hdiutil", "detach")
+    assert detach[2] == requested_mount
+
+
+def test_mounted_dmg_success_detaches_private_mountpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = []
+
+    def run(*args: str, **kwargs: object) -> SimpleNamespace:
+        calls.append(args)
+        if args[1] == "detach":
+            return SimpleNamespace(stdout="", stderr="")
+        mount = Path(args[args.index("-mountpoint") + 1])
+        (mount / "AudioAtlas.app").mkdir()
+        (mount / "Applications").symlink_to("/Applications")
+        payload = {"system-entities": [{"mount-point": str(mount)}]}
+        return SimpleNamespace(stdout=plistlib.dumps(payload).decode("utf-8"), stderr="")
+
+    monkeypatch.setattr(package_macos_dmg, "_run", run)
+
+    package_macos_dmg._verify_mounted_dmg(tmp_path / "candidate.dmg")
+
+    attach, detach = calls
+    requested_mount = attach[attach.index("-mountpoint") + 1]
+    assert detach == ("hdiutil", "detach", requested_mount)
+
+
+def test_mounted_dmg_preserves_verification_error_when_detach_also_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def run(*args: str, **kwargs: object) -> SimpleNamespace:
+        if args[1] == "detach":
+            raise SystemExit("detach command failed")
+        mount = Path(args[args.index("-mountpoint") + 1])
+        (mount / "unexpected.txt").write_text("unexpected", encoding="utf-8")
+        payload = {"system-entities": [{"mount-point": str(mount)}]}
+        return SimpleNamespace(stdout=plistlib.dumps(payload).decode("utf-8"), stderr="")
+
+    monkeypatch.setattr(package_macos_dmg, "_run", run)
+
+    with pytest.raises(SystemExit, match="must contain exactly") as exc_info:
+        package_macos_dmg._verify_mounted_dmg(tmp_path / "candidate.dmg")
+
+    assert str(exc_info.value) == "DMG must contain exactly AudioAtlas.app and Applications"
+    assert any("detach command failed" in note for note in exc_info.value.__notes__)
+
+
+def test_partial_attach_failure_still_detaches_private_mountpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = []
+
+    def run(*args: str, **kwargs: object) -> SimpleNamespace:
+        calls.append(args)
+        if args[1] == "detach":
+            return SimpleNamespace(stdout="", stderr="", returncode=0)
+        mount = Path(args[args.index("-mountpoint") + 1])
+        return SimpleNamespace(
+            stdout=plistlib.dumps(
+                {"system-entities": [{"mount-point": str(mount)}]}
+            ).decode("utf-8"),
+            stderr="attach reported an error",
+            returncode=1,
+        )
+
+    monkeypatch.setattr(package_macos_dmg, "_run", run)
+
+    with pytest.raises(SystemExit, match="attach failed after cleanup"):
+        package_macos_dmg._verify_mounted_dmg(tmp_path / "candidate.dmg")
+
+    assert calls[1][:2] == ("hdiutil", "detach")
 
 
 def test_notarization_submission_rejects_partial_status() -> None:
@@ -336,14 +460,14 @@ def test_packaging_manifest_schema_rejects_malformed_hash() -> None:
     manifest = {
         "schema_version": 1,
         "candidate_id": "candidate",
-        "version": "0.2.0a7",
+        "version": "0.2.0a8",
         "bundle_build": "42",
         "commit": "cafebabe" * 5,
         "architecture": "arm64",
         "minimum_macos": "14.0",
         "bundle_identifier": "com.charlesmish.audioatlas",
         "workflow_url": "https://example.invalid/release-run",
-        "dmg_filename": "AudioAtlas-0.2.0a7-macos.dmg",
+        "dmg_filename": "AudioAtlas-0.2.0a8-macos.dmg",
         "dmg_sha256": "bad-digest",
         "notarization_submission_id": "submit-123",
         "notarytool_id": "ABC123",
@@ -360,14 +484,14 @@ def test_packaging_manifest_schema_rejects_invalid_bundle_build() -> None:
     manifest = {
         "schema_version": 1,
         "candidate_id": "candidate",
-        "version": "0.2.0a7",
+        "version": "0.2.0a8",
         "bundle_build": "x-42",
         "commit": "cafebabe" * 5,
         "architecture": "arm64",
         "minimum_macos": "14.0",
         "bundle_identifier": "com.charlesmish.audioatlas",
         "workflow_url": "https://example.invalid/release-run",
-        "dmg_filename": "AudioAtlas-0.2.0a7-macos.dmg",
+        "dmg_filename": "AudioAtlas-0.2.0a8-macos.dmg",
         "dmg_sha256": "a" * 64,
         "notarization_submission_id": "submit-123",
         "notarytool_id": "ABC123",
@@ -387,14 +511,14 @@ def test_packaging_manifest_schema_rejects_nonpositive_bundle_build(
     manifest = {
         "schema_version": 1,
         "candidate_id": "candidate",
-        "version": "0.2.0a7",
+        "version": "0.2.0a8",
         "bundle_build": bundle_build,
         "commit": "cafebabe" * 5,
         "architecture": "arm64",
         "minimum_macos": "14.0",
         "bundle_identifier": "com.charlesmish.audioatlas",
         "workflow_url": "https://example.invalid/release-run",
-        "dmg_filename": "AudioAtlas-0.2.0a7-macos.dmg",
+        "dmg_filename": "AudioAtlas-0.2.0a8-macos.dmg",
         "dmg_sha256": "a" * 64,
         "notarization_submission_id": "submit-123",
         "notarytool_id": "ABC123",
@@ -408,7 +532,7 @@ def test_packaging_manifest_schema_rejects_nonpositive_bundle_build(
 
 
 def test_packaging_manifest_schema_rejects_missing_fields() -> None:
-    manifest = {"schema_version": 1, "version": "0.2.0a7"}
+    manifest = {"schema_version": 1, "version": "0.2.0a8"}
 
     with pytest.raises(SystemExit, match="missing required fields"):
         package_macos_dmg._validate_manifest(manifest)

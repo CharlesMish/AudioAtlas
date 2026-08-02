@@ -17,7 +17,6 @@ from typing import Any
 from audioatlas import __version__
 from audioatlas.errors import RevisionDiffError
 from audioatlas.output import (
-    ALL_GENERATED_FILENAMES,
     OUTPUT_MARKER_FILENAME,
     REVISION_DIFF_FILENAMES,
     output_transaction,
@@ -199,7 +198,7 @@ def write_revision_diff(
         publish_staged_output(
             staging,
             out,
-            owned_filenames=set(ALL_GENERATED_FILENAMES),
+            allowed_staged_filenames=set(REVISION_DIFF_FILENAMES),
             transaction=transaction,
         )
     return {

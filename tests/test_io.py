@@ -6,7 +6,26 @@ import soundfile as sf
 
 import audioatlas.io as io_module
 from audioatlas.errors import AudioLoadError, SourceChangedError
-from audioatlas.io import load_audio
+from audioatlas.io import compute_source_binding, load_audio
+
+
+def test_source_binding_is_stable_private_and_distinguishes_same_name_copies(tmp_path):
+    first = tmp_path / "A" / "song.wav"
+    second = tmp_path / "B" / "song.wav"
+    first.parent.mkdir()
+    second.parent.mkdir()
+    first.write_bytes(b"identical copied bytes")
+    second.write_bytes(b"identical copied bytes")
+
+    first_binding = compute_source_binding(first)
+    repeated_binding = compute_source_binding(first)
+    second_binding = compute_source_binding(second)
+
+    assert first_binding == repeated_binding
+    assert first_binding != second_binding
+    serialized = first_binding.to_manifest_dict()
+    assert str(first.parent) not in str(serialized)
+    assert set(serialized) == {"format", "version", "algorithm", "digest"}
 
 
 def test_load_audio_preserves_shape_and_metadata(tmp_path, sr):
@@ -102,7 +121,7 @@ def test_load_audio_rejects_source_changed_during_decode(
 ):
     path = tmp_path / "exporting.wav"
     sf.write(path, np.zeros((sr // 10, 1), dtype=np.float32), sr)
-    identities = iter([(1, 2, 3, 4), (1, 2, 5, 6)])
+    identities = iter([(1, 2, 3, 4), (1, 2, 3, 4), (1, 2, 5, 6)])
     monkeypatch.setattr(io_module, "_source_identity", lambda supplied: next(identities))
 
     with pytest.raises(SourceChangedError, match="changed while it was being read"):

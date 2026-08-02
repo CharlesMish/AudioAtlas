@@ -151,6 +151,7 @@ jobs:
           $setupSignature = Get-AuthenticodeSignature $setup
           if ($setupSignature.Status -ne 'NotSigned') { throw "Unexpected internal setup signature: $($setupSignature.Status)" }
           uv run python scripts/audit_windows_distribution.py `
+            --app dist/windows/AudioAtlas `
             --bundle-audit dist/windows/windows-app-pe-audit.json `
             --installer $setup `
             --signature-status $setupSignature.Status `
@@ -193,13 +194,12 @@ jobs:
             $process.WaitForExit()
             return $process.ExitCode
           }
-          $portableArchive = (Get-ChildItem "$env:RUNNER_TEMP/candidate-extracted/portable/*-portable.zip").FullName
           $copyA = "$env:RUNNER_TEMP/delivered-portable-a"
           $copyB = "$env:RUNNER_TEMP/delivered-portable-b"
-          Expand-Archive -LiteralPath $portableArchive -DestinationPath $copyA
-          Expand-Archive -LiteralPath $portableArchive -DestinationPath $copyB
-          $exeA = (Resolve-Path "$copyA/AudioAtlas/AudioAtlas.exe").Path
-          $exeB = (Resolve-Path "$copyB/AudioAtlas/AudioAtlas.exe").Path
+          Copy-Item -Recurse "$env:RUNNER_TEMP/candidate-extracted/portable-app/AudioAtlas" $copyA
+          Copy-Item -Recurse "$env:RUNNER_TEMP/candidate-extracted/portable-app/AudioAtlas" $copyB
+          $exeA = (Resolve-Path "$copyA/AudioAtlas.exe").Path
+          $exeB = (Resolve-Path "$copyB/AudioAtlas.exe").Path
 
           if ((Invoke-AudioAtlas $exeA @('--ui-smoke')) -ne 0) { throw 'Delivered portable A UI smoke failed' }
           if ((Invoke-AudioAtlas $exeB @('--ui-smoke')) -ne 0) { throw 'Delivered portable B UI smoke failed' }
@@ -299,6 +299,7 @@ jobs:
           name: AudioAtlas-${{ steps.package.outputs.version }}-build-${{ github.run_number }}-${{ steps.identity.outputs.short_sha }}-INTERNAL-Windows-x64-installer-test
           path: |
             dist/windows/candidate/README_FIRST.txt
+            dist/windows/candidate/windows-candidate-manifest.json
             dist/windows/candidate/*-installer-test-kit.zip
             dist/windows/candidate/*-installer-test-kit.zip.sha256
           if-no-files-found: error
@@ -311,6 +312,7 @@ jobs:
           name: AudioAtlas-${{ steps.package.outputs.version }}-build-${{ github.run_number }}-${{ steps.identity.outputs.short_sha }}-INTERNAL-Windows-x64-portable-test
           path: |
             dist/windows/candidate/README_FIRST.txt
+            dist/windows/candidate/windows-candidate-manifest.json
             dist/windows/candidate/*-portable-test-kit.zip
             dist/windows/candidate/*-portable-test-kit.zip.sha256
           if-no-files-found: error

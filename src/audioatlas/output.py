@@ -5,11 +5,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -61,6 +62,16 @@ PLOT_FILENAMES = frozenset(
     }
 )
 ALL_GENERATED_FILENAMES = frozenset(ROOT_GENERATED_FILENAMES | PLOT_FILENAMES)
+SOURCE_BINDING_FORMAT = "audioatlas-source-binding"
+SOURCE_BINDING_VERSION = 1
+SOURCE_BINDING_ALGORITHM = "sha256"
+_SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
+_GENERATED_FILENAMES_BY_KIND = {
+    "single-track-report": frozenset(SINGLE_REPORT_FILENAMES | PLOT_FILENAMES),
+    "batch-catalog": CATALOG_FILENAMES,
+    "same-track-revision-diff": REVISION_DIFF_FILENAMES,
+    "song-project": PROJECT_FILENAMES,
+}
 
 
 @dataclass(frozen=True)
@@ -68,6 +79,40 @@ class OutputTransaction:
     """Opaque proof that one canonical output destination is locked."""
 
     destination: Path
+
+
+@dataclass(frozen=True)
+class SourceBinding:
+    """Opaque source identity serialized without its local filesystem fields."""
+
+    digest: str
+    source_identity: tuple[int, int, int, int] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+    )
+
+    def __post_init__(self) -> None:
+        if not _SHA256_HEX.fullmatch(self.digest):
+            raise ValueError("Source binding digest must be lowercase SHA-256 hex")
+
+    def to_manifest_dict(self) -> dict[str, object]:
+        return {
+            "format": SOURCE_BINDING_FORMAT,
+            "version": SOURCE_BINDING_VERSION,
+            "algorithm": SOURCE_BINDING_ALGORITHM,
+            "digest": self.digest,
+        }
+
+
+@dataclass(frozen=True)
+class _ManifestOwnership:
+    """Validated file and directory declarations from one output manifest."""
+
+    kind: str
+    files: frozenset[str]
+    directories: frozenset[str]
+    source_binding_digest: str | None
 
 
 @contextmanager
@@ -157,6 +202,7 @@ def write_output_manifest(
     kind: str,
     generated_files: list[str],
     generated_directories: list[str] | None = None,
+    source_binding: SourceBinding | None = None,
 ) -> Path:
     """Write the ownership manifest included in every generated report folder."""
 
@@ -166,11 +212,12 @@ def write_output_manifest(
         "manifest_version": 1,
         "audioatlas_version": __version__,
         "kind": kind,
-        "generated_files": sorted(dict.fromkeys(generated_files)),
-        "generated_directories": sorted(
-            dict.fromkeys(generated_directories or [])
-        ),
+        "generated_files": sorted(generated_files),
+        "generated_directories": sorted(generated_directories or []),
     }
+    if source_binding is not None:
+        payload["source_binding"] = source_binding.to_manifest_dict()
+    _manifest_ownership(payload, context="Output manifest")
     out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return out
 
@@ -179,15 +226,15 @@ def publish_staged_output(
     staging: str | Path,
     destination: str | Path,
     *,
-    owned_filenames: set[str],
+    allowed_staged_filenames: set[str],
     transaction: OutputTransaction | None = None,
 ) -> None:
     """Publish a completed staging directory while preserving unknown files.
 
-    Known AudioAtlas filenames that are absent from the new run are removed,
-    which prevents a full-to-compact rerun from leaving stale plots. Files not
-    owned by AudioAtlas are left untouched. Existing generated artifacts are
-    first moved into a sibling backup; if any individual publication step
+    ``allowed_staged_filenames`` constrains what the current producer may stage;
+    it does not claim existing destination files. Prior-file authority comes
+    only from the destination's validated ownership manifest. Existing owned
+    artifacts are first moved into a sibling backup; if any publication step
     fails, the previous generated set is restored.
     """
 
@@ -198,7 +245,7 @@ def publish_staged_output(
             publish_staged_output(
                 source,
                 target,
-                owned_filenames=owned_filenames,
+                allowed_staged_filenames=allowed_staged_filenames,
                 transaction=acquired,
             )
         return
@@ -223,33 +270,32 @@ def publish_staged_output(
 
     staged_names = {path.name for path in source_entries if path.is_file()}
     staged_directories = {path.name for path in source_entries if path.is_dir()}
-    _validate_staging_manifest(source, staged_names, staged_directories)
-    staged_manifest = _read_output_manifest(source / OUTPUT_MARKER_FILENAME)
+    staged_manifest = _validate_staging_manifest(
+        source,
+        staged_names,
+        staged_directories,
+        allowed_staged_filenames=allowed_staged_filenames,
+    )
     if (
         (target / PROJECT_CONFIG_FILENAME).is_file()
-        and (staged_manifest or {}).get("kind") != "song-project"
+        and staged_manifest.kind != "song-project"
     ):
         raise OutputOwnershipError(
             "Refusing to publish a report into an AudioAtlas song-project root. "
             "Choose a separate output folder."
         )
 
-    allowed_staged_files = owned_filenames | {OUTPUT_MARKER_FILENAME}
-    unexpected_files = staged_names - allowed_staged_files
-    if unexpected_files:
-        joined = ", ".join(repr(name) for name in sorted(unexpected_files))
-        raise ValueError(f"Refusing to publish unowned staged file(s): {joined}")
-
-    invalid_owned_names = {
-        name
-        for name in allowed_staged_files
-        if not name or Path(name).name != name
-    }
-    if invalid_owned_names:
-        joined = ", ".join(repr(name) for name in sorted(invalid_owned_names))
-        raise ValueError(f"Owned output names must be simple filenames: {joined}")
-
-    previous_directories = _previous_owned_directories(target)
+    previous = _previous_owned_entries(target)
+    if (
+        staged_manifest.kind == "single-track-report"
+        and staged_manifest.source_binding_digest is not None
+        and previous.kind == "single-track-report"
+        and previous.source_binding_digest != staged_manifest.source_binding_digest
+    ):
+        raise OutputOwnershipError(
+            "Refusing to replace a report created for a different or ambiguously "
+            "bound source. Choose a different output folder."
+        )
 
     # Validate every predictable collision before deleting or replacing
     # anything. AudioAtlas may update directories it can independently
@@ -257,24 +303,44 @@ def publish_staged_output(
     # merely because a track slug happens to match that folder's name.
     for filename in staged_names:
         destination_path = target / filename
-        if destination_path.is_dir() and not destination_path.is_symlink():
+        if destination_path.is_symlink():
+            raise OutputOwnershipError(
+                "Refusing to replace an output-file symlink: "
+                f"{filename!r}"
+            )
+        if destination_path.is_dir():
             raise OutputOwnershipError(
                 "Refusing to replace an output directory with a file: "
                 f"{filename!r}"
+            )
+        if destination_path.exists() and filename not in previous.files:
+            raise OutputOwnershipError(
+                "Refusing to replace an unowned output file: "
+                f"{filename!r}. Choose a different output folder or move the file."
+            )
+
+    for filename in previous.files:
+        destination_path = target / filename
+        if destination_path.is_symlink() or (
+            destination_path.exists() and not destination_path.is_file()
+        ):
+            raise OutputOwnershipError(
+                "The previous ownership manifest declares a file with an unsafe "
+                f"destination type: {filename!r}"
             )
 
     for directory_name in staged_directories:
         destination_path = target / directory_name
         if (
             destination_path.exists() or destination_path.is_symlink()
-        ) and directory_name not in previous_directories:
+        ) and directory_name not in previous.directories:
             raise OutputOwnershipError(
                 "Refusing to replace an unowned output directory: "
                 f"{directory_name!r}"
             )
 
-    affected_files = allowed_staged_files | staged_names
-    affected_directories = previous_directories | staged_directories
+    affected_files = set(previous.files) | staged_names | {OUTPUT_MARKER_FILENAME}
+    affected_directories = set(previous.directories) | staged_directories
     backup = Path(
         tempfile.mkdtemp(prefix=f".{target.name}.backup-", dir=target.parent)
     )
@@ -339,30 +405,36 @@ def _validate_staging_manifest(
     source: Path,
     staged_names: set[str],
     staged_directories: set[str],
-) -> None:
+    *,
+    allowed_staged_filenames: set[str],
+) -> _ManifestOwnership:
     """Require the staging manifest to describe the staged artifact set."""
 
     manifest = _read_output_manifest(source / OUTPUT_MARKER_FILENAME)
     if manifest is None:
         raise ValueError("Staging folder lacks a recognized AudioAtlas output manifest")
+    ownership = _manifest_ownership(manifest, context="Staging manifest")
+    if "source_binding" in manifest and ownership.source_binding_digest is None:
+        raise ValueError("Staging manifest contains an unsupported or malformed source binding")
+    _validate_allowed_staged_filenames(allowed_staged_filenames)
+    allowed = allowed_staged_filenames | {OUTPUT_MARKER_FILENAME}
+    unexpected_files = staged_names - allowed
+    if unexpected_files:
+        joined = ", ".join(repr(name) for name in sorted(unexpected_files))
+        raise ValueError(f"Refusing to publish unowned staged file(s): {joined}")
 
-    declared_files = _manifest_name_set(manifest.get("generated_files"), "files")
-    declared_directories = _manifest_name_set(
-        manifest.get("generated_directories", []), "directories"
-    )
-    declared_files.add(OUTPUT_MARKER_FILENAME)
-
-    if declared_files != staged_names:
+    if ownership.files != staged_names:
         raise ValueError(
             "Staging manifest does not match generated files: "
-            f"declared={sorted(declared_files)!r}, actual={sorted(staged_names)!r}"
+            f"declared={sorted(ownership.files)!r}, actual={sorted(staged_names)!r}"
         )
-    if declared_directories != staged_directories:
+    if ownership.directories != staged_directories:
         raise ValueError(
             "Staging manifest does not match generated directories: "
-            f"declared={sorted(declared_directories)!r}, "
+            f"declared={sorted(ownership.directories)!r}, "
             f"actual={sorted(staged_directories)!r}"
         )
+    return ownership
 
 
 def _validate_output_root(target: Path) -> None:
@@ -374,30 +446,158 @@ def _validate_output_root(target: Path) -> None:
         raise OutputOwnershipError("Output path exists and is not a folder.")
     if not target.is_dir() or not any(target.iterdir()):
         return
-    existing_manifest = _read_output_manifest(target / OUTPUT_MARKER_FILENAME)
-    legacy_catalog = bool(_previous_owned_directories(target))
+    marker = target / OUTPUT_MARKER_FILENAME
+    if marker.exists() or marker.is_symlink():
+        _previous_owned_entries(target)
+        return
+    legacy_catalog = bool(_legacy_owned_directories(target))
     legacy_project = (target / PROJECT_CONFIG_FILENAME).is_file()
-    if existing_manifest is None and not legacy_catalog and not legacy_project:
+    if not legacy_catalog and not legacy_project:
         raise OutputOwnershipError(
             "The selected output folder is not owned by AudioAtlas. "
             "Choose an empty folder or a different report location."
         )
 
 
-def _manifest_name_set(value: Any, label: str) -> set[str]:
-    """Validate a manifest filename/directory list and return unique names."""
+def _validate_allowed_staged_filenames(names: set[str]) -> None:
+    """Validate a producer's allowlist without turning it into prior ownership."""
+
+    invalid = {
+        name
+        for name in names
+        if not isinstance(name, str)
+        or not _is_simple_name(name)
+        or name not in ALL_GENERATED_FILENAMES
+    }
+    if invalid:
+        joined = ", ".join(repr(name) for name in sorted(invalid, key=repr))
+        raise ValueError(f"Unsupported staged output filename(s): {joined}")
+
+
+def _manifest_ownership(
+    manifest: dict[str, Any],
+    *,
+    context: str,
+) -> _ManifestOwnership:
+    """Validate declarations without inferring ownership from global names."""
+
+    kind = manifest.get("kind")
+    if not isinstance(kind, str) or kind not in _GENERATED_FILENAMES_BY_KIND:
+        raise ValueError(f"{context} has an unsupported output kind: {kind!r}")
+    allowed_files = _GENERATED_FILENAMES_BY_KIND[kind] | {OUTPUT_MARKER_FILENAME}
+    files = _manifest_name_set(
+        manifest.get("generated_files"),
+        "files",
+        context=context,
+        allowed_names=allowed_files,
+    )
+    directories = _manifest_name_set(
+        manifest.get("generated_directories"),
+        "directories",
+        context=context,
+        directory_names=True,
+    )
+    if directories and kind != "batch-catalog":
+        raise ValueError(
+            f"{context} kind {kind!r} cannot declare generated directories"
+        )
+
+    files.add(OUTPUT_MARKER_FILENAME)
+    file_keys = {name.casefold() for name in files}
+    directory_keys = {name.casefold() for name in directories}
+    overlap = file_keys & directory_keys
+    if overlap:
+        raise ValueError(
+            f"{context} ambiguously declares the same file and directory name: "
+            f"{sorted(overlap)!r}"
+        )
+    return _ManifestOwnership(
+        kind=kind,
+        files=frozenset(files),
+        directories=frozenset(directories),
+        source_binding_digest=_source_binding_digest(manifest.get("source_binding")),
+    )
+
+
+def manifest_matches_source_binding(
+    manifest: dict[str, Any], source_binding: SourceBinding
+) -> bool:
+    """Return whether a manifest has this exact supported source binding."""
+
+    return _source_binding_digest(manifest.get("source_binding")) == source_binding.digest
+
+
+def _source_binding_digest(value: Any) -> str | None:
+    """Return a supported binding digest; reject legacy, future, or malformed values."""
+
+    if not isinstance(value, dict) or set(value) != {
+        "format",
+        "version",
+        "algorithm",
+        "digest",
+    }:
+        return None
+    if value.get("format") != SOURCE_BINDING_FORMAT:
+        return None
+    if value.get("version") != SOURCE_BINDING_VERSION:
+        return None
+    if value.get("algorithm") != SOURCE_BINDING_ALGORITHM:
+        return None
+    digest = value.get("digest")
+    if not isinstance(digest, str) or not _SHA256_HEX.fullmatch(digest):
+        return None
+    return digest
+
+
+def _manifest_name_set(
+    value: Any,
+    label: str,
+    *,
+    context: str,
+    allowed_names: frozenset[str] | None = None,
+    directory_names: bool = False,
+) -> set[str]:
+    """Validate a manifest filename/directory list and reject ambiguity."""
 
     if not isinstance(value, list):
-        raise ValueError(f"Staging manifest generated_{label} must be a list")
+        raise ValueError(f"{context} generated_{label} must be a list")
     names: set[str] = set()
+    normalized_names: set[str] = set()
     for item in value:
-        if not isinstance(item, str) or not item or Path(item).name != item:
+        valid_name = isinstance(item, str) and _is_simple_name(item)
+        if directory_names:
+            valid_name = valid_name and _is_supported_directory_name(item)
+        elif allowed_names is not None:
+            valid_name = valid_name and item in allowed_names
+        if not valid_name:
             raise ValueError(
-                f"Staging manifest contains an invalid generated_{label} entry: "
+                f"{context} contains an invalid or unsupported generated_{label} entry: "
                 f"{item!r}"
             )
+        normalized = item.casefold()
+        if normalized in normalized_names:
+            raise ValueError(
+                f"{context} contains a duplicate or ambiguous generated_{label} "
+                f"entry: {item!r}"
+            )
         names.add(item)
+        normalized_names.add(normalized)
     return names
+
+
+def _is_simple_name(name: str) -> bool:
+    """Return whether a name is one cross-platform path component."""
+
+    return bool(name) and name not in {".", ".."} and "/" not in name and "\\" not in name
+
+
+def _is_supported_directory_name(name: str) -> bool:
+    """Match the direct-child names emitted by the batch slug generator."""
+
+    return (
+        name == name.strip("-_")
+        and all(character.isalnum() or character in {"-", "_"} for character in name)
+    )
 
 
 def _rollback_publication(
@@ -454,34 +654,77 @@ def _remove_path(path: Path) -> None:
         shutil.rmtree(path)
 
 
-def _previous_owned_directories(target: Path) -> set[str]:
-    """Read directories demonstrably owned by an earlier AudioAtlas batch."""
+def _previous_owned_entries(target: Path) -> _ManifestOwnership:
+    """Return only entries authorized by a validated previous manifest."""
 
     marker = target / OUTPUT_MARKER_FILENAME
-    if marker.exists():
-        payload = _read_output_manifest(marker)
-        if payload is None or payload.get("kind") != "batch-catalog":
-            return set()
-        values = payload.get("generated_directories")
-        if not isinstance(values, list):
-            return set()
-        owned: set[str] = set()
-        for value in values:
-            if not isinstance(value, str) or not value or Path(value).name != value:
-                continue
-            report_dir = target / value
-            if report_dir.is_symlink() or not report_dir.is_dir():
-                continue
-            child_manifest = _read_output_manifest(
-                report_dir / OUTPUT_MARKER_FILENAME
-            )
-            if child_manifest is not None and child_manifest.get("kind") == (
-                "single-track-report"
-            ):
-                owned.add(value)
-        return owned
+    if not marker.exists() and not marker.is_symlink():
+        legacy_directories = _legacy_owned_directories(target)
+        return _ManifestOwnership(
+            kind="batch-catalog" if legacy_directories else "",
+            files=frozenset(),
+            directories=frozenset(legacy_directories),
+            source_binding_digest=None,
+        )
 
-    # Narrow compatibility recovery for legacy pre-manifest catalogs. A directory
+    payload = _read_output_manifest(marker)
+    if payload is None:
+        raise OutputOwnershipError(
+            "The existing AudioAtlas ownership manifest is unreadable or unrecognized. "
+            "Choose a different output folder."
+        )
+    try:
+        declared = _manifest_ownership(payload, context="Existing output manifest")
+    except ValueError as exc:
+        raise OutputOwnershipError(
+            "The existing AudioAtlas ownership manifest has unsafe or malformed "
+            f"declarations: {exc}"
+        ) from exc
+
+    owned_directories: set[str] = set()
+    for name in declared.directories:
+        report_dir = target / name
+        if report_dir.is_symlink():
+            raise OutputOwnershipError(
+                "The previous ownership manifest declares a directory symlink: "
+                f"{name!r}"
+            )
+        if not report_dir.exists():
+            continue
+        if not report_dir.is_dir():
+            raise OutputOwnershipError(
+                "The previous ownership manifest declares a directory with an unsafe "
+                f"destination type: {name!r}"
+            )
+        child_marker = report_dir / OUTPUT_MARKER_FILENAME
+        child_manifest = _read_output_manifest(child_marker)
+        if child_manifest is None:
+            continue
+        try:
+            child = _manifest_ownership(
+                child_manifest,
+                context=f"Child output manifest for {name!r}",
+            )
+        except ValueError as exc:
+            raise OutputOwnershipError(
+                "A child AudioAtlas ownership manifest has unsafe or malformed "
+                f"declarations: {exc}"
+            ) from exc
+        if child.kind == "single-track-report":
+            owned_directories.add(name)
+
+    return _ManifestOwnership(
+        kind=declared.kind,
+        files=declared.files,
+        directories=frozenset(owned_directories),
+        source_binding_digest=declared.source_binding_digest,
+    )
+
+
+def _legacy_owned_directories(target: Path) -> set[str]:
+    """Return narrowly recognized pre-manifest catalog report directories."""
+
+    # Compatibility recovery never grants authority over root files. A directory
     # is adopted only when the catalog has the exact old schema, its report path
     # is one direct child, and the expected AudioAtlas report files are present.
     catalog_path = target / "catalog_summary.json"

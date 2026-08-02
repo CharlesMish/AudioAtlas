@@ -6,6 +6,7 @@ Internal convention throughout AudioAtlas:
 
 from __future__ import annotations
 
+import hashlib
 import math
 import os
 from dataclasses import asdict, dataclass
@@ -16,7 +17,11 @@ import soundfile as sf
 from numpy.typing import NDArray
 
 from audioatlas.errors import AudioLoadError, SourceChangedError
+from audioatlas.output import SourceBinding
 from audioatlas.utils import ensure_2d_audio
+
+_SOURCE_BINDING_DOMAIN = b"AudioAtlas source binding v1\x00"
+_SOURCE_BINDING_CHUNK_BYTES = 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -56,6 +61,35 @@ class AudioData:
     y: NDArray[np.float32]
     sr: int
     metadata: AudioMetadata
+    source_binding: SourceBinding
+
+
+def compute_source_binding(path: str | Path) -> SourceBinding:
+    """Stream an opaque content-and-file identity without serializing its path."""
+
+    source = Path(path).expanduser()
+    try:
+        source_before = _source_identity(source)
+        if not source.is_file():
+            raise OSError("path is not a regular file")
+        digest = hashlib.sha256()
+        digest.update(_SOURCE_BINDING_DOMAIN)
+        for value in (
+            os.path.normcase(source.name).encode("utf-8"),
+            str(source_before[0]).encode("ascii"),
+            str(source_before[1]).encode("ascii"),
+        ):
+            digest.update(len(value).to_bytes(8, "big"))
+            digest.update(value)
+        with source.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(_SOURCE_BINDING_CHUNK_BYTES), b""):
+                digest.update(chunk)
+        source_after = _source_identity(source)
+    except OSError as exc:
+        raise AudioLoadError(source, f"source binding could not be computed ({exc})") from exc
+    if source_after != source_before:
+        raise SourceChangedError(source)
+    return SourceBinding(digest.hexdigest(), source_identity=source_before)
 
 
 def load_audio(
@@ -65,6 +99,7 @@ def load_audio(
     start_seconds: float | None = None,
     end_seconds: float | None = None,
     include_local_paths: bool = False,
+    source_binding: SourceBinding | None = None,
 ) -> AudioData:
     """Load audio without auto-normalizing level.
 
@@ -94,6 +129,13 @@ def load_audio(
         source_before = _source_identity(p)
     except OSError as exc:
         raise AudioLoadError(p, f"file metadata could not be inspected ({exc})") from exc
+    if source_binding is None:
+        source_binding = compute_source_binding(p)
+    elif (
+        source_binding.source_identity is not None
+        and source_binding.source_identity != source_before
+    ):
+        raise SourceChangedError(p)
 
     try:
         info = sf.info(str(p))
@@ -178,7 +220,12 @@ def load_audio(
         path_kind="absolute" if include_local_paths else "basename",
         local_paths_included=include_local_paths,
     )
-    return AudioData(y=y, sr=int(sr), metadata=metadata)
+    return AudioData(
+        y=y,
+        sr=int(sr),
+        metadata=metadata,
+        source_binding=source_binding,
+    )
 
 
 def _source_identity(path: Path) -> tuple[int, int, int, int]:

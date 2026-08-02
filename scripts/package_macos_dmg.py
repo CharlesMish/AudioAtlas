@@ -304,40 +304,84 @@ def _verify_exact_app_entitlements(app: Path) -> None:
 
 
 def _verify_mounted_dmg(dmg: Path) -> None:
-    attached = _run(
-        "hdiutil",
-        "attach",
-        "-readonly",
-        "-nobrowse",
-        "-plist",
-        str(dmg),
-        capture_output=True,
-        timeout=MOUNT_TIMEOUT_SECONDS,
-        context="Attach DMG for postpackaging audit",
-    )
-    payload = plistlib.loads(attached.stdout.encode("utf-8"))
-    mount_points = [
-        entity.get("mount-point")
-        for entity in payload.get("system-entities", [])
-        if entity.get("mount-point")
-    ]
-    if len(mount_points) != 1:
-        raise SystemExit(f"Expected one mounted DMG volume, found {mount_points!r}")
-    mount = Path(mount_points[0])
-    try:
-        if {entry.name for entry in mount.iterdir()} != {"AudioAtlas.app", "Applications"}:
-            raise SystemExit("DMG must contain exactly AudioAtlas.app and Applications")
-        applications = mount / "Applications"
-        if not applications.is_symlink() or applications.readlink() != Path("/Applications"):
-            raise SystemExit("DMG Applications item must link to /Applications")
-    finally:
-        _run(
+    with tempfile.TemporaryDirectory(
+        prefix="audioatlas-dmg-mount-", ignore_cleanup_errors=True
+    ) as temporary:
+        mount = Path(temporary) / "volume"
+        mount.mkdir()
+        attached = _run(
             "hdiutil",
-            "detach",
+            "attach",
+            "-readonly",
+            "-nobrowse",
+            "-plist",
+            "-mountpoint",
             str(mount),
-            timeout=DETACH_TIMEOUT_SECONDS,
-            context="Detach DMG for postpackaging audit",
+            str(dmg),
+            capture_output=True,
+            check=False,
+            timeout=MOUNT_TIMEOUT_SECONDS,
+            context="Attach DMG for postpackaging audit",
         )
+        try:
+            if getattr(attached, "returncode", 0) != 0:
+                raise SystemExit(
+                    "hdiutil attach failed after cleanup became necessary: "
+                    f"stdout={attached.stdout!r} stderr={attached.stderr!r}"
+                )
+            try:
+                payload = plistlib.loads(attached.stdout.encode("utf-8"))
+            except (plistlib.InvalidFileException, TypeError, ValueError) as exc:
+                raise SystemExit("hdiutil attach returned an invalid plist") from exc
+            if not isinstance(payload, dict):
+                raise SystemExit("hdiutil attach plist must contain a dictionary")
+            entities = payload.get("system-entities")
+            if not isinstance(entities, list) or not all(
+                isinstance(entity, dict) for entity in entities
+            ):
+                raise SystemExit("hdiutil attach plist has invalid system-entities")
+            mount_points = [
+                entity["mount-point"]
+                for entity in entities
+                if "mount-point" in entity
+            ]
+            if not all(isinstance(point, str) and point for point in mount_points):
+                raise SystemExit("hdiutil attach plist has an invalid mount-point")
+            if len(mount_points) != 1:
+                raise SystemExit(f"Expected one mounted DMG volume, found {mount_points!r}")
+            if Path(mount_points[0]).resolve() != mount.resolve():
+                raise SystemExit("DMG mounted somewhere other than the requested mount point")
+
+            if {entry.name for entry in mount.iterdir()} != {
+                "AudioAtlas.app",
+                "Applications",
+            }:
+                raise SystemExit("DMG must contain exactly AudioAtlas.app and Applications")
+            applications = mount / "Applications"
+            if not applications.is_symlink() or applications.readlink() != Path(
+                "/Applications"
+            ):
+                raise SystemExit("DMG Applications item must link to /Applications")
+        except BaseException as verification_error:
+            try:
+                _run(
+                    "hdiutil",
+                    "detach",
+                    str(mount),
+                    timeout=DETACH_TIMEOUT_SECONDS,
+                    context="Detach DMG for postpackaging audit",
+                )
+            except BaseException as detach_error:
+                verification_error.add_note(f"DMG detach also failed: {detach_error}")
+            raise
+        else:
+            _run(
+                "hdiutil",
+                "detach",
+                str(mount),
+                timeout=DETACH_TIMEOUT_SECONDS,
+                context="Detach DMG for postpackaging audit",
+            )
 
 
 def _assert_macos_file_hash_consistent(dmg: Path, manifest: dict[str, object]) -> None:

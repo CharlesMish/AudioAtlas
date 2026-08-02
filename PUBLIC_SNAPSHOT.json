@@ -9,12 +9,16 @@
       "sha256": "4f4173338864165589a0e5ac471bc0c406c00aea190107e6b0fed4d84d05c001"
     },
     {
+      "path": ".github/pages-assets/audioatlas-0.2.0a8-release-hero.png",
+      "sha256": "a0457c41066b0133de6773f86e8d4c59aefa9f900cd2928392946da3fbc19343"
+    },
+    {
       "path": ".github/workflows/ci.yml",
       "sha256": "87cf6a770e19ed44206d7738141a92c3c78a0f31fc6c23e7d6b58f192255fb0f"
     },
     {
       "path": ".github/workflows/macos-app.yml",
-      "sha256": "6cc10eeaf5279d57cc6e029a5e77ba5b8adae2559a957c3acaba3ca3dff6f6a0"
+      "sha256": "e244cbb351698b3ada286862eda8a6b626647f8c5f291e520af55be9f49b64f6"
     },
     {
       "path": ".github/workflows/macos-demo-candidate.yml",
@@ -22,11 +26,11 @@
     },
     {
       "path": ".github/workflows/pages.yml",
-      "sha256": "d74cb9420fcd7b378d725b76e30373ea10ac09c7f4a9614438406b4f79622936"
+      "sha256": "c0bc5e843c8893f3459c8bc421d6b399a1088f7a0fd1a04a04a98f6c720b203b"
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "690982cf08e9dd5beaf4fc60257857351873e61bb4003a4f28514641e88d2c9f"
+      "sha256": "9137982d45f71942ba0d78f1fa06d2235914ec1fcd49a959d56809ded9816563"
     },
     {
       "path": ".github/workflows/testpypi.yml",
@@ -34,7 +38,7 @@
     },
     {
       "path": ".github/workflows/windows-demo-candidate.yml",
-      "sha256": "4110ad6f04f97dfea9b511d1c914dc1a300f404b6ac9ae09cfcb6cd871a2abf9"
+      "sha256": "7ae6dd7b38916bc37e55b57262e8ad1093ca7a55b659043942799da689ff4ed1"
     },
     {
       "path": ".gitignore",
@@ -62,11 +66,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "941d06ca0f46008fe3ea317fe15add75e720010155acfd70125be7a69cdd8d3f"
+      "sha256": "89e54fd1af7edfb020ea28e079ba742349f5b0d602f19ba66463f69aa9ade805"
     },
     {
       "path": "README_EASY_RUN.md",
-      "sha256": "6d4c54f9aa7664e97deee61fb8701bd01295456ffb18e1df6bcdc27871a9b035"
+      "sha256": "f93cd5391eda55999bbae9eddaad61f43ddb365437434654d4029e837600389f"
     },
     {
       "path": "SECURITY.md",
@@ -74,19 +78,19 @@
     },
     {
       "path": "docs/ALPHA_LIMITATIONS.md",
-      "sha256": "9c42e88cdecd670d55b2e16b2ccb8f03f06e09ab8dcc4283008e811d659e27d5"
+      "sha256": "65ae1ab7f8002a8e1919edf27ecb54c9fd684e4741d28a12471b5323ba46530c"
     },
     {
       "path": "docs/ARCHITECTURE.md",
-      "sha256": "52dc0a4532985212985ac4c863acdc0b66436a9fc7f78de31d90ea84b461cec0"
+      "sha256": "92f3edcb779224509718fedc8d354dcc75c24494de82adc3065abdf35c85e7f3"
     },
     {
       "path": "docs/CHANGELOG.md",
-      "sha256": "70fff50b10870d40235b498484270868a8fa70e2dca574a8bdf076ff43424f89"
+      "sha256": "06f00c033a042576afff25e49747e127ae811ea292b5d56b55c4219edc073000"
     },
     {
       "path": "docs/COMPATIBILITY.md",
-      "sha256": "91b7fbdd228660bdb6a60373b17153a111bf3cc4fb5206d2dbf467d0fff76c0c"
+      "sha256": "224db75bd945c9f1db907984f015291e08ea628bcabf5c266320e85b194c17fb"
     },
     {
       "path": "docs/FINDING_RULES.md",
@@ -94,7 +98,7 @@
     },
     {
       "path": "docs/MACOS_APP_RELEASE.md",
-      "sha256": "0740987fc45872c484ba2db8fb694344f216ee698b6cd7bcdcd0cfc9ac1c4ac0"
+      "sha256": "7283193e124bd6985d4b0cc2d5a36190e516bebe1e952649370ba71a38e65b98"
     },
     {
       "path": "docs/MACOS_DEMO_GUIDE.md",
@@ -106,15 +110,15 @@
     },
     {
       "path": "docs/SUMMARY_SCHEMA.md",
-      "sha256": "24c3011b9afc59bd4ddf3a1d51e1c135de73b7d5f13b503fb2398d1f1083f09e"
+      "sha256": "0c032bb98be0b0662cecb6d5ae1a3152d258157e131b5a60a596007804b2ca4f"
     },
     {
       "path": "docs/USER_GUIDE.md",
-      "sha256": "ea71acd457f6ff9d4dd348714c96b6e440bd489547389c892b94ea6470952543"
+      "sha256": "734285e75b7ccae22b5c78fc1f912cd9301da69d62a0f053cb89710e9fcb91a3"
     },
     {
       "path": "docs/WINDOWS_DEMO_GUIDE.md",
-      "sha256": "27ec84bbc775376f0d24d5c298aeec362e1b615f079e56402a8576e1a9271a35"
+      "sha256": "f031e1dd2da1282252f8da1f77b3dc64ba25b4bbf0e96fc19be3166fec766645"
     },
     {
       "path": "docs/WINDOWS_PACKAGING_DESIGN.md",
@@ -162,19 +166,19 @@
     },
     {
       "path": "packaging/macos/AudioAtlas.spec",
-      "sha256": "0ce4cef1281b4b4784fd5dadbb58332b56dc0fe5e98012835920b08dd65a07a3"
+      "sha256": "d48d5adefbe580f5adc62d1d2a3c5b6d64ec493e46d102fc28bd0fab3a3fb1b1"
     },
     {
       "path": "packaging/windows/AudioAtlas.iss",
-      "sha256": "a5855d5d3dcb3d343b4bb0c5976cae045089363f21e572f8c24de97b619b30e3"
+      "sha256": "91fea94c9a9ac3a61946d50a1a3a3238a0d76758c491429e23fca88974b9c231"
     },
     {
       "path": "packaging/windows/AudioAtlas.spec",
-      "sha256": "123abfc9f5457f7647640a63f232b2cfea733484013fef52945c94e30564bdec"
+      "sha256": "bb7e4ebd777f34fdc2f122e8f09de19448a706434769d1de0829d301b3a09993"
     },
     {
       "path": "pyproject.toml",
-      "sha256": "062099d709c0e4ecdde77f7c8c72e23dfdde364eeeb9b553d5b9031e61c2840b"
+      "sha256": "7fba6f32bb040f56485b2fb64c506a164572ff8924ed6962584c9f8a07d29a34"
     },
     {
       "path": "scripts/__init__.py",
@@ -182,15 +186,15 @@
     },
     {
       "path": "scripts/audit_windows_distribution.py",
-      "sha256": "c36cec85fe44473af0ac938bba1c12a62fa2cdbdff29d59a966130fe94892020"
+      "sha256": "9c6a80946f50335836ff3608cfe0ffafc56ffd9019384bd475a488a0e5df464a"
     },
     {
       "path": "scripts/build_macos_app.py",
-      "sha256": "683d2b38b9d244155ee3b00bd6e7613c604cc2d0a13fad4bf9b01a43a6232797"
+      "sha256": "4a12a12cf401f80b19e7cd9a4e008c27e057bb600859bd24124ddc2f0f72997b"
     },
     {
       "path": "scripts/build_windows_app.py",
-      "sha256": "98e6629f33a9fd6a5ae5a3f724c23cdcaa7580617bbd129295b0f993118f7969"
+      "sha256": "d551c754c43fb277bc03f1f62fd9c8dc51c5b1374e9235d57dcf8e8d57860aa7"
     },
     {
       "path": "scripts/check_package_index.py",
@@ -198,11 +202,11 @@
     },
     {
       "path": "scripts/package_macos_dmg.py",
-      "sha256": "e278d8211434aa7fe9353e3f35cdd2df90656b99a38bb3ce470bca317f3b4938"
+      "sha256": "0e1e5ca13e89a05f88db24e4a91402183825689cc1385d14c1499a42642383d6"
     },
     {
       "path": "scripts/package_windows_candidate.py",
-      "sha256": "8a6a92f52eb452015069bc5774e0d7d5d41ed294314993ea626108d984a2144e"
+      "sha256": "3265356030e6b8594ab849915baf1badef7c72da351a787250d0005a3caae340"
     },
     {
       "path": "scripts/public_snapshot.py",
@@ -222,11 +226,15 @@
     },
     {
       "path": "scripts/verify_windows_candidate.py",
-      "sha256": "577df013856e28ffaed84d4ce042b3b6975a9761234ad2709688a42b986de577"
+      "sha256": "2ebd5035bfbd73d67c655cf366e0217b7baa44b75042225b775f9afe3b5ea259"
+    },
+    {
+      "path": "scripts/windows_inventory.py",
+      "sha256": "2c83638fe4328fc7d6b4c2afe49d060faf319c9a5ce1f00746f152bd1867ac04"
     },
     {
       "path": "src/audioatlas/__init__.py",
-      "sha256": "0457f7d5813b856b4c61aea66f0dcfef9c9044d9e270b8d375ec6125b13194cb"
+      "sha256": "90ff04356f3ac9d3ba633ca86cb1ac60508ad92a93143a6073427cdfcd7f0e09"
     },
     {
       "path": "src/audioatlas/__main__.py",
@@ -274,11 +282,11 @@
     },
     {
       "path": "src/audioatlas/app_core.py",
-      "sha256": "e66c2c2f4361e8bfbb4f49161b467dd0f9b1dee2c327b3f714c550675d937f4b"
+      "sha256": "bd109038e9dd9bc4702a401046bd400ec64e288cf014465cb6dfdd9b012920d3"
     },
     {
       "path": "src/audioatlas/batch.py",
-      "sha256": "83b3b91a93b365b36f02a899bc639985da3ecf87db76e78eb43e10af27c9e2db"
+      "sha256": "fceff76ed2cfc3803a582648a01f067128495c38e46b553cc7eef5ede8e4ac24"
     },
     {
       "path": "src/audioatlas/catalog_report.py",
@@ -294,11 +302,11 @@
     },
     {
       "path": "src/audioatlas/desktop_controller.py",
-      "sha256": "57d6bb7a2dea4ab8d90b2e18eaca0c8d3ed9f4cc2e8f5b89057c535a95815eee"
+      "sha256": "02d12dfc0a88ed76517bb59928e2beb281cac313eb4efb29a9d25cf23c718894"
     },
     {
       "path": "src/audioatlas/desktop_runtime.py",
-      "sha256": "f6e63e6c5849ac249b82df69d8dd12ceab67f33acad6a537c53582fe909bf7f1"
+      "sha256": "8b8c0e22bb2fbf0267756d901740d3ede59d5bee9dcc7f1b5aedae48bcc333b7"
     },
     {
       "path": "src/audioatlas/desktop_smoke.py",
@@ -322,7 +330,7 @@
     },
     {
       "path": "src/audioatlas/graphs/registry.py",
-      "sha256": "e0f4ea3333be94d647784038d8bb763f153882e398ef3022cd38b7e2e8bbbab7"
+      "sha256": "952722421d964406fb6e3790a8001b84b63c826b7ce271cd08251e22b5d99d0e"
     },
     {
       "path": "src/audioatlas/graphs/selection.py",
@@ -330,15 +338,15 @@
     },
     {
       "path": "src/audioatlas/html_report.py",
-      "sha256": "62ce320e7d7feef71a4244ea73fba27ee902cf7aaeee38fae010a63032e88f38"
+      "sha256": "4a0f4715aea40ef45452a11e82f8538236461184cf02437f0b13fbd1e3436510"
     },
     {
       "path": "src/audioatlas/io.py",
-      "sha256": "2a8c9148027f03b2900494e84d6107592911c4f44526bc87e563e4f747cccc23"
+      "sha256": "9865c4596592967ab45fedae3b0323a28e49d022ffab16d3f039e436b742560b"
     },
     {
       "path": "src/audioatlas/macos_app.py",
-      "sha256": "abee5e0813b63b751f23fbb602d0316badf3d6c74d4399f79e1e9e30d66c7d39"
+      "sha256": "473aa56647fd85d73a474754abaa7f97016e83bf95bb9ceef8ed4103d9b7bd9a"
     },
     {
       "path": "src/audioatlas/markdown.py",
@@ -346,11 +354,11 @@
     },
     {
       "path": "src/audioatlas/output.py",
-      "sha256": "4f09273a6778170211eb2ce8c87b5a97be0dd484c89d0a8bffd031af3ac787ef"
+      "sha256": "207ed81980bfd37a66b42f156a52eb7f2e5c3c5dd67b7f13d48ab4875c0362ec"
     },
     {
       "path": "src/audioatlas/pipeline.py",
-      "sha256": "0ae9fb89edfdeeef4556a36c870907aa2e0b89f978ac6b290a03e34fafb478e2"
+      "sha256": "e860bc3954cbbf9013ce86367c5f90bfb0b4d497c8151cdadf4a90452c583996"
     },
     {
       "path": "src/audioatlas/plot_theme.py",
@@ -362,7 +370,7 @@
     },
     {
       "path": "src/audioatlas/project.py",
-      "sha256": "22b1a2f380c19fe75d16f1ba639e65688449780a02ad9b22bdd5c7af894eb57b"
+      "sha256": "d95c8d289d9830cf6a015dbd9792a5d634f4d478fdd688ec9998822fa4d07d91"
     },
     {
       "path": "src/audioatlas/provenance.py",
@@ -370,7 +378,7 @@
     },
     {
       "path": "src/audioatlas/release.py",
-      "sha256": "315aa53c9b97fbb30971ca8e16465e6d661ec13c3cb531b2498cef60f8071a8b"
+      "sha256": "bcb0a68a2939670f237a241d56e9c184d74dcb95a58aa23207136cee68fe0f21"
     },
     {
       "path": "src/audioatlas/report.py",
@@ -378,7 +386,7 @@
     },
     {
       "path": "src/audioatlas/revision_diff.py",
-      "sha256": "3177c3b93de4d2d74a9ec59fd372c4070171ed54b1961617286d605c14734fe4"
+      "sha256": "08da583e308d8f12b913f514daaacfd4ae6dc4fdee5e84a3ff9c741d28ba1f8f"
     },
     {
       "path": "src/audioatlas/run_contract.py",
@@ -446,7 +454,7 @@
     },
     {
       "path": "src/audioatlas/windows_app.py",
-      "sha256": "b77220b18a240f58ab94c1152d45402e2bfb11cb72864b29fc363794f5bd2a66"
+      "sha256": "855188f1b5707433a7d6e4a936c2640a06ae6d8baeed30f3cfcfa33dbe1bc4bb"
     },
     {
       "path": "starter_kit/PUT_AUDIO_HERE/.gitkeep",
@@ -522,7 +530,7 @@
     },
     {
       "path": "tests/test_app_core.py",
-      "sha256": "8e45c74cbf84a47ffcde6e9324d256b62212cc87545463558cba01a7d7b2e01f"
+      "sha256": "d12ebe967e8b8b593ccbb0c3e9aa312f9905bf7eaa4ec90d9cf14723954add1c"
     },
     {
       "path": "tests/test_batch.py",
@@ -550,11 +558,11 @@
     },
     {
       "path": "tests/test_desktop_controller.py",
-      "sha256": "34c3517930a69fb5f5b1030fa9da48b2a47bf5b7d722d23df30056c6f097e4e9"
+      "sha256": "e29af15f9ec43d19fd6367ea63fc1d6c64ef000a7686a474bb5ce8c17b241ec7"
     },
     {
       "path": "tests/test_desktop_runtime.py",
-      "sha256": "b878addca363f12248f06fc48a931ec5d90670317d0db8e3455326950acfa998"
+      "sha256": "e61081b028b70f8312b49585408688f3378d6b525d3c65e41d3481c44ef3a5ae"
     },
     {
       "path": "tests/test_distribution_artifacts.py",
@@ -586,7 +594,7 @@
     },
     {
       "path": "tests/test_io.py",
-      "sha256": "e7bad54228d4f30ecdd6a883ec373cbb9752093e3fac0e828dbbafa9252da93c"
+      "sha256": "c64778d90296d4f76eab32893b3bce2615a401bc1d7a7acadf2160f62307d49a"
     },
     {
       "path": "tests/test_launchers.py",
@@ -602,7 +610,11 @@
     },
     {
       "path": "tests/test_macos_app.py",
-      "sha256": "96b0de77f71280ae15af8256e025bb31a5f3be5346020b44723e2aaee9d5938a"
+      "sha256": "90f45ee69d7ea38456d1a4d15ac8690872e63bca4faac8c1c11157c18c1d0ee0"
+    },
+    {
+      "path": "tests/test_macos_native_audit.py",
+      "sha256": "30b5fed76a891e56a2034a12403e2c5159be40ca08ea2410f3285eafa1f89f0f"
     },
     {
       "path": "tests/test_malformed_audio.py",
@@ -614,19 +626,19 @@
     },
     {
       "path": "tests/test_output.py",
-      "sha256": "e4cbbab62427dab6d2b3343003b1328d4a56ac52b6f22541e172e777b0e9f4d7"
+      "sha256": "8961d44983da968400957acd51a92d406c749c105a33d0cdb21bfe278e448e8a"
     },
     {
       "path": "tests/test_package_index.py",
-      "sha256": "83b69d57d347ef887702041b27f2866040e64aef514a1be3cd34312ea7826d9d"
+      "sha256": "049c137e2130fe24abcd4bfaa5df8ab9f111051f17921fb1df98a1fa66d3e6c4"
     },
     {
       "path": "tests/test_package_macos_dmg.py",
-      "sha256": "182d96262b6d3cd43edd534801d54cd0ae4a9a2cb19d165d53b2622299eab8d0"
+      "sha256": "4c4e5853a8ea755e5a66fccfee05333ce500e87dc92846a624282b763955a898"
     },
     {
       "path": "tests/test_pipeline.py",
-      "sha256": "53552e0a01fb778df9ce3439a1c2f2848a625d905d683acdc5c44a3d26316791"
+      "sha256": "7b169bcdee2003538529a0f6f58c0e263427a725e95075f9963accfe59fde883"
     },
     {
       "path": "tests/test_plot_theme.py",
@@ -650,19 +662,19 @@
     },
     {
       "path": "tests/test_release.py",
-      "sha256": "e0ec5f8ed7f1e5d4b944b1d5fc545e7ce4f2beda9d97a7b61008a5f26d53062c"
+      "sha256": "a64612421f9607f2e7228b694dd4187318463fc70b12550d929e8f6e0749afa2"
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "b10149b716e042d655a2ed124ff3999eb30f34ac42dfa30c645c26cbf5b58318"
+      "sha256": "5363079ee4a6b32b53cf5ea857b5a67253d01ddd0823f83ad8d573195c9e0379"
     },
     {
       "path": "tests/test_report.py",
-      "sha256": "b9b09875e48f1c8734ed6327f93277daaa71bedd7354e706b49e2fb80f3ef262"
+      "sha256": "e3d75cd285eb8346d07390918b2a3dd3d12355dae89fadcf396bc606a7218d68"
     },
     {
       "path": "tests/test_revision_diff.py",
-      "sha256": "b4431a7abb2fe1612dc5092120b7b1f1dc7f24a44b3211478ae4109a9e7231e5"
+      "sha256": "ee7f8e20b1bc33754d02a33078a20d7b5069baa54d3cd11845935ce97445e93d"
     },
     {
       "path": "tests/test_spectral.py",
@@ -686,24 +698,28 @@
     },
     {
       "path": "tests/test_windows_app.py",
-      "sha256": "af90e6e1de961f8c2f670de4611f07328882943cbfeccf51ecfad8814ac2e42a"
+      "sha256": "c40484b28a589d5b84b9ffda343fff4564db0faf5c2c51e3b74fe749bd4ae009"
     },
     {
       "path": "tests/test_windows_candidate_hardening.py",
-      "sha256": "fd8ef65573b6d92a5bad906f8ffbe422538fd5f03f08306d837a79f6f95a7409"
+      "sha256": "027367c0cbe49320a6427ff47388f26179bc1bd1dc156ba51250689efd791d1f"
+    },
+    {
+      "path": "tests/test_windows_native_audit.py",
+      "sha256": "f01bcc0ce7e4ecfcc9d31e7b272b69e7ed1b40b30a1f89f5e091dd12893ee6b5"
     },
     {
       "path": "tests/test_windows_packaging.py",
-      "sha256": "2fea3be56fe227f96170438a91186493bff5ea8b6c0979e43c2556f850afa9dc"
+      "sha256": "f45c74dda18de90a2ac4bf99f51a8b3e0ee6033450d213ea47f95ffd6c3ff297"
     },
     {
       "path": "uv.lock",
-      "sha256": "718949a224e73cfe1638b83508cd92a6b68eac020fffedfd448e5890d89365f1"
+      "sha256": "7e621ab9f4e80036ae2674f9e3c8939380f7a830dd1f9143aa5c90c68ade2264"
     }
   ],
   "format_version": 1,
-  "included_file_count": 175,
-  "package_version": "0.2.0a7",
-  "public_tree_sha256": "daf4a782db39c8735adbdc03c33dd9ccf0f2bbe5e1e0063977590ce18f376abd",
-  "source_commit": "e69fb41fd5a368e1867b50e6567261d3c5ed921a"
+  "included_file_count": 179,
+  "package_version": "0.2.0a8",
+  "public_tree_sha256": "72838084f1a0b355b91fc975b230870b8c56839b90c5e284f8c9604b8eaad3aa",
+  "source_commit": "3c9841e59ec38be74efd2015d581e13a24b6c0f7"
 }

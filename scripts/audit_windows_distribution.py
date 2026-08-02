@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from build_windows_app import AMD64_MACHINE, SYSTEM_DLLS
+from windows_inventory import InventoryVerificationError, verify_app_inventory
 
 
 def _decode(value: bytes | str) -> str:
@@ -23,7 +24,9 @@ def _version_strings(pe: Any) -> dict[str, str]:
     for group in pe.FileInfo or []:
         for entry in group:
             for table in getattr(entry, "StringTable", []):
-                values.update({_decode(key): _decode(value) for key, value in table.entries.items()})
+                values.update(
+                    {_decode(key): _decode(value) for key, value in table.entries.items()}
+                )
     return values
 
 
@@ -115,6 +118,7 @@ def _validate_setup_contract(
 
 def audit_distribution(
     *,
+    app_dir: Path,
     bundle_audit: Path,
     installer: Path,
     signature_status: str,
@@ -129,8 +133,10 @@ def audit_distribution(
         app = json.loads(bundle_audit.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise SystemExit("Frozen-app PE audit is invalid") from exc
-    if not isinstance(app, dict) or app.get("architecture") != "x86_64":
-        raise SystemExit("Frozen-app PE audit has an unexpected architecture")
+    try:
+        inventory_root = verify_app_inventory(app_dir, app)
+    except InventoryVerificationError as exc:
+        raise SystemExit(f"Frozen-app PE audit is stale: {exc}") from exc
     pe = pefile.PE(str(installer), fast_load=False)
     try:
         setup = _validate_setup_contract(
@@ -145,18 +151,22 @@ def audit_distribution(
     finally:
         pe.close()
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "architecture": "x86_64",
         "windows_targets": ["Windows 10 22H2 x64", "Windows 11 x64"],
         "minimum_windows_build": 19045,
         "signing_status": "unsigned-internal",
         "app_bundle": app,
-        "installer": setup,
+        "installer": {
+            **setup,
+            "source_app_inventory_root_sha256": inventory_root,
+        },
     }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--app", type=Path, required=True)
     parser.add_argument("--bundle-audit", type=Path, required=True)
     parser.add_argument("--installer", type=Path, required=True)
     parser.add_argument("--signature-status", required=True)
@@ -165,6 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args(argv)
     report = audit_distribution(
+        app_dir=args.app,
         bundle_audit=args.bundle_audit,
         installer=args.installer,
         signature_status=args.signature_status,
@@ -172,9 +183,7 @@ def main(argv: list[str] | None = None) -> int:
         build_number=args.build_number,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(
-        json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"AudioAtlas Windows distribution audit: {args.out}")
     return 0
 

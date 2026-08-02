@@ -1,5 +1,8 @@
 # AudioAtlas Internal Windows Candidate
 
+No Windows desktop download is included in the `0.2.0a8` public alpha. This
+guide describes a future private acceptance candidate, not a release artifact.
+
 This kit is an **unsigned internal test candidate**, not a friend-ready public
 download. Windows may block it because it has no trusted publisher reputation.
 Do not disable or bypass Windows security controls. Record any block as the

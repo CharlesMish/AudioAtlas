@@ -11,6 +11,7 @@ import audioatlas.app_core as app_core
 from audioatlas.app_core import (
     AppInputError,
     AppInputInfo,
+    AppOutputPreflight,
     LargeFileDecision,
     default_report_directory,
     friendly_error_message,
@@ -21,6 +22,7 @@ from audioatlas.app_core import (
     validate_app_input,
 )
 from audioatlas.errors import AnalysisCancelled, AudioLoadError
+from audioatlas.io import compute_source_binding
 from audioatlas.output import OUTPUT_MARKER_FILENAME, write_output_manifest
 from audioatlas.pipeline import CancellationToken
 
@@ -72,6 +74,7 @@ def test_analyze_for_app_uses_fixed_friend_facing_defaults(
     assert kwargs["presentation_mode"] == "studio"
     assert kwargs["include_local_paths"] is False
     assert kwargs["selection"].profile == "standard"
+    assert kwargs["source_binding"] == compute_source_binding(source)
 
 
 def test_analyze_for_app_can_retry_under_selected_parent(
@@ -93,14 +96,39 @@ def test_analyze_for_app_can_retry_under_selected_parent(
     assert calls[0][1] == destination / "AudioAtlas Report – song"
 
 
+def test_analyze_for_app_reuses_preflighted_source_binding(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    source = tmp_path / "song.wav"
+    source.touch()
+    binding = compute_source_binding(source)
+    preflight = AppOutputPreflight(tmp_path / "report", binding)
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        app_core,
+        "compute_app_source_binding",
+        lambda path: pytest.fail("preflighted source must not be hashed twice"),
+    )
+    monkeypatch.setattr(
+        app_core,
+        "_analyze_file",
+        lambda *args, **kwargs: calls.append(kwargs) or object(),
+    )
+
+    app_core.analyze_for_app(source, _preflighted_output_dir=preflight)
+
+    assert calls[0]["source_binding"] is binding
+
+
 def test_preflight_proves_destination_and_removes_staging(tmp_path: Path) -> None:
     source = tmp_path / "song.wav"
     source.touch()
     output_parent = tmp_path / "reports"
 
-    destination = preflight_app_output(source, output_parent=output_parent)
+    preflight = preflight_app_output(source, output_parent=output_parent)
 
-    assert destination == output_parent / "AudioAtlas Report – song"
+    assert preflight.directory == output_parent / "AudioAtlas Report – song"
+    assert preflight.source_binding == compute_source_binding(source)
     assert output_parent.is_dir()
     assert list(output_parent.iterdir()) == []
 
@@ -119,10 +147,117 @@ def test_safe_report_directory_reuses_only_a_report_for_the_same_filename(tmp_pa
         report,
         kind="single-track-report",
         generated_files=["summary.json", OUTPUT_MARKER_FILENAME],
+        source_binding=compute_source_binding(wav),
     )
 
     assert safe_report_directory(wav) == report
     assert safe_report_directory(flac) == tmp_path / "AudioAtlas Report – song.flac"
+
+
+def test_safe_report_directory_does_not_reuse_same_basename_from_another_source(
+    tmp_path: Path,
+):
+    first = tmp_path / "A" / "song.wav"
+    second = tmp_path / "B" / "song.wav"
+    first.parent.mkdir()
+    second.parent.mkdir()
+    first.write_bytes(b"first source bytes")
+    second.write_bytes(b"second source bytes")
+    output_parent = tmp_path / "reports"
+    output_parent.mkdir()
+    report = output_parent / "AudioAtlas Report – song"
+    report.mkdir()
+    (report / "summary.json").write_text(
+        json.dumps({"metadata": {"filename": first.name}}), encoding="utf-8"
+    )
+    write_output_manifest(
+        report,
+        kind="single-track-report",
+        generated_files=["summary.json", OUTPUT_MARKER_FILENAME],
+        source_binding=compute_source_binding(first),
+    )
+
+    assert safe_report_directory(second, output_parent=output_parent) == (
+        output_parent / "AudioAtlas Report – song.wav"
+    )
+
+
+def test_safe_report_directory_does_not_adopt_legacy_basename_only_report(
+    tmp_path: Path,
+):
+    source = tmp_path / "song.wav"
+    source.write_bytes(b"source bytes")
+    report = default_report_directory(source)
+    report.mkdir()
+    (report / "summary.json").write_text(
+        json.dumps({"metadata": {"filename": source.name}}), encoding="utf-8"
+    )
+    write_output_manifest(
+        report,
+        kind="single-track-report",
+        generated_files=["summary.json", OUTPUT_MARKER_FILENAME],
+    )
+
+    assert safe_report_directory(source) == tmp_path / "AudioAtlas Report – song.wav"
+
+
+def test_safe_report_directory_reuses_unchanged_source_and_rejects_changed_bytes(
+    tmp_path: Path,
+):
+    source = tmp_path / "song.wav"
+    source.write_bytes(b"original source bytes")
+    report = default_report_directory(source)
+    report.mkdir()
+    write_output_manifest(
+        report,
+        kind="single-track-report",
+        generated_files=[OUTPUT_MARKER_FILENAME],
+        source_binding=compute_source_binding(source),
+    )
+
+    assert safe_report_directory(source) == report
+
+    source.write_bytes(b"materially changed source bytes")
+
+    assert safe_report_directory(source) == tmp_path / "AudioAtlas Report – song.wav"
+
+
+@pytest.mark.parametrize(
+    "source_binding",
+    [
+        {
+            "format": "audioatlas-source-binding",
+            "version": 2,
+            "algorithm": "sha256",
+            "digest": "a" * 64,
+        },
+        {
+            "format": "audioatlas-source-binding",
+            "version": 1,
+            "algorithm": "sha256",
+            "digest": "not-a-sha256",
+        },
+        "malformed",
+    ],
+)
+def test_safe_report_directory_rejects_unknown_or_malformed_source_binding(
+    tmp_path: Path, source_binding: object
+):
+    source = tmp_path / "song.wav"
+    source.write_bytes(b"source bytes")
+    report = default_report_directory(source)
+    report.mkdir()
+    write_output_manifest(
+        report,
+        kind="single-track-report",
+        generated_files=[OUTPUT_MARKER_FILENAME],
+    )
+    manifest_path = report / OUTPUT_MARKER_FILENAME
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["source_binding"] = source_binding
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    assert safe_report_directory(source) == tmp_path / "AudioAtlas Report – song.wav"
 
 
 def test_safe_report_directory_skips_unowned_and_numbered_collisions(tmp_path: Path):
@@ -140,6 +275,7 @@ def test_safe_report_directory_skips_unowned_and_numbered_collisions(tmp_path: P
 
 def test_safe_report_directory_truncates_unicode_component_deterministically(tmp_path: Path):
     source = tmp_path / (("音" * 80) + ".wav")
+    source.touch()
 
     first = safe_report_directory(source)
     second = safe_report_directory(source)

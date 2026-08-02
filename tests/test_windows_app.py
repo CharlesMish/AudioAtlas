@@ -16,6 +16,7 @@ from audioatlas.run_contract import (
 )
 from audioatlas.windows_app import (
     WindowsDesktopApp,
+    _run_native_gui,
     main,
     open_local_file,
     reveal_in_explorer,
@@ -86,6 +87,97 @@ def test_windows_main_refuses_native_ui_on_other_platforms(monkeypatch: pytest.M
 
     with pytest.raises(SystemExit, match="requires 64-bit Windows"):
         main([])
+
+
+@pytest.mark.parametrize("failure_stage", ["root", "application"])
+def test_windows_startup_failures_are_private_and_traceback_free(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    failure_stage: str,
+) -> None:
+    import audioatlas.windows_app as windows_app
+
+    private_detail = r"C:\Users\private-user\Music\secret.wav"
+    records = []
+    shown = []
+    events = []
+    root = SimpleNamespace(
+        report_callback_exception=None,
+        mainloop=lambda: None,
+    )
+
+    def make_root():
+        events.append("root")
+        if failure_stage == "root":
+            raise RuntimeError(f"Tk failed at {private_detail}")
+        return root
+
+    def make_application(candidate_root: object) -> None:
+        assert candidate_root.report_callback_exception is sys.excepthook
+        raise RuntimeError(f"application failed at {private_detail}")
+
+    tkinter = SimpleNamespace(Tk=make_root)
+    logger = SimpleNamespace(
+        error=lambda message, *, exc_info: records.append((message, exc_info)),
+        exception=lambda message: records.append((message, True)),
+    )
+    monkeypatch.setattr(windows_app.sys, "platform", "win32")
+    monkeypatch.setitem(sys.modules, "tkinter", tkinter)
+    monkeypatch.setattr(windows_app, "WindowsDesktopApp", make_application)
+    monkeypatch.setattr(
+        windows_app,
+        "configure_desktop_logger",
+        lambda name: events.append("logger") or logger,
+    )
+    monkeypatch.setattr(windows_app, "configure_scientific_cache_environment", lambda: None)
+    monkeypatch.setattr(windows_app, "_show_generic_error", lambda: shown.append(True))
+
+    with pytest.raises(SystemExit) as exc_info:
+        main([])
+
+    assert exc_info.value.code == 1
+    assert events[:2] == ["logger", "root"]
+    assert shown == [True]
+    assert private_detail in str(records[0][1][1])
+    output = capsys.readouterr()
+    visible = output.out + output.err
+    assert "Traceback" not in visible
+    assert "private-user" not in visible
+    assert private_detail not in visible
+
+
+def test_tk_callback_failure_uses_controlled_boundary(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import audioatlas.windows_app as windows_app
+    from audioatlas.desktop_runtime import DesktopExceptionBoundary
+
+    records = []
+    shown = []
+    root = SimpleNamespace(
+        report_callback_exception=None,
+        mainloop=lambda: None,
+    )
+
+    def make_application(candidate_root: object) -> None:
+        error = RuntimeError(r"callback at C:\Users\private-user\song.wav")
+        candidate_root.report_callback_exception(type(error), error, error.__traceback__)
+
+    monkeypatch.setitem(sys.modules, "tkinter", SimpleNamespace(Tk=lambda: root))
+    monkeypatch.setattr(windows_app, "WindowsDesktopApp", make_application)
+    logger = SimpleNamespace(
+        error=lambda message, *, exc_info: records.append((message, exc_info)),
+        exception=lambda message: records.append((message, True)),
+    )
+    boundary = DesktopExceptionBoundary(logger, lambda: shown.append(True))  # type: ignore[arg-type]
+
+    _run_native_gui(SimpleNamespace(ui_smoke=False), boundary)
+
+    assert len(records) == 1
+    assert shown == [True]
+    output = capsys.readouterr()
+    assert "Traceback" not in output.out + output.err
+    assert "private-user" not in output.out + output.err
 
 
 def test_open_local_file_returns_browser_result(

@@ -2,7 +2,16 @@ name: Release
 
 "on":
   push:
-    tags: ["v*"]
+    tags: ["v*", "!v0.2.0a8"]
+  workflow_dispatch:
+    inputs:
+      release_mode:
+        description: Publication route
+        required: true
+        type: choice
+        default: python-only
+        options:
+          - python-only
 
 permissions:
   contents: read
@@ -24,6 +33,7 @@ jobs:
     timeout-minutes: 40
     outputs:
       version: ${{ steps.package.outputs.version }}
+      release_mode: ${{ steps.package.outputs.release_mode }}
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -48,17 +58,33 @@ jobs:
         id: package
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_MODE_INPUT: ${{ inputs.release_mode || '' }}
         shell: bash
         run: |
           version="$(uv run python -c 'import audioatlas; print(audioatlas.__version__)')"
           test "${GITHUB_REF_NAME}" = "v${version}"
-          git fetch origin main
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            test "${RELEASE_MODE_INPUT}" = "python-only"
+            test "${GITHUB_REF}" = "refs/tags/v0.2.0a8"
+            test "${version}" = "0.2.0a8"
+            release_mode="python-only"
+          else
+            test "${GITHUB_EVENT_NAME}" = "push"
+            test -z "${RELEASE_MODE_INPUT}"
+            release_mode="native"
+          fi
+          git fetch origin main --tags
           git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+          if [ "${release_mode}" = "python-only" ]; then
+            test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"
+          fi
+          test "$(git rev-list -n 1 "${GITHUB_REF_NAME}")" = "${GITHUB_SHA}"
           successful_preflights="$(gh api \
             "repos/${GITHUB_REPOSITORY}/actions/workflows/testpypi.yml/runs?head_sha=${GITHUB_SHA}&status=success&per_page=1" \
             --jq '.total_count')"
           test "${successful_preflights}" -gt 0
           echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "release_mode=${release_mode}" >> "$GITHUB_OUTPUT"
 
       - name: Run release gates
         run: |
@@ -73,6 +99,7 @@ jobs:
           uv run python -m twine check dist/*
 
       - name: Build release extras and checksums
+        if: steps.package.outputs.release_mode == 'native'
         shell: bash
         run: |
           version="${{ steps.package.outputs.version }}"
@@ -97,6 +124,7 @@ jobs:
           retention-days: 30
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: steps.package.outputs.release_mode == 'native'
         with:
           name: audioatlas-release
           path: dist/*
@@ -105,6 +133,7 @@ jobs:
 
   macos-app:
     needs: prepare
+    if: needs.prepare.outputs.release_mode == 'native'
     runs-on: macos-14
     timeout-minutes: 45
     environment:
@@ -285,6 +314,7 @@ jobs:
 
   macos-evidence:
     needs: [prepare, macos-app]
+    if: needs.prepare.outputs.release_mode == 'native'
     runs-on: macos-14
     timeout-minutes: 10
     steps:
@@ -392,6 +422,7 @@ jobs:
 
   macos-acceptance:
     needs: [prepare, macos-app, macos-evidence]
+    if: needs.prepare.outputs.release_mode == 'native'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:
@@ -429,6 +460,7 @@ jobs:
 
   draft-release:
     needs: [prepare, macos-app, macos-acceptance]
+    if: needs.prepare.outputs.release_mode == 'native'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -469,8 +501,100 @@ jobs:
               --verify-tag
           fi
 
+  python-release-assets:
+    needs: [prepare, macos-app, macos-evidence, macos-acceptance]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.prepare.outputs.release_mode == 'python-only' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Require every native release job to be skipped
+        env:
+          MACOS_APP_RESULT: ${{ needs.macos-app.result }}
+          MACOS_EVIDENCE_RESULT: ${{ needs.macos-evidence.result }}
+          MACOS_ACCEPTANCE_RESULT: ${{ needs.macos-acceptance.result }}
+        run: |
+          test "${MACOS_APP_RESULT}" = "skipped"
+          test "${MACOS_EVIDENCE_RESULT}" = "skipped"
+          test "${MACOS_ACCEPTANCE_RESULT}" = "skipped"
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: audioatlas-python-dist
+          path: built-dist
+
+      - name: Download the prepared draft assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json isDraft --jq .isDraft)" = "true"
+          test "$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json isPrerelease --jq .isPrerelease)" = "true"
+          test "$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json name --jq .name)" = "AudioAtlas 0.2.0a8 — Public Alpha"
+          mkdir release-assets
+          gh release download "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" --dir release-assets
+
+      - name: Verify the exact Python-only release boundary
+        shell: python
+        run: |
+          import hashlib
+          from pathlib import Path
+
+          expected = {
+              "audioatlas-0.2.0a8-py3-none-any.whl": "f4546ca18499299a8108312a95f9e1d527565ecc8e8fea62f64144b7b5a7fde7",
+              "audioatlas-0.2.0a8.tar.gz": "9ccb7566ac5c8cf4c5eaaaa8728b99a80f7f4b3da283350901b9754a83733c0c",
+              "AudioAtlas-0.2.0a8-public-source-3c9841e.zip": "d9f83ec1c3a88fe72db0a89ae64d5eb3442cb95bbdc799a0a2b84a3261e50968",
+              "AudioAtlas-0.2.0a8-canonical-compact-example-3c9841e.zip": "4e13a63daa1307c5798035c75b334d7bc5a84a294f8a4bebeb0bf263f62cfa1c",
+              "AudioAtlas-0.2.0a8-canonical-full-example-3c9841e.zip": "9d6bff6a6018c6040bdb3e74e4e9d6e5066e3ea3dbf153fd6e9478145ea4c296",
+              "SHA256SUMS.txt": "ef43619285432430e5bb8565b0b2d476fe1882d96818a9c044770a5b22b12ade",
+              "ARTIFACT_MANIFEST.json": "6c039a367ed5cf3569d3de2b83eb6361c945404d33f033928469ff2f128d61ca",
+          }
+          root = Path("release-assets")
+          files = sorted(path for path in root.iterdir() if path.is_file())
+          actual_names = {path.name for path in files}
+          if actual_names != set(expected):
+              raise SystemExit(
+                  f"Release asset boundary mismatch: expected={sorted(expected)!r}, "
+                  f"actual={sorted(actual_names)!r}"
+              )
+          for path in files:
+              observed = hashlib.sha256(path.read_bytes()).hexdigest()
+              if observed != expected[path.name]:
+                  raise SystemExit(f"Release asset digest mismatch: {path.name}")
+          for name in ("audioatlas-0.2.0a8-py3-none-any.whl", "audioatlas-0.2.0a8.tar.gz"):
+              built = Path("built-dist", name)
+              if not built.is_file() or built.read_bytes() != (root / name).read_bytes():
+                  raise SystemExit(f"Built distribution differs from prepared release asset: {name}")
+
+  release-assets-ready:
+    needs: [prepare, draft-release, python-release-assets]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Require the selected release-asset path
+        env:
+          RELEASE_MODE: ${{ needs.prepare.outputs.release_mode }}
+          PREPARE_RESULT: ${{ needs.prepare.result }}
+          NATIVE_RESULT: ${{ needs.draft-release.result }}
+          PYTHON_RESULT: ${{ needs.python-release-assets.result }}
+        run: |
+          test "${PREPARE_RESULT}" = "success"
+          if [ "${RELEASE_MODE}" = "python-only" ]; then
+            test "${NATIVE_RESULT}" = "skipped"
+            test "${PYTHON_RESULT}" = "success"
+          else
+            test "${RELEASE_MODE}" = "native"
+            test "${NATIVE_RESULT}" = "success"
+            test "${PYTHON_RESULT}" = "skipped"
+          fi
+
   pypi:
-    needs: [prepare, index-state, draft-release]
+    needs: [prepare, index-state, release-assets-ready]
     if: needs.index-state.outputs.publish_needed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -489,8 +613,8 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
 
   verify-index:
-    needs: [prepare, index-state, draft-release, pypi]
-    if: ${{ always() && needs.prepare.result == 'success' && needs.index-state.result == 'success' && needs.draft-release.result == 'success' && (needs.pypi.result == 'success' || needs.pypi.result == 'skipped') }}
+    needs: [prepare, index-state, release-assets-ready, pypi]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.index-state.result == 'success' && needs.release-assets-ready.result == 'success' && (needs.pypi.result == 'success' || needs.pypi.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -558,7 +682,7 @@ jobs:
           audioatlas project add aa_pypi_project tests/fixtures/sine_1k_-6dbfs_2s.wav --label "Mix 1"
 
   finalize-release:
-    needs: [prepare, verify-index, pypi-smoke]
+    needs: [prepare, release-assets-ready, verify-index, pypi-smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:
@@ -568,11 +692,50 @@ jobs:
       contents: write
 
     steps:
+      - name: Reverify Python-only assets before publication
+        if: needs.prepare.outputs.release_mode == 'python-only'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          test "$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json isDraft --jq .isDraft)" = "true"
+          test "$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json isPrerelease --jq .isPrerelease)" = "true"
+          mkdir release-assets
+          gh release download "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" --dir release-assets
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+
+          expected = {
+              "audioatlas-0.2.0a8-py3-none-any.whl": "f4546ca18499299a8108312a95f9e1d527565ecc8e8fea62f64144b7b5a7fde7",
+              "audioatlas-0.2.0a8.tar.gz": "9ccb7566ac5c8cf4c5eaaaa8728b99a80f7f4b3da283350901b9754a83733c0c",
+              "AudioAtlas-0.2.0a8-public-source-3c9841e.zip": "d9f83ec1c3a88fe72db0a89ae64d5eb3442cb95bbdc799a0a2b84a3261e50968",
+              "AudioAtlas-0.2.0a8-canonical-compact-example-3c9841e.zip": "4e13a63daa1307c5798035c75b334d7bc5a84a294f8a4bebeb0bf263f62cfa1c",
+              "AudioAtlas-0.2.0a8-canonical-full-example-3c9841e.zip": "9d6bff6a6018c6040bdb3e74e4e9d6e5066e3ea3dbf153fd6e9478145ea4c296",
+              "SHA256SUMS.txt": "ef43619285432430e5bb8565b0b2d476fe1882d96818a9c044770a5b22b12ade",
+              "ARTIFACT_MANIFEST.json": "6c039a367ed5cf3569d3de2b83eb6361c945404d33f033928469ff2f128d61ca",
+          }
+          root = Path("release-assets")
+          files = {path.name: path for path in root.iterdir() if path.is_file()}
+          if set(files) != set(expected):
+              raise SystemExit("Release asset boundary changed after PyPI verification.")
+          for name, digest in expected.items():
+              if hashlib.sha256(files[name].read_bytes()).hexdigest() != digest:
+                  raise SystemExit(f"Release asset digest changed after PyPI verification: {name}")
+          PY
+
       - name: Publish GitHub prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [ "${{ needs.prepare.outputs.release_mode }}" = "python-only" ]; then
+            title="AudioAtlas 0.2.0a8 — Public Alpha"
+          else
+            title="AudioAtlas ${GITHUB_REF_NAME}"
+          fi
           gh release edit "${GITHUB_REF_NAME}" \
             --repo "${GITHUB_REPOSITORY}" \
+            --title "${title}" \
             --draft=false \
             --prerelease
