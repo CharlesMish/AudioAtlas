@@ -295,8 +295,8 @@ def test_absolute_external_dependency_is_rejected(
 ) -> None:
     build = _build_script()
     app, executable = _app_fixture(tmp_path)
-    outside = _write_mach_o(tmp_path / "outside" / "libfoo.dylib")
-    tools = MockNativeTools(dependencies={executable: [str(outside)]})
+    external_install_name = "/outside/libfoo.dylib"
+    tools = MockNativeTools(dependencies={executable: [external_install_name]})
     monkeypatch.setattr(build, "_run", tools)
 
     with pytest.raises(SystemExit, match="absolute non-system dependency"):

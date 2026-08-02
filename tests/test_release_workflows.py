@@ -134,9 +134,9 @@ def test_python_only_release_is_manual_exact_and_native_free() -> None:
     expected_assets = {
         "audioatlas-0.2.0a8-py3-none-any.whl",
         "audioatlas-0.2.0a8.tar.gz",
-        "AudioAtlas-0.2.0a8-public-source-8ca0358.zip",
-        "AudioAtlas-0.2.0a8-canonical-compact-example-8ca0358.zip",
-        "AudioAtlas-0.2.0a8-canonical-full-example-8ca0358.zip",
+        "AudioAtlas-0.2.0a8-public-source-3c9841e.zip",
+        "AudioAtlas-0.2.0a8-canonical-compact-example-3c9841e.zip",
+        "AudioAtlas-0.2.0a8-canonical-full-example-3c9841e.zip",
         "SHA256SUMS.txt",
         "ARTIFACT_MANIFEST.json",
     }
@@ -144,12 +144,12 @@ def test_python_only_release_is_manual_exact_and_native_free() -> None:
         assert text.count(f'"{asset}"') >= 2
     for digest in (
         "f4546ca18499299a8108312a95f9e1d527565ecc8e8fea62f64144b7b5a7fde7",
-        "0d27846905f531c51c65e8412d628119ce6b58d3aa4fab599284cc938ecd0788",
-        "6df0e4cc1e3cec8ad36d66af8a3752555959dda661c1d9fce36125b0fa0ce690",
-        "9dc005120de12bc1006d95638013d9c1d453e1b20bbcb5fa5cb261ea31fea110",
-        "10ba2acde755adacf6b18b7f4dafd2e7f1a82b1acc2390a03144f034d9f191ae",
-        "685908c26a764585e9f9cd433ebc901508678696f8762750f532dfc5a69475be",
-        "a36729745b3f02a3485718b8f6f4cf97458da462c188e58dbe3c3f33e24d7190",
+        "9ccb7566ac5c8cf4c5eaaaa8728b99a80f7f4b3da283350901b9754a83733c0c",
+        "d9f83ec1c3a88fe72db0a89ae64d5eb3442cb95bbdc799a0a2b84a3261e50968",
+        "4e13a63daa1307c5798035c75b334d7bc5a84a294f8a4bebeb0bf263f62cfa1c",
+        "9d6bff6a6018c6040bdb3e74e4e9d6e5066e3ea3dbf153fd6e9478145ea4c296",
+        "ef43619285432430e5bb8565b0b2d476fe1882d96818a9c044770a5b22b12ade",
+        "6c039a367ed5cf3569d3de2b83eb6361c945404d33f033928469ff2f128d61ca",
     ):
         assert text.count(digest) == 2
     assert "Release asset boundary mismatch" in text
