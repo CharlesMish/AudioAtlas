@@ -627,6 +627,7 @@ jobs:
 
   pypi:
     needs: [prepare, index-state, release-assets-ready]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.index-state.result == 'success' && needs.release-assets-ready.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:

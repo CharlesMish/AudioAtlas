@@ -213,7 +213,11 @@ def test_python_only_release_is_manual_exact_and_native_free() -> None:
     assert 'test "${MACOS_EVIDENCE_RESULT}" = "skipped"' in text
     assert 'test "${MACOS_ACCEPTANCE_RESULT}" = "skipped"' in text
     assert jobs["pypi"]["needs"] == ["prepare", "index-state", "release-assets-ready"]
-    assert "if" not in jobs["pypi"]
+    assert jobs["pypi"]["if"] == (
+        "${{ always() && needs.prepare.result == 'success' && "
+        "needs.index-state.result == 'success' && "
+        "needs.release-assets-ready.result == 'success' }}"
+    )
     assert "needs.pypi.result == 'success'" in jobs["verify-index"]["if"]
     assert "needs.pypi.result == 'skipped'" not in jobs["verify-index"]["if"]
 
