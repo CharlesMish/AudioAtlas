@@ -643,6 +643,7 @@ jobs:
           name: audioatlas-python-dist
           path: dist
       - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
+        if: needs.index-state.outputs.publish_needed == 'true'
 
   verify-index:
     needs: [prepare, index-state, release-assets-ready, pypi]
@@ -678,6 +679,7 @@ jobs:
 
   pypi-smoke:
     needs: [prepare, verify-index]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.verify-index.result == 'success' }}
     name: PyPI smoke · ${{ matrix.os }} · Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -719,6 +721,7 @@ jobs:
 
   finalize-release:
     needs: [prepare, release-assets-ready, verify-index, pypi-smoke]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.release-assets-ready.result == 'success' && needs.verify-index.result == 'success' && needs.pypi-smoke.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:

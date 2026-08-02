@@ -220,6 +220,22 @@ def test_python_only_release_is_manual_exact_and_native_free() -> None:
     )
     assert "needs.pypi.result == 'success'" in jobs["verify-index"]["if"]
     assert "needs.pypi.result == 'skipped'" not in jobs["verify-index"]["if"]
+    publish_step = next(
+        step
+        for step in jobs["pypi"]["steps"]
+        if step.get("uses", "").startswith("pypa/gh-action-pypi-publish@")
+    )
+    assert publish_step["if"] == "needs.index-state.outputs.publish_needed == 'true'"
+    assert jobs["pypi-smoke"]["if"] == (
+        "${{ always() && needs.prepare.result == 'success' && "
+        "needs.verify-index.result == 'success' }}"
+    )
+    assert jobs["finalize-release"]["if"] == (
+        "${{ always() && needs.prepare.result == 'success' && "
+        "needs.release-assets-ready.result == 'success' && "
+        "needs.verify-index.result == 'success' && "
+        "needs.pypi-smoke.result == 'success' }}"
+    )
 
     expected_assets = {
         "audioatlas-0.2.0a8-py3-none-any.whl",
