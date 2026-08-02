@@ -184,7 +184,7 @@ def test_python_only_release_is_manual_exact_and_native_free() -> None:
         "macos-evidence",
         "macos-acceptance",
     ]
-    assert python_assets["permissions"] == {"contents": "read", "actions": "read"}
+    assert python_assets["permissions"] == {"contents": "write", "actions": "read"}
     assert "needs.prepare.outputs.release_mode == 'python-only'" in python_assets["if"]
     assert 'test "${MACOS_APP_RESULT}" = "skipped"' in text
     assert 'test "${MACOS_EVIDENCE_RESULT}" = "skipped"' in text
