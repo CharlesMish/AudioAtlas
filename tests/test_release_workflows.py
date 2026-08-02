@@ -356,6 +356,7 @@ def test_testpypi_is_manual_and_uses_separate_environment() -> None:
     assert "verify" in workflow["jobs"]
     assert "astral-sh/setup-uv" in text
     assert "uv sync --locked --extra dev" in text
+    assert "uv run --with twine python -m twine check dist/*" in text
     assert "python -m pip download --no-deps" in text
     assert "uv run python -m pip download" not in text
 
