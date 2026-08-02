@@ -30,7 +30,7 @@
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "9137982d45f71942ba0d78f1fa06d2235914ec1fcd49a959d56809ded9816563"
+      "sha256": "73da5d1b8ce3e1c759292f30c9d10ed7d103dd19ef3209ac356731bef0e6fbc1"
     },
     {
       "path": ".github/workflows/testpypi.yml",
@@ -666,7 +666,7 @@
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "2a0189b6be59648f8b4b4a19c36392bc5a948a3eae61b4e1b09743096cdf9e54"
+      "sha256": "9022b71022a432c4e762500ab5e7f0650796585a0de0a36cbca15d282be9b6f4"
     },
     {
       "path": "tests/test_report.py",
@@ -720,6 +720,6 @@
   "format_version": 1,
   "included_file_count": 179,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "d9f2c305ec5ec53d852420b9ccf0c9be9d2062029e7d091cdad808f4e78482f1",
-  "source_commit": "3c9841e59ec38be74efd2015d581e13a24b6c0f7"
+  "public_tree_sha256": "941e82c1f5febbeb2f6bf6e691fc4de4961a018b54267ba8fd00a31df7660424",
+  "source_commit": "a31dd563b0742e52a7cb097579bb3c47ec65a393"
 }
