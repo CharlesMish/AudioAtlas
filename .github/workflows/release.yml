@@ -627,7 +627,6 @@ jobs:
 
   pypi:
     needs: [prepare, index-state, release-assets-ready]
-    if: needs.index-state.outputs.publish_needed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -646,7 +645,7 @@ jobs:
 
   verify-index:
     needs: [prepare, index-state, release-assets-ready, pypi]
-    if: ${{ always() && needs.prepare.result == 'success' && needs.index-state.result == 'success' && needs.release-assets-ready.result == 'success' && (needs.pypi.result == 'success' || needs.pypi.result == 'skipped') }}
+    if: ${{ always() && needs.prepare.result == 'success' && needs.index-state.result == 'success' && needs.release-assets-ready.result == 'success' && needs.pypi.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
