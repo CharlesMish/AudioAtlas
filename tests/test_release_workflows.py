@@ -44,17 +44,39 @@ def test_live_demo_deploys_only_from_main_or_manual_dispatch() -> None:
     assert workflow["jobs"]["deploy"]["environment"]["name"] == "github-pages"
     text = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
     assert "examples/demo_audio/audioatlas_demo.wav" in text
-    assert "--graphs-profile standard" in text
-    assert "--theme midnight_studio" in text
+    assert "--graphs-profile compact" in text
+    assert "--graphs-profile full" in text
+    assert "--theme default" in text
+    assert "--presentation studio" in text
     assert 'summary["metadata"]["filename"] == "audioatlas_demo.wav"' in text
-    assert 'len(summary["graphs"]["selected_filenames"]) == 14' in text
+    assert 'profiles = {"compact": 4, "full": 17}' in text
+    assert 'href="compact/"' in text
+    assert 'href="full/"' in text
+    assert ".github/pages-assets/audioatlas-0.2.0a8-release-hero.png" in text
+    assert "rm site/compact/.audioatlas-output.json" in text
+    assert "rm site/full/.audioatlas-output.json" in text
+    assert "if path.is_file() and path.name != \".nojekyll\"" in text
+    assert 'assert not list(site.rglob(".audioatlas-*"))' in text
     assert "assert not list(site.rglob(\"*.wav\"))" in text
 
 
 def test_release_requires_version_tag_and_uses_trusted_publishing() -> None:
     workflow = _workflow("release.yml")
 
-    assert workflow["on"] == {"push": {"tags": ["v*"]}}
+    assert workflow["on"] == {
+        "push": {"tags": ["v*", "!v0.2.0a8"]},
+        "workflow_dispatch": {
+            "inputs": {
+                "release_mode": {
+                    "description": "Publication route",
+                    "required": True,
+                    "type": "choice",
+                    "default": "python-only",
+                    "options": ["python-only"],
+                }
+            }
+        },
+    }
     assert workflow["jobs"]["pypi"]["permissions"] == {
         "actions": "read",
         "id-token": "write",
@@ -74,6 +96,65 @@ def test_release_requires_version_tag_and_uses_trusted_publishing() -> None:
     assert "uv run python -m build" in text
     assert "uv run pytest" in text
     assert "uv run pip-audit --require-hashes" in text
+
+
+def test_python_only_release_is_manual_exact_and_native_free() -> None:
+    workflow = _workflow("release.yml")
+    jobs = workflow["jobs"]
+    text = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert jobs["prepare"]["outputs"]["release_mode"] == (
+        "${{ steps.package.outputs.release_mode }}"
+    )
+    assert 'test "${GITHUB_REF}" = "refs/tags/v0.2.0a8"' in text
+    assert 'test "${version}" = "0.2.0a8"' in text
+    assert 'release_mode="python-only"' in text
+    assert 'release_mode="native"' in text
+    assert 'test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"' in text
+
+    for native_job in ("macos-app", "macos-evidence", "macos-acceptance", "draft-release"):
+        assert jobs[native_job]["if"] == "needs.prepare.outputs.release_mode == 'native'"
+
+    python_assets = jobs["python-release-assets"]
+    assert python_assets["needs"] == [
+        "prepare",
+        "macos-app",
+        "macos-evidence",
+        "macos-acceptance",
+    ]
+    assert python_assets["permissions"] == {"contents": "read", "actions": "read"}
+    assert "needs.prepare.outputs.release_mode == 'python-only'" in python_assets["if"]
+    assert 'test "${MACOS_APP_RESULT}" = "skipped"' in text
+    assert 'test "${MACOS_EVIDENCE_RESULT}" = "skipped"' in text
+    assert 'test "${MACOS_ACCEPTANCE_RESULT}" = "skipped"' in text
+    assert jobs["pypi"]["needs"] == ["prepare", "index-state", "release-assets-ready"]
+
+    expected_assets = {
+        "audioatlas-0.2.0a8-py3-none-any.whl",
+        "audioatlas-0.2.0a8.tar.gz",
+        "AudioAtlas-0.2.0a8-public-source-8ca0358.zip",
+        "AudioAtlas-0.2.0a8-canonical-compact-example-8ca0358.zip",
+        "AudioAtlas-0.2.0a8-canonical-full-example-8ca0358.zip",
+        "SHA256SUMS.txt",
+        "ARTIFACT_MANIFEST.json",
+    }
+    for asset in expected_assets:
+        assert text.count(f'"{asset}"') >= 2
+    for digest in (
+        "f4546ca18499299a8108312a95f9e1d527565ecc8e8fea62f64144b7b5a7fde7",
+        "0d27846905f531c51c65e8412d628119ce6b58d3aa4fab599284cc938ecd0788",
+        "6df0e4cc1e3cec8ad36d66af8a3752555959dda661c1d9fce36125b0fa0ce690",
+        "9dc005120de12bc1006d95638013d9c1d453e1b20bbcb5fa5cb261ea31fea110",
+        "10ba2acde755adacf6b18b7f4dafd2e7f1a82b1acc2390a03144f034d9f191ae",
+        "685908c26a764585e9f9cd433ebc901508678696f8762750f532dfc5a69475be",
+        "a36729745b3f02a3485718b8f6f4cf97458da462c188e58dbe3c3f33e24d7190",
+    ):
+        assert text.count(digest) == 2
+    assert "Release asset boundary mismatch" in text
+    assert "Release asset boundary changed after PyPI verification" in text
+    assert "AudioAtlas 0.2.0a8 — Public Alpha" in text
 
 
 def test_macos_app_has_separate_beta_and_notarized_release_gates() -> None:

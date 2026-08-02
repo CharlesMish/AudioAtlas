@@ -37,13 +37,76 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install .
 
-      - name: Generate share-safe AudioAtlas demo report
+      - name: Generate share-safe Compact and Full reports
         run: |
+          mkdir -p site/compact site/full site/assets
           audioatlas analyze examples/demo_audio/audioatlas_demo.wav \
-            --out site \
-            --graphs-profile standard \
-            --theme midnight_studio
-          mv site/report.html site/index.html
+            --out site/compact \
+            --graphs-profile compact \
+            --theme default \
+            --presentation studio
+          audioatlas analyze examples/demo_audio/audioatlas_demo.wav \
+            --out site/full \
+            --graphs-profile full \
+            --theme default \
+            --presentation studio
+          rm site/compact/.audioatlas-output.json
+          rm site/full/.audioatlas-output.json
+          cp site/compact/report.html site/compact/index.html
+          cp site/full/report.html site/full/index.html
+          cp .github/pages-assets/audioatlas-0.2.0a8-release-hero.png site/assets/hero.png
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <meta name="description" content="AudioAtlas 0.2.0a8 public alpha: local-first audio reports with measurements, not grades.">
+            <title>AudioAtlas 0.2.0a8 — Public Alpha</title>
+            <style>
+              :root { color-scheme: dark; --bg:#05080d; --panel:#0a1019; --line:#223047; --text:#edf2fb; --muted:#a3b1c7; --accent:#e8b25c; --link:#8edbd1; }
+              * { box-sizing: border-box; }
+              body { margin:0; background:var(--bg); color:var(--text); font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.6; }
+              a { color:var(--link); }
+              a:focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
+              main { width:min(1120px,calc(100% - 32px)); margin:0 auto; padding:48px 0 72px; }
+              .eyebrow { color:var(--accent); font-size:.82rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+              h1 { max-width:850px; margin:12px 0 16px; font-size:clamp(2.35rem,7vw,5.5rem); line-height:.98; letter-spacing:-.04em; }
+              .lede { max-width:760px; color:var(--muted); font-size:clamp(1.05rem,2.2vw,1.35rem); }
+              .hero { display:block; width:100%; margin:36px 0; border:1px solid var(--line); border-radius:16px; }
+              .actions { display:flex; flex-wrap:wrap; gap:12px; margin:28px 0 44px; }
+              .actions a { display:inline-block; padding:11px 16px; border:1px solid var(--line); border-radius:999px; color:var(--text); font-weight:700; text-decoration:none; }
+              .actions a.primary { border-color:var(--accent); background:var(--accent); color:#15100a; }
+              .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+              .card { min-height:235px; padding:28px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+              .card h2 { margin-top:0; font-size:1.55rem; }
+              .card p,.boundary { color:var(--muted); }
+              .card a { font-weight:800; }
+              .boundary { margin-top:36px; padding-top:24px; border-top:1px solid var(--line); }
+              @media (max-width:720px) { main { padding-top:30px; } .grid { grid-template-columns:1fr; } .card { min-height:0; } }
+            </style>
+          </head>
+          <body>
+            <main>
+              <div class="eyebrow">AudioAtlas 0.2.0a8 · Public alpha</div>
+              <h1>See the signal. Keep the judgment yours.</h1>
+              <p class="lede">AudioAtlas turns one local audio file into a portable listening map: measured context, clear plots, and bounded places to check by ear—measurements, not grades.</p>
+              <nav class="actions" aria-label="Project links">
+                <a class="primary" href="compact/">Open Compact report</a>
+                <a href="full/">Open Full report</a>
+                <a href="https://github.com/CharlesMish/AudioAtlas">View source</a>
+                <a href="https://github.com/CharlesMish/AudioAtlas/releases/tag/v0.2.0a8">View release</a>
+              </nav>
+              <img class="hero" src="assets/hero.png" width="1600" height="900" alt="Four AudioAtlas measurement plots: waveform and RMS, log-frequency spectrogram, pitch-class energy, and short-term loudness.">
+              <section class="grid" aria-label="Example report choices">
+                <article class="card"><h2>Compact</h2><p>A four-plot route for a focused first pass. It keeps the complete measured summary while publishing fewer visual maps.</p><a href="compact/">Explore the Compact report →</a></article>
+                <article class="card"><h2>Full</h2><p>Every registered plot for readers who want the broadest technical view. The underlying analysis is the same.</p><a href="full/">Explore the Full report →</a></article>
+              </section>
+              <p class="boundary">AudioAtlas runs locally through its Python 3.11+ CLI on Windows, macOS, and Linux. There is no account, telemetry, hosted dashboard, or intentional audio upload. These examples are static files with no analytics, cookies, remote fonts, external JavaScript, or source audio. No native desktop download is included in this release.</p>
+            </main>
+          </body>
+          </html>
+          HTML
           touch site/.nojekyll
 
       - name: Verify static demo boundary
@@ -55,22 +118,37 @@ jobs:
 
           site = Path("site")
           allowed_suffixes = {".html", ".md", ".json", ".png"}
-          files = [path for path in site.rglob("*") if path.name != ".nojekyll"]
+          files = [
+              path
+              for path in site.rglob("*")
+              if path.is_file() and path.name != ".nojekyll"
+          ]
           assert files
           assert not any(path.is_symlink() for path in site.rglob("*"))
-          assert all(path.is_file() for path in files)
           assert all(path.suffix.lower() in allowed_suffixes for path in files)
           assert not list(site.rglob("*.wav"))
 
-          summary = json.loads((site / "summary.json").read_text(encoding="utf-8"))
-          assert summary["metadata"]["filename"] == "audioatlas_demo.wav"
-          assert summary["metadata"]["path_kind"] == "basename"
-          assert summary["metadata"]["local_paths_included"] is False
-          assert summary["graphs"]["profile"] == "standard"
-          assert len(summary["graphs"]["selected_filenames"]) == 14
-          html = (site / "index.html").read_text(encoding="utf-8")
-          assert "--bg: #0b1120;" in html
-          assert 'data-presentation="studio"' in html
+          assert not list(site.rglob(".audioatlas-*"))
+          assert (site / "assets" / "hero.png").is_file()
+          landing = (site / "index.html").read_text(encoding="utf-8")
+          assert "AudioAtlas 0.2.0a8 — Public Alpha" in landing
+          assert 'href="compact/"' in landing
+          assert 'href="full/"' in landing
+          assert "measurements, not grades" in landing
+          profiles = {"compact": 4, "full": 17}
+          for profile, plot_count in profiles.items():
+              report = site / profile
+              summary = json.loads((report / "summary.json").read_text(encoding="utf-8"))
+              assert summary["metadata"]["filename"] == "audioatlas_demo.wav"
+              assert summary["metadata"]["path_kind"] == "basename"
+              assert summary["metadata"]["local_paths_included"] is False
+              assert summary["graphs"]["profile"] == profile
+              assert len(summary["graphs"]["selected_filenames"]) == plot_count
+              assert (report / "index.html").read_bytes() == (report / "report.html").read_bytes()
+              report_html = (report / "index.html").read_text(encoding="utf-8")
+              assert 'data-presentation="studio"' in report_html
+              for filename in summary["graphs"]["selected_filenames"]:
+                  assert (report / filename).is_file(), filename
           forbidden = (
               "/home/runner/",
               "C:\\Users\\",
@@ -87,8 +165,6 @@ jobs:
                   assert not re.search(
                       r"<(?:script|link)[^>]+(?:src|href)=[\"']https?://", text
                   ), path
-          for filename in summary["graphs"]["selected_filenames"]:
-              assert (site / filename).is_file(), filename
 
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
