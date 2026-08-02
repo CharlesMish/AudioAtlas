@@ -574,13 +574,13 @@ jobs:
           from pathlib import Path
 
           expected = {
-              "audioatlas-0.2.0a8-py3-none-any.whl": "f4546ca18499299a8108312a95f9e1d527565ecc8e8fea62f64144b7b5a7fde7",
-              "audioatlas-0.2.0a8.tar.gz": "9ccb7566ac5c8cf4c5eaaaa8728b99a80f7f4b3da283350901b9754a83733c0c",
-              "AudioAtlas-0.2.0a8-public-source-3c9841e.zip": "d9f83ec1c3a88fe72db0a89ae64d5eb3442cb95bbdc799a0a2b84a3261e50968",
-              "AudioAtlas-0.2.0a8-canonical-compact-example-3c9841e.zip": "4e13a63daa1307c5798035c75b334d7bc5a84a294f8a4bebeb0bf263f62cfa1c",
-              "AudioAtlas-0.2.0a8-canonical-full-example-3c9841e.zip": "9d6bff6a6018c6040bdb3e74e4e9d6e5066e3ea3dbf153fd6e9478145ea4c296",
-              "SHA256SUMS.txt": "ef43619285432430e5bb8565b0b2d476fe1882d96818a9c044770a5b22b12ade",
-              "ARTIFACT_MANIFEST.json": "6c039a367ed5cf3569d3de2b83eb6361c945404d33f033928469ff2f128d61ca",
+              "audioatlas-0.2.0a8-py3-none-any.whl": {"size": 166024, "sha256": "f4546ca18499299a8108312a95f9e1d527565ecc8e8fea62f64144b7b5a7fde7"},
+              "audioatlas-0.2.0a8.tar.gz": {"size": 1442625, "sha256": "9ccb7566ac5c8cf4c5eaaaa8728b99a80f7f4b3da283350901b9754a83733c0c"},
+              "AudioAtlas-0.2.0a8-public-source-3c9841e.zip": {"size": 19576394, "sha256": "d9f83ec1c3a88fe72db0a89ae64d5eb3442cb95bbdc799a0a2b84a3261e50968"},
+              "AudioAtlas-0.2.0a8-canonical-compact-example-3c9841e.zip": {"size": 2203840, "sha256": "4e13a63daa1307c5798035c75b334d7bc5a84a294f8a4bebeb0bf263f62cfa1c"},
+              "AudioAtlas-0.2.0a8-canonical-full-example-3c9841e.zip": {"size": 4025986, "sha256": "9d6bff6a6018c6040bdb3e74e4e9d6e5066e3ea3dbf153fd6e9478145ea4c296"},
+              "SHA256SUMS.txt": {"size": 659, "sha256": "ef43619285432430e5bb8565b0b2d476fe1882d96818a9c044770a5b22b12ade"},
+              "ARTIFACT_MANIFEST.json": {"size": 2709, "sha256": "6c039a367ed5cf3569d3de2b83eb6361c945404d33f033928469ff2f128d61ca"},
           }
           root = Path("release-assets")
           files = sorted(path for path in root.iterdir() if path.is_file())
@@ -591,8 +591,10 @@ jobs:
                   f"actual={sorted(actual_names)!r}"
               )
           for path in files:
+              if path.stat().st_size != expected[path.name]["size"]:
+                  raise SystemExit(f"Release asset size mismatch: {path.name}")
               observed = hashlib.sha256(path.read_bytes()).hexdigest()
-              if observed != expected[path.name]:
+              if observed != expected[path.name]["sha256"]:
                   raise SystemExit(f"Release asset digest mismatch: {path.name}")
           for name in ("audioatlas-0.2.0a8-py3-none-any.whl", "audioatlas-0.2.0a8.tar.gz"):
               built = Path("built-dist", name)
