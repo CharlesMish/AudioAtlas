@@ -9,6 +9,7 @@ import audioatlas.output as output_module
 from audioatlas.errors import OutputBusyError, OutputOwnershipError
 from audioatlas.output import (
     OUTPUT_MARKER_FILENAME,
+    SourceBinding,
     output_transaction,
     publish_staged_output,
     staged_output_directory,
@@ -61,8 +62,8 @@ def test_output_transaction_uses_guard_when_cache_lock_is_denied(
 def test_publish_replaces_owned_artifacts_and_preserves_unknown_files(tmp_path: Path):
     target = tmp_path / "report"
     target.mkdir()
-    (target / "report.html").write_text("old report", encoding="utf-8")
-    (target / "old_plot.png").write_bytes(b"old plot")
+    (target / "catalog.html").write_text("old catalog", encoding="utf-8")
+    (target / "catalog.md").write_text("stale catalog", encoding="utf-8")
     (target / "notes.txt").write_text("human notes", encoding="utf-8")
     (target / "old-track").mkdir()
     (target / "old-track" / "report.html").write_text("old track", encoding="utf-8")
@@ -79,6 +80,11 @@ def test_publish_replaces_owned_artifacts_and_preserves_unknown_files(tmp_path: 
                 "format": "audioatlas-output-manifest",
                 "manifest_version": 1,
                 "kind": "batch-catalog",
+                "generated_files": [
+                    "catalog.html",
+                    "catalog.md",
+                    OUTPUT_MARKER_FILENAME,
+                ],
                 "generated_directories": ["old-track"],
             }
         ),
@@ -87,30 +93,129 @@ def test_publish_replaces_owned_artifacts_and_preserves_unknown_files(tmp_path: 
 
     staging = tmp_path / "staging"
     staging.mkdir()
-    (staging / "report.html").write_text("new report", encoding="utf-8")
-    (staging / "new_plot.png").write_bytes(b"new plot")
+    (staging / "catalog.html").write_text("new catalog", encoding="utf-8")
+    (staging / "catalog_summary.json").write_text("{}", encoding="utf-8")
     (staging / "new-track").mkdir()
     (staging / "new-track" / "report.html").write_text("new track", encoding="utf-8")
     write_output_manifest(
         staging,
-        kind="test",
-        generated_files=["report.html", "new_plot.png"],
+        kind="batch-catalog",
+        generated_files=["catalog.html", "catalog_summary.json"],
         generated_directories=["new-track"],
     )
 
     publish_staged_output(
         staging,
         target,
-        owned_filenames={"report.html", "old_plot.png", "new_plot.png"},
+        allowed_staged_filenames={"catalog.html", "catalog_summary.json"},
     )
 
-    assert (target / "report.html").read_text(encoding="utf-8") == "new report"
-    assert (target / "new_plot.png").read_bytes() == b"new plot"
-    assert not (target / "old_plot.png").exists()
+    assert (target / "catalog.html").read_text(encoding="utf-8") == "new catalog"
+    assert (target / "catalog_summary.json").read_text(encoding="utf-8") == "{}"
+    assert not (target / "catalog.md").exists()
     assert not (target / "old-track").exists()
     assert (target / "new-track" / "report.html").exists()
     assert (target / "notes.txt").read_text(encoding="utf-8") == "human notes"
     assert (target / "user-folder" / "keep.txt").read_text(encoding="utf-8") == "keep"
+
+
+def test_publish_preserves_undeclared_reserved_name_from_previous_report(tmp_path: Path):
+    target = tmp_path / "report"
+    target.mkdir()
+    (target / "report.html").write_text("old report", encoding="utf-8")
+    unrelated_catalog = target / "catalog.html"
+    unrelated_catalog.write_bytes(b"unrelated reserved-name file")
+    write_output_manifest(
+        target,
+        kind="single-track-report",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+    )
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    (staging / "report.html").write_text("new report", encoding="utf-8")
+    write_output_manifest(
+        staging,
+        kind="single-track-report",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+    )
+
+    publish_staged_output(
+        staging,
+        target,
+        allowed_staged_filenames={"report.html", "catalog.html"},
+    )
+
+    assert (target / "report.html").read_text(encoding="utf-8") == "new report"
+    assert unrelated_catalog.read_bytes() == b"unrelated reserved-name file"
+
+
+def test_publish_refuses_to_replace_undeclared_reserved_name(tmp_path: Path):
+    target = tmp_path / "report"
+    target.mkdir()
+    (target / "summary.json").write_text("old summary", encoding="utf-8")
+    unrelated_report = target / "report.html"
+    unrelated_report.write_bytes(b"unrelated report")
+    write_output_manifest(
+        target,
+        kind="single-track-report",
+        generated_files=["summary.json", OUTPUT_MARKER_FILENAME],
+    )
+    old_manifest = (target / OUTPUT_MARKER_FILENAME).read_bytes()
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    (staging / "report.html").write_text("new report", encoding="utf-8")
+    write_output_manifest(
+        staging,
+        kind="single-track-report",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+    )
+
+    with pytest.raises(OutputOwnershipError, match="unowned output file.*report.html"):
+        publish_staged_output(
+            staging,
+            target,
+            allowed_staged_filenames={"summary.json", "report.html"},
+        )
+
+    assert unrelated_report.read_bytes() == b"unrelated report"
+    assert (target / "summary.json").read_text(encoding="utf-8") == "old summary"
+    assert (target / OUTPUT_MARKER_FILENAME).read_bytes() == old_manifest
+
+
+def test_publish_refuses_mismatched_source_binding_before_mutation(tmp_path: Path):
+    target = tmp_path / "report"
+    target.mkdir()
+    report = target / "report.html"
+    report.write_bytes(b"first source report")
+    write_output_manifest(
+        target,
+        kind="single-track-report",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+        source_binding=SourceBinding("a" * 64),
+    )
+    old_manifest = (target / OUTPUT_MARKER_FILENAME).read_bytes()
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    (staging / "report.html").write_bytes(b"second source report")
+    write_output_manifest(
+        staging,
+        kind="single-track-report",
+        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+        source_binding=SourceBinding("b" * 64),
+    )
+
+    with pytest.raises(OutputOwnershipError, match="different or ambiguously bound"):
+        publish_staged_output(
+            staging,
+            target,
+            allowed_staged_filenames={"report.html"},
+        )
+
+    assert report.read_bytes() == b"first source report"
+    assert (target / OUTPUT_MARKER_FILENAME).read_bytes() == old_manifest
 
 
 def test_unrecognized_marker_cannot_claim_user_directories(tmp_path: Path):
@@ -124,10 +229,10 @@ def test_unrecognized_marker_cannot_claim_user_directories(tmp_path: Path):
 
     staging = tmp_path / "staging"
     staging.mkdir()
-    write_output_manifest(staging, kind="test", generated_files=[])
+    write_output_manifest(staging, kind="single-track-report", generated_files=[])
 
-    with pytest.raises(OutputOwnershipError, match="not owned"):
-        publish_staged_output(staging, target, owned_filenames=set())
+    with pytest.raises(OutputOwnershipError, match="unreadable or unrecognized"):
+        publish_staged_output(staging, target, allowed_staged_filenames=set())
 
     assert (target / "user-folder" / "keep.txt").exists()
 
@@ -143,6 +248,7 @@ def test_parent_manifest_cannot_claim_directory_without_child_manifest(tmp_path:
                 "format": "audioatlas-output-manifest",
                 "manifest_version": 1,
                 "kind": "batch-catalog",
+                "generated_files": [OUTPUT_MARKER_FILENAME],
                 "generated_directories": ["user-folder"],
             }
         ),
@@ -153,9 +259,67 @@ def test_parent_manifest_cannot_claim_directory_without_child_manifest(tmp_path:
     staging.mkdir()
     write_output_manifest(staging, kind="batch-catalog", generated_files=[])
 
-    publish_staged_output(staging, target, owned_filenames=set())
+    publish_staged_output(staging, target, allowed_staged_filenames=set())
 
     assert (target / "user-folder" / "keep.txt").exists()
+
+
+@pytest.mark.parametrize(
+    ("kind", "generated_files", "generated_directories"),
+    [
+        ("single-track-report", ["../outside.txt"], []),
+        ("single-track-report", ["nested/report.html"], []),
+        ("single-track-report", [r"nested\report.html"], []),
+        ("single-track-report", ["/tmp/report.html"], []),
+        ("single-track-report", ["unsupported.txt"], []),
+        ("single-track-report", ["report.html", "report.html"], []),
+        ("batch-catalog", ["catalog.html"], ["Track", "track"]),
+        ("batch-catalog", ["catalog.html"], [".."]),
+    ],
+)
+def test_malformed_manifest_cannot_authorize_deletion(
+    tmp_path: Path,
+    kind: str,
+    generated_files: list[str],
+    generated_directories: list[str],
+):
+    outside = tmp_path / "outside.txt"
+    outside.write_bytes(b"outside bytes")
+    target = tmp_path / "report"
+    target.mkdir()
+    unrelated_catalog = target / "catalog.html"
+    unrelated_catalog.write_bytes(b"unrelated catalog bytes")
+    (target / OUTPUT_MARKER_FILENAME).write_text(
+        json.dumps(
+            {
+                "format": "audioatlas-output-manifest",
+                "manifest_version": 1,
+                "kind": kind,
+                "generated_files": generated_files,
+                "generated_directories": generated_directories,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    (staging / "summary.json").write_text("{}", encoding="utf-8")
+    write_output_manifest(
+        staging,
+        kind="single-track-report",
+        generated_files=["summary.json", OUTPUT_MARKER_FILENAME],
+    )
+
+    with pytest.raises(OutputOwnershipError, match="unsafe or malformed"):
+        publish_staged_output(
+            staging,
+            target,
+            allowed_staged_filenames={"summary.json"},
+        )
+
+    assert outside.read_bytes() == b"outside bytes"
+    assert unrelated_catalog.read_bytes() == b"unrelated catalog bytes"
 
 
 def test_staging_directory_is_cleaned_after_failure(tmp_path: Path):
@@ -178,31 +342,35 @@ def test_staging_directory_is_cleaned_after_failure(tmp_path: Path):
 def test_publish_refuses_to_replace_unowned_directory_before_mutation(tmp_path: Path):
     target = tmp_path / "report"
     target.mkdir()
-    (target / "report.html").write_text("old report", encoding="utf-8")
+    (target / "catalog.html").write_text("old catalog", encoding="utf-8")
     (target / "track").mkdir()
     (target / "track" / "keep.txt").write_text("human data", encoding="utf-8")
     write_output_manifest(
         target,
         kind="batch-catalog",
-        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
+        generated_files=["catalog.html", OUTPUT_MARKER_FILENAME],
     )
 
     staging = tmp_path / "staging"
     staging.mkdir()
-    (staging / "report.html").write_text("new report", encoding="utf-8")
+    (staging / "catalog.html").write_text("new catalog", encoding="utf-8")
     (staging / "track").mkdir()
     (staging / "track" / "report.html").write_text("generated", encoding="utf-8")
     write_output_manifest(
         staging,
         kind="batch-catalog",
-        generated_files=["report.html"],
+        generated_files=["catalog.html"],
         generated_directories=["track"],
     )
 
     with pytest.raises(OutputOwnershipError, match="unowned output directory"):
-        publish_staged_output(staging, target, owned_filenames={"report.html"})
+        publish_staged_output(
+            staging,
+            target,
+            allowed_staged_filenames={"catalog.html"},
+        )
 
-    assert (target / "report.html").read_text(encoding="utf-8") == "old report"
+    assert (target / "catalog.html").read_text(encoding="utf-8") == "old catalog"
     assert (target / "track" / "keep.txt").read_text(encoding="utf-8") == "human data"
 
 
@@ -211,11 +379,11 @@ def test_publish_refuses_file_over_directory_before_mutation(tmp_path: Path):
     target.mkdir()
     (target / "summary.json").mkdir()
     (target / "summary.json" / "keep.txt").write_text("human data", encoding="utf-8")
-    (target / "old_plot.png").write_bytes(b"old")
+    (target / "chroma_cqt.png").write_bytes(b"old")
     write_output_manifest(
         target,
         kind="single-track-report",
-        generated_files=["old_plot.png", OUTPUT_MARKER_FILENAME],
+        generated_files=["chroma_cqt.png", OUTPUT_MARKER_FILENAME],
     )
 
     staging = tmp_path / "staging"
@@ -227,13 +395,13 @@ def test_publish_refuses_file_over_directory_before_mutation(tmp_path: Path):
         publish_staged_output(
             staging,
             target,
-            owned_filenames={"summary.json", "old_plot.png"},
+            allowed_staged_filenames={"summary.json", "chroma_cqt.png"},
         )
 
     assert (target / "summary.json" / "keep.txt").read_text(encoding="utf-8") == (
         "human data"
     )
-    assert (target / "old_plot.png").read_bytes() == b"old"
+    assert (target / "chroma_cqt.png").read_bytes() == b"old"
 
 
 def test_legacy_v01_catalog_adopts_only_complete_report_directories(tmp_path: Path):
@@ -265,7 +433,11 @@ def test_legacy_v01_catalog_adopts_only_complete_report_directories(tmp_path: Pa
         generated_directories=["track-a"],
     )
 
-    publish_staged_output(staging, target, owned_filenames={"catalog_summary.json"})
+    publish_staged_output(
+        staging,
+        target,
+        allowed_staged_filenames={"catalog_summary.json"},
+    )
 
     assert (target / "track-a" / "report.html").read_text(encoding="utf-8") == "new"
 
@@ -276,40 +448,32 @@ def test_publish_rolls_back_files_after_mid_publication_failure(
     target = tmp_path / "report"
     target.mkdir()
     (target / "report.html").write_text("old report", encoding="utf-8")
-    write_output_manifest(
-        target,
-        kind="single-track-report",
-        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
-    )
-    write_output_manifest(
-        target,
-        kind="single-track-report",
-        generated_files=["report.html", OUTPUT_MARKER_FILENAME],
-    )
-    (target / "old_plot.png").write_bytes(b"old plot")
+    (target / "chroma_cqt.png").write_bytes(b"old plot")
     (target / "notes.txt").write_text("human notes", encoding="utf-8")
+    unrelated_catalog = target / "catalog.html"
+    unrelated_catalog.write_bytes(b"unrelated catalog")
     write_output_manifest(
         target,
         kind="single-track-report",
-        generated_files=["report.html", "old_plot.png", OUTPUT_MARKER_FILENAME],
+        generated_files=["report.html", "chroma_cqt.png", OUTPUT_MARKER_FILENAME],
     )
     old_manifest = (target / OUTPUT_MARKER_FILENAME).read_bytes()
 
     staging = tmp_path / "staging"
     staging.mkdir()
     (staging / "report.html").write_text("new report", encoding="utf-8")
-    (staging / "new_plot.png").write_bytes(b"new plot")
+    (staging / "waveform_rms.png").write_bytes(b"new plot")
     write_output_manifest(
         staging,
         kind="single-track-report",
-        generated_files=["report.html", "new_plot.png", OUTPUT_MARKER_FILENAME],
+        generated_files=["report.html", "waveform_rms.png", OUTPUT_MARKER_FILENAME],
     )
 
     real_replace = output_module.os.replace
 
     def fail_on_new_plot(source: str | Path, destination: str | Path) -> None:
         source_path = Path(source)
-        if source_path.parent == staging and source_path.name == "new_plot.png":
+        if source_path.parent == staging and source_path.name == "waveform_rms.png":
             raise OSError("injected publish failure")
         real_replace(source, destination)
 
@@ -319,14 +483,15 @@ def test_publish_rolls_back_files_after_mid_publication_failure(
         publish_staged_output(
             staging,
             target,
-            owned_filenames={"report.html", "old_plot.png", "new_plot.png"},
+            allowed_staged_filenames={"report.html", "waveform_rms.png"},
         )
 
     assert (target / "report.html").read_text(encoding="utf-8") == "old report"
-    assert (target / "old_plot.png").read_bytes() == b"old plot"
-    assert not (target / "new_plot.png").exists()
+    assert (target / "chroma_cqt.png").read_bytes() == b"old plot"
+    assert not (target / "waveform_rms.png").exists()
     assert (target / OUTPUT_MARKER_FILENAME).read_bytes() == old_manifest
     assert (target / "notes.txt").read_text(encoding="utf-8") == "human notes"
+    assert unrelated_catalog.read_bytes() == b"unrelated catalog"
     assert not list(tmp_path.glob(".report.backup-*"))
 
 
@@ -380,7 +545,7 @@ def test_publish_rolls_back_directories_after_mid_publication_failure(
         publish_staged_output(
             staging,
             target,
-            owned_filenames={"catalog.html"},
+            allowed_staged_filenames={"catalog.html"},
         )
 
     assert (target / "catalog.html").read_text(encoding="utf-8") == "old catalog"
@@ -405,22 +570,26 @@ def test_publish_refuses_unowned_staged_file_before_mutation(tmp_path: Path):
     staging = tmp_path / "staging"
     staging.mkdir()
     (staging / "report.html").write_text("new report", encoding="utf-8")
-    (staging / "surprise.tmp").write_text("unexpected", encoding="utf-8")
+    (staging / "summary.json").write_text("{}", encoding="utf-8")
     write_output_manifest(
         staging,
         kind="single-track-report",
         generated_files=[
             "report.html",
-            "surprise.tmp",
+            "summary.json",
             OUTPUT_MARKER_FILENAME,
         ],
     )
 
     with pytest.raises(ValueError, match="unowned staged file"):
-        publish_staged_output(staging, target, owned_filenames={"report.html"})
+        publish_staged_output(
+            staging,
+            target,
+            allowed_staged_filenames={"report.html"},
+        )
 
     assert (target / "report.html").read_text(encoding="utf-8") == "old report"
-    assert not (target / "surprise.tmp").exists()
+    assert not (target / "summary.json").exists()
 
 
 def test_normal_report_cannot_replace_song_project_root(tmp_path: Path) -> None:
@@ -437,7 +606,11 @@ def test_normal_report_cannot_replace_song_project_root(tmp_path: Path) -> None:
     )
 
     with pytest.raises(OutputOwnershipError, match="song-project root"):
-        publish_staged_output(staging, destination, owned_filenames={"report.html"})
+        publish_staged_output(
+            staging,
+            destination,
+            allowed_staged_filenames={"report.html"},
+        )
 
     assert (destination / "audioatlas-project.yaml").is_file()
     assert not (destination / "report.html").exists()
@@ -464,6 +637,10 @@ def test_publish_refuses_output_folder_symlink(tmp_path: Path) -> None:
     write_output_manifest(staging, kind="single-track-report", generated_files=[])
 
     with pytest.raises(OutputOwnershipError, match="symlink"):
-        publish_staged_output(staging, destination, owned_filenames=set())
+        publish_staged_output(
+            staging,
+            destination,
+            allowed_staged_filenames=set(),
+        )
 
     assert not list(real.iterdir())

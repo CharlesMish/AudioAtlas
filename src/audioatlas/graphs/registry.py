@@ -60,7 +60,10 @@ GRAPHS: tuple[GraphSpec, ...] = (
         cost_tier=CostTier.CHEAP,
         enabled_by_default=True,
         profiles=frozenset({"minimal", "standard", "full"}),
-        html_caption="What this shows: raw samples with the RMS envelope overlaid.",
+        html_caption=(
+            "What this shows: raw samples with the RMS envelope overlaid. "
+            "It is amplitude context, not a quality judgment."
+        ),
         summary_key="rms_envelope",
     ),
     GraphSpec(
@@ -73,7 +76,10 @@ GRAPHS: tuple[GraphSpec, ...] = (
         cost_tier=CostTier.FREE,
         enabled_by_default=True,
         profiles=frozenset({"minimal", "standard", "full"}),
-        html_caption="What this shows: frame-by-frame RMS energy over time.",
+        html_caption=(
+            "What this shows: frame-by-frame RMS energy over time. "
+            "It describes energy movement within this track, not a loudness target."
+        ),
         summary_key="rms_envelope",
     ),
     GraphSpec(
@@ -137,7 +143,8 @@ GRAPHS: tuple[GraphSpec, ...] = (
         enabled_by_default=True,
         profiles=frozenset({"minimal", "standard", "full"}),
         html_caption=(
-            "What this shows: sample-value distribution with clipping and near-clipping thresholds."
+            "What this shows: sample-value distribution with clipping and near-clipping "
+            "thresholds. Threshold markers do not prove audible distortion."
         ),
         summary_key="levels",
     ),
@@ -151,7 +158,10 @@ GRAPHS: tuple[GraphSpec, ...] = (
         cost_tier=CostTier.FREE,
         enabled_by_default=True,
         profiles=_DEFAULT_PROFILES,
-        html_caption="What this shows: the measured left/right channel relationship over time.",
+        html_caption=(
+            "What this shows: the measured left/right channel relationship over time. "
+            "Low-correlation passages are listening prompts, not defects."
+        ),
         summary_key="stereo_correlation",
     ),
     GraphSpec(
@@ -165,7 +175,8 @@ GRAPHS: tuple[GraphSpec, ...] = (
         enabled_by_default=True,
         profiles=_DEFAULT_PROFILES,
         html_caption=(
-            "What this shows: mid and side RMS energy over time with the side-to-mid ratio."
+            "What this shows: mid and side RMS energy over time with the side-to-mid ratio. "
+            "Side-heavy passages can be intentional; this is context, not a width judgment."
         ),
         summary_key="mid_side_energy",
     ),
@@ -180,7 +191,8 @@ GRAPHS: tuple[GraphSpec, ...] = (
         enabled_by_default=True,
         profiles=_DEFAULT_PROFILES,
         html_caption=(
-            "What this shows: spectral centroid, rolloff, and bandwidth movement over time."
+            "What this shows: spectral centroid, rolloff, and bandwidth movement over time. "
+            "It shows shape within this track, not brightness quality."
         ),
         summary_key="spectral_shape",
     ),
@@ -257,7 +269,8 @@ GRAPHS: tuple[GraphSpec, ...] = (
         ),
         html_caption=(
             "What this shows: K-weighted short-term loudness in 3 s windows over time. "
-            "This is distinct from the RMS timeline and from integrated LUFS."
+            "This is distinct from the RMS timeline and from integrated LUFS. "
+            "It is descriptive context, not a delivery pass/fail result."
         ),
         wide=True,
         summary_key="short_term_lufs",

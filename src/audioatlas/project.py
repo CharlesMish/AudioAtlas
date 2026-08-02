@@ -352,7 +352,7 @@ def _publish_project_root(root: Path, config: dict[str, Any]) -> None:
         publish_staged_output(
             staging,
             root,
-            owned_filenames=set(PROJECT_FILENAMES),
+            allowed_staged_filenames=set(PROJECT_FILENAMES),
             transaction=transaction,
         )
 

@@ -13,8 +13,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from audioatlas.desktop_runtime import (
+    GENERIC_GUI_ERROR_MESSAGE,
+    GENERIC_GUI_ERROR_TITLE,
+    DesktopExceptionBoundary,
     configure_desktop_logger,
     configure_scientific_cache_environment,
+    installed_desktop_excepthook,
     log_path,
 )
 from audioatlas.run_contract import DesktopRunPhase, DesktopRunState
@@ -394,10 +398,24 @@ def main(argv: list[str] | None = None) -> None:
     if sys.platform != "win32":
         raise SystemExit("The AudioAtlas Windows app requires 64-bit Windows.")
 
-    configure_scientific_cache_environment()
+    logger = configure_desktop_logger("audioatlas.windows_app")
+    boundary = DesktopExceptionBoundary(logger, _show_generic_error)
+    with installed_desktop_excepthook(boundary):
+        try:
+            configure_scientific_cache_environment()
+            _run_native_gui(args, boundary)
+        except Exception:
+            exception_type, exception, traceback = sys.exc_info()
+            assert exception_type is not None and exception is not None
+            boundary(exception_type, exception, traceback)
+            raise SystemExit(1) from None
+
+
+def _run_native_gui(args: argparse.Namespace, boundary: DesktopExceptionBoundary) -> None:
     import tkinter as tk
 
     root = tk.Tk()
+    root.report_callback_exception = boundary
     WindowsDesktopApp(root)
     if args.ui_smoke:
         root.withdraw()
@@ -405,6 +423,13 @@ def main(argv: list[str] | None = None) -> None:
         print("AudioAtlas Windows UI ready", flush=True)
         root.after(10, root.destroy)
     root.mainloop()
+
+
+def _show_generic_error() -> None:
+    import ctypes
+
+    message_box = ctypes.windll.user32.MessageBoxW  # type: ignore[attr-defined]
+    message_box(None, GENERIC_GUI_ERROR_MESSAGE, GENERIC_GUI_ERROR_TITLE, 0x10)
 
 
 if __name__ == "__main__":

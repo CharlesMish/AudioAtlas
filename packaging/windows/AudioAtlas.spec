@@ -70,7 +70,7 @@ executable = EXE(
     strip=False,
     upx=False,
     console=False,
-    disable_windowed_traceback=False,
+    disable_windowed_traceback=True,
     version=version_file,
 )
 collection = COLLECT(

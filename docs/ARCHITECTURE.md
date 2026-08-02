@@ -43,7 +43,7 @@ scripts/prepare_calibration_review.py
 
 | Layer | Owns | Must not own |
 |---|---|---|
-| `io.py` | decoding, ranges, metadata privacy | DSP interpretation, plotting |
+| `io.py` | decoding, ranges, metadata privacy, streamed source binding | DSP interpretation, plotting |
 | `analysis/*` | pure measurements and JSON-safe summaries | paths, matplotlib, report prose |
 | `graphs/*` | stable plot identity, profile membership, captions, adapters | DSP recomputation |
 | `visualize/*` | rendering supplied results | decoding or analysis |
@@ -54,7 +54,7 @@ scripts/prepare_calibration_review.py
 | `revision_diff.py` | same-track guard, comparability assessment, descriptive B-minus-A artifacts | audio analysis, cross-track ranking, preferred-version claims |
 | `alt_text.py` | measured descriptions from existing summary values | analysis recomputation or musical inference |
 | report writers | static presentation | new measurements or causal claims |
-| `output.py` | staged publication and owned-artifact cleanup | analysis or interpretation |
+| `output.py` | staged publication, source-bound manifests, and owned-artifact cleanup | analysis or interpretation |
 | calibration scripts | anonymous review/replay evidence and hash verification | opening audio or replacing human listening |
 | `cli.py` | arguments, lightweight discovery, and friendly user errors | business logic |
 | `app_core.py` | fixed friend-facing defaults, input validation, and output naming | DSP, Cocoa, alternate analysis behavior |
@@ -105,7 +105,9 @@ paths come from the operating system's standard per-user locations, preserving
 The Windows shell uses bundled Tkinter and polls a thread-safe state queue on
 Tk's event loop; controller callbacks never touch Tk widgets from the worker.
 PyInstaller packages a Python 3.11 x64 onedir application so native DLL closure
-can be audited and startup does not require onefile extraction. A separate
+can be audited and startup does not require onefile extraction. The audit finds
+PE images by their headers, resolves imports only through the importing image's
+permitted onedir roots, and hashes the canonical resolved inventory. A separate
 Inno Setup definition installs the same audited directory under the current
 user without elevation. The app creates no services, updater, file association,
 PATH entry, startup task, or app-owned registry state.
@@ -143,11 +145,13 @@ A run renders into a sibling temporary directory. Only after every writer and
 plot succeeds does `output.py` publish the completed artifacts. It:
 
 - replaces individual files with same-filesystem atomic operations;
-- removes stale known AudioAtlas outputs absent from the new run, including
-  obsolete root artifacts when a folder switches between single-report and
-  catalog mode;
+- removes only stale artifacts declared by the previous validated ownership
+  manifest, including obsolete root artifacts when a folder switches between
+  single-report and catalog mode;
 - preserves unrelated files;
 - records owned files/directories in `.audioatlas-output.json`;
+- binds single-track manifests to an opaque versioned digest of the source file
+  instance, basename, and streamed bytes without recording a local path;
 - removes prior batch-track directories only when both the parent catalog and
   child report carry recognized ownership evidence (or a narrow legacy catalog
   recovery rule applies);
@@ -166,7 +170,7 @@ runs from retaining completed Matplotlib graphs and their analysis bundles.
 
 Librosa uses Numba/llvmlite in analysis paths, so those transitive packages are
 part of the executable measurement environment rather than incidental build
-tools. AudioAtlas `0.2.0a7` promotes Numba into the direct dependency contract
+tools. AudioAtlas `0.2.0a8` promotes Numba into the direct dependency contract
 and constrains it to `>=0.65.1,<0.66` after a clean Python 3.13 report stalled
 and crashed with Numba 0.66.0 / llvmlite 0.48.0 but completed with Numba 0.65.1
 / llvmlite 0.47.0. Dependency versions are recorded in provenance; widening

@@ -10,12 +10,16 @@ It runs on your computer. There is no account, upload, server, telemetry, or
 quality score. The result is a folder you can open in any browser and keep with
 the track.
 
-![Current default AudioAtlas Studio report generated from the included guitar demo](docs/assets/readme/report_overview.png)
+![AudioAtlas Midnight Studio report plots generated from the included demo](docs/assets/readme/midnight_report_plots.png)
 
-This is the regular no-theme output: AudioAtlas uses the polished light default
-theme and opens the finished report in Studio.
+AudioAtlas provides:
 
-## Try it, then make your first report
+- local analysis with no intentional audio upload;
+- portable HTML, Markdown, JSON, and PNG reports;
+- Compact, Standard, and Full plot selections over the same complete analysis;
+- bounded review prompts that describe measurements without grading the music.
+
+## Quick start
 
 Open the [live Midnight Studio report](https://charlesmish.github.io/AudioAtlas/)
 to see the complete local-first experience before installing anything. It is
@@ -23,38 +27,44 @@ generated from the 70.98-second project demo track. The hosted sample contains
 the static report only; AudioAtlas itself does not upload user audio or
 generated reports.
 
-### Easiest path: Apple Silicon Mac app
-
-The friend-facing macOS beta needs no Python, Terminal, account, or installer.
-Download `AudioAtlas-<version>-macOS-arm64.dmg` from the matching
-[GitHub prerelease](https://github.com/CharlesMish/AudioAtlas/releases), drag
-AudioAtlas into Applications, and open it. Drop one track or choose a file;
-AudioAtlas writes `AudioAtlas Report – <track>` beside the audio and opens the
-finished themed HTML report automatically.
-
-The signed/notarized DMG is the supported low-setup path. Workflow artifacts
-labeled `beta` are ad-hoc owner-test builds, not substitutes for that release.
-The first app beta supports Apple Silicon and macOS 14 or newer.
-
-### CLI and advanced workflows
-
-The Python CLI supports Python 3.11 or newer and exposes themes, graph profiles,
-batch reports, manual sections, revision diffs, and song projects.
+The recommended `0.2.0a8` alpha installation is the Python package. AudioAtlas
+supports Python 3.11 or newer on macOS, Windows, and Linux where its scientific
+Python and audio-decoder dependencies are available.
 
 ```bash
-python -m pip install audioatlas
-audioatlas analyze song.wav
+python -m pip install audioatlas==0.2.0a8
+audioatlas --version
+audioatlas analyze song.wav --graphs-profile compact
 ```
 
-When `--out` is omitted, AudioAtlas creates a friendly folder such as:
+When `--out` is omitted, the report appears in a folder such as
+`audioatlas-report-song/` in the current directory. Open `report.html` inside
+that folder. Use `--graphs-profile full` for all seventeen registered plots.
 
-```text
-audioatlas-report-song/
-```
+## Release status
 
-Open `report.html` inside that folder.
+### Python package and CLI
 
-From a source checkout using `uv`:
+**Available — recommended installation for AudioAtlas 0.2.0a8 alpha.** The CLI
+includes one-file reports, themes, graph profiles, batch reports, manual
+sections, revision diffs, and song projects.
+
+### macOS application
+
+**Optional unsigned Apple Silicon technical preview — not signed or notarized.**
+It requires Apple Silicon and macOS 14 or newer, is intended for experienced
+testers, and is not the recommended installation route. Apple cannot
+authenticate its developer or notarization status. Do not weaken or disable
+macOS security controls to run it; use the Python package if normal launch is
+blocked.
+
+### Windows application
+
+**Desktop download not included in this alpha — native Windows build and
+acceptance remain pending.** Windows users can use the recommended Python CLI;
+the native application is neither abandoned nor represented as ready.
+
+## Source checkout
 
 ```bash
 uv sync
@@ -122,8 +132,6 @@ time. Midnight Studio is an optional built-in alternative:
 ```bash
 audioatlas analyze song.wav --theme midnight_studio
 ```
-
-![Midnight Studio report plot cards with theme-matched PNG canvases](docs/assets/readme/midnight_report_plots.png)
 
 Choose the restrained opening view when generating a report:
 
@@ -252,11 +260,20 @@ surface no prioritized prompts at all.
 
 ## Alpha status
 
-AudioAtlas `0.2.0a7` is a public alpha. The report pipeline, macOS app,
-comparison tools, and local song-project workflow are usable, but the default
-review prompts are still being calibrated on real music. The first app release
-is Apple Silicon-only. The older `.command` and `.bat` launchers remain
+AudioAtlas `0.2.0a8` is a public alpha. The report pipeline, comparison tools,
+and local song-project workflow are usable, but the default review prompts are
+still being calibrated on real music. This release adds safer report
+replacement, private source binding, GUI failure containment, and stricter
+native packaging verification. Signed/notarized or Authenticode-signed desktop
+artifacts plus clean-machine acceptance remain future gates; no desktop binary
+is generally release-ready. The older `.command` and `.bat` launchers remain
 convenience wrappers for an already installed CLI, not desktop installers.
+
+Processing time and memory use vary with file length, format, graph profile,
+and machine. Keep original audio and any reports you care about; alpha feedback
+about installation clarity, report usefulness, and failures is welcome through
+the project issue tracker. Reports are descriptive analysis tools, not
+authoritative mastering judgments.
 
 The temporary Numba compatibility range is documented in
 [Compatibility](docs/COMPATIBILITY.md).
@@ -272,7 +289,6 @@ The temporary Numba compatibility range is documented in
 - [Schemas](docs/SUMMARY_SCHEMA.md)
 - [Song-project schema](docs/PROJECT_SCHEMA.md)
 - [Architecture](docs/ARCHITECTURE.md)
-- [macOS app release and clean-machine gate](docs/MACOS_APP_RELEASE.md)
 - [Changelog](docs/CHANGELOG.md)
 - [Security policy](SECURITY.md)
 

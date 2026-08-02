@@ -21,11 +21,11 @@ from audioatlas.config import AnalysisConfig
 from audioatlas.graphs import all_graphs
 from audioatlas.graphs.selection import GraphSelection
 from audioatlas.html_report import write_report_html
-from audioatlas.io import load_audio
+from audioatlas.io import compute_source_binding, load_audio
 from audioatlas.output import (
-    ALL_GENERATED_FILENAMES,
     OUTPUT_MARKER_FILENAME,
     SINGLE_REPORT_FILENAMES,
+    SourceBinding,
     output_transaction,
     publish_staged_output,
     staged_output_directory,
@@ -60,6 +60,7 @@ def analyze_file(
     track_id: str | None = None,
     progress_callback: ProgressCallback | None = None,
     cancellation_token: CancellationToken | None = None,
+    source_binding: SourceBinding | None = None,
 ) -> AnalysisRunResult:
     """Analyze one file, publish its report, and release renderer cycles.
 
@@ -84,6 +85,7 @@ def analyze_file(
             track_id=track_id,
             progress_callback=progress_callback,
             cancellation_token=cancellation_token,
+            source_binding=source_binding,
         )
     finally:
         gc.collect()
@@ -104,6 +106,7 @@ def _analyze_file_impl(
     track_id: str | None = None,
     progress_callback: ProgressCallback | None = None,
     cancellation_token: CancellationToken | None = None,
+    source_binding: SourceBinding | None = None,
 ) -> AnalysisRunResult:
     """Implement one analysis run inside a collectable lifecycle frame.
 
@@ -121,6 +124,7 @@ def _analyze_file_impl(
 
     token = cancellation_token or CancellationToken()
     token.raise_if_cancelled()
+    binding = source_binding or compute_source_binding(input_path)
 
     # Lock and preflight the destination before expensive work. Staging is the
     # only filesystem mutation until publication, so bad input and cancellation
@@ -133,6 +137,7 @@ def _analyze_file_impl(
             start_seconds=start_seconds,
             end_seconds=end_seconds,
             include_local_paths=include_local_paths,
+            source_binding=binding,
         )
         token.raise_if_cancelled()
 
@@ -183,10 +188,9 @@ def _analyze_file_impl(
         }
         findings = generate_findings(summary).to_dict()
 
-        # A destination may legitimately be reused for any generated artifact kind.
-        # Treat every predictable root artifact as AudioAtlas-owned so switching
-        # among reports, catalogs, and revision diffs cannot leave a mixed folder.
-        owned_names = set(ALL_GENERATED_FILENAMES)
+        # This constrains only the current staged report. Stale-file authority is
+        # derived later from the destination's validated ownership manifest.
+        staged_file_allowlist = set(SINGLE_REPORT_FILENAMES) | set(selected_filenames)
         graph_total = len(selected_graphs)
         _emit_progress(
             progress_callback,
@@ -231,6 +235,7 @@ def _analyze_file_impl(
                 *SINGLE_REPORT_FILENAMES,
                 OUTPUT_MARKER_FILENAME,
             ],
+            source_binding=audio.source_binding,
         )
         token.raise_if_cancelled()
         _emit_progress(progress_callback, "publishing", "Publishing report")
@@ -239,7 +244,7 @@ def _analyze_file_impl(
         publish_staged_output(
             staging,
             out,
-            owned_filenames=owned_names,
+            allowed_staged_filenames=staged_file_allowlist,
             transaction=transaction,
         )
 

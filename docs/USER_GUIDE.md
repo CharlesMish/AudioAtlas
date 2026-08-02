@@ -6,30 +6,31 @@ not grade the track or tell you what artistic choice to make.
 
 ## Installation
 
-### Apple Silicon macOS app
+### Python CLI — recommended
 
-For the lowest-setup path, download the signed/notarized
-`AudioAtlas-<version>-macOS-arm64.dmg` from the matching GitHub prerelease. Drag
-AudioAtlas into Applications and open it. Drop one supported audio file or use
-**Choose Audio File**. The app uses the standard graph set and default Studio
-theme, writes `AudioAtlas Report – <track>` beside the source, and opens the
-finished report automatically. It does not need Python, Terminal, an account,
-or a network connection after download.
-
-If the source folder cannot be written, choose another report location when
-prompted. The first app beta supports Apple Silicon and macOS 14 or newer.
-Cancel, Quit, and closing the window request a safe stop; once publication has
-started, AudioAtlas finishes the complete report before exiting. Existing
-unowned folders are never adopted, and same-stem files receive distinct report
-folders when needed.
-
-### Python CLI
-
-AudioAtlas supports Python 3.11 and newer. For a normal installation:
+AudioAtlas supports Python 3.11 and newer on macOS, Windows, and Linux where its
+scientific Python and audio-decoder dependencies are available. For the
+recommended `0.2.0a8` public-alpha installation:
 
 ```bash
-python -m pip install audioatlas
+python -m pip install audioatlas==0.2.0a8
+audioatlas --version
+audioatlas themes
 ```
+
+### Native application status
+
+An optional `0.2.0a8` Apple Silicon application may be provided as an **unsigned
+technical preview** for experienced testers. It requires macOS 14 or newer and
+is not signed, notarized, Gatekeeper-approved, or the recommended route. Apple
+cannot authenticate its developer. Do not weaken macOS security controls; use
+the Python CLI if ordinary launch is blocked.
+
+No Windows desktop download is included in this alpha. The genuine Windows
+build and native client acceptance remain pending; Windows users can use the
+Python CLI.
+
+### Editable source checkout
 
 For an editable source checkout, create and activate an environment:
 

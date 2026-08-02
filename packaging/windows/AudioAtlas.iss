@@ -40,11 +40,11 @@ ChangesEnvironment=no
 CloseApplications=yes
 CloseApplicationsFilter=AudioAtlas.exe
 UninstallDisplayIcon={app}\AudioAtlas.exe
-VersionInfoVersion=0.2.0.7
+VersionInfoVersion=0.2.0.8
 VersionInfoDescription=AudioAtlas internal Windows candidate build {#MyBuildNumber}
 VersionInfoProductName=AudioAtlas
 VersionInfoTextVersion={#MyAppVersion}
-VersionInfoProductVersion=0.2.0.7
+VersionInfoProductVersion=0.2.0.8
 VersionInfoProductTextVersion={#MyAppVersion}
 
 [Files]

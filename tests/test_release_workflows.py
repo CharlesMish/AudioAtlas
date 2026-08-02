@@ -156,7 +156,7 @@ def test_private_macos_demo_candidate_cannot_publish() -> None:
     assert 'test "${GITHUB_REF}" = "refs/heads/main"' in text
     assert 'test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"' in text
     assert r'if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+a[0-9]+$ ]]' in text
-    assert "0.2.0a7" not in text
+    assert "0.2.0a8" not in text
     assert "scripts/package_macos_dmg.py" in text
     assert "audioatlas_demo.wav" in text
     assert "docs/MACOS_DEMO_GUIDE.md" in text
@@ -214,6 +214,7 @@ def test_private_windows_candidate_workflow_cannot_publish() -> None:
             assert "$PSNativeCommandUseErrorActionPreference = $true" in run
     for promised in (
         "README_FIRST.txt",
+        "windows-candidate-manifest.json",
         "*-installer-test-kit.zip",
         "*-installer-test-kit.zip.sha256",
         "*-portable-test-kit.zip",
@@ -230,6 +231,9 @@ def test_private_windows_candidate_workflow_cannot_publish() -> None:
     assert diagnostic_upload["with"]["path"] == "dist/windows/evidence"
     successful_uploads = [step for step in uploads if step is not diagnostic_upload]
     assert all(step["if"] == "success()" for step in successful_uploads)
+    assert all(
+        "windows-candidate-manifest.json" in step["with"]["path"] for step in successful_uploads
+    )
     assert "*-setup.exe" not in "\n".join(
         str(step["with"]["path"]) for step in successful_uploads
     )

@@ -195,6 +195,7 @@ def write_report_html(
         duration_label = "unknown"
     source_range = _source_range_label(metadata)
     build_metadata = report_build_metadata()
+    profile_label = _profile_label(summary)
 
     lines = [
         "<!DOCTYPE html>",
@@ -210,9 +211,12 @@ def write_report_html(
         f'<body data-presentation="{_h(selected_presentation)}">',
         skip_link_html(),
         '<div class="container">',
-        "<header>",
+        '<header id="top">',
         f"<h1>{_h(filename)}</h1>",
         '<div class="subtitle">Measurement-based findings, not quality judgments.</div>',
+        '<p class="report-positioning">Local-first listening context: measurements, not '
+        "grades. AudioAtlas analyzes the selected file on this machine and does not "
+        "intentionally upload it.</p>",
         presentation_controls_html(selected_presentation),
         '<div class="meta-chips">',
         _chip("Duration", duration_label),
@@ -220,6 +224,7 @@ def write_report_html(
         _chip("Sample rate", f"{_fmt_value(metadata.get('samplerate'))} Hz"),
         _chip("Channels", _fmt_value(metadata.get("channels"))),
         _chip("Format", f"{_fmt_value(metadata.get('format'))} / {_fmt_value(metadata.get('subtype'))}"),
+        _chip("Profile", profile_label) if profile_label is not None else "",
         _chip("Generated", build_metadata["generated_at"]),
         _chip("AudioAtlas", build_metadata["audioatlas_version"]),
         _chip("Git", build_metadata.get("git_hash", "unavailable")),
@@ -227,6 +232,7 @@ def write_report_html(
         "</div>",
         "</header>",
         '<nav class="top-nav" aria-label="Report sections">',
+        '<a href="#how-to-read">Overview</a><span aria-hidden="true">·</span>',
         '<a href="#metrics">Key metrics</a><span aria-hidden="true">·</span>',
         '<a href="#findings">Findings</a><span aria-hidden="true">·</span>',
         '<a href="#plots">Plots</a><span aria-hidden="true">·</span>',
@@ -236,10 +242,12 @@ def write_report_html(
         "</nav>",
         '<main id="main-content" tabindex="-1">',
         '<section class="how-to-read" id="how-to-read">',
-        "<strong>How to read this report</strong>",
-        "<p>Use this alpha report as a workflow: review Delivery / headroom context, "
+        '<h2 class="how-to-read-title">How to read this report</h2>',
+        "<p>Start with Key metrics for level and headroom context, "
         "scan Findings for checks worth prioritizing, then inspect the relevant plots "
         "and verify by listening.</p>",
+        "<p>This report provides descriptive context, not professional mastering approval "
+        "or a universal pass/fail result.</p>",
         f"<p>{_h(RELATIVE_DB_NOTE)}</p>",
         "<p>Check before delivery / worth a listen / for reference indicate priority, not quality.</p>",
         "<p>A report can have no prioritized findings; the plots still describe the track's measured shape.</p>",
@@ -299,6 +307,16 @@ def _chip(label: str, value: Any) -> str:
     return f'<div class="chip"><strong>{_h(label)}</strong> {_h(value)}</div>'
 
 
+def _profile_label(summary: dict[str, Any]) -> str | None:
+    graphs = summary.get("graphs")
+    if not isinstance(graphs, dict):
+        return None
+    profile = graphs.get("profile")
+    if not isinstance(profile, str) or not profile.strip():
+        return None
+    return profile.strip().replace("_", " ").title()
+
+
 def _metric_card(label: str, value: Any, unit: str, glossary_id: str) -> str:
     value_text = _fmt_value(value)
     unit_html = f'<div class="metric-note">{_h(unit)}</div>' if unit else ""
@@ -342,6 +360,7 @@ def _findings_section(
     ]
     if not isinstance(findings, dict):
         lines.append('<p class="empty">No findings data was provided.</p>')
+        lines.append(_back_to_top_html())
         lines.append("</section>")
         return "\n".join(lines)
 
@@ -353,6 +372,7 @@ def _findings_section(
             "<p class=\"empty\">No prioritized findings surfaced. The plots and technical "
             "details still describe the track's measured shape.</p>"
         )
+        lines.append(_back_to_top_html())
         lines.append("</section>")
         return "\n".join(lines)
 
@@ -384,6 +404,7 @@ def _findings_section(
             for item in additional:
                 lines.append(_finding_card(item, max_display, available_graphs))
             lines.extend(["</div>", "</details>"])
+    lines.append(_back_to_top_html())
     lines.append("</section>")
     return "\n".join(lines)
 
@@ -420,7 +441,9 @@ def _finding_card(
     )
     does_not_mean = item.get("does_not_mean")
     if isinstance(does_not_mean, str) and does_not_mean:
-        lines.append(f'<p class="why"><strong>Does not mean:</strong> {_h(does_not_mean)}</p>')
+        lines.append(
+            f'<p class="why why-limit"><strong>Does not mean:</strong> {_h(does_not_mean)}</p>'
+        )
 
     checks = item.get("suggested_checks")
     if isinstance(checks, list) and checks:
@@ -523,6 +546,7 @@ def _plots_section(
             ]
         )
     lines.append("</div>")
+    lines.append(_back_to_top_html())
     lines.append("</section>")
     return "\n".join(lines)
 
@@ -616,7 +640,7 @@ def _glossary_section() -> str:
             f'<div class="glossary-item" id="glossary-{_h(glossary_id)}">'
             f'<h3>{_h(term)}</h3><p>{_h(text)}</p></div>'
         )
-    lines.extend(["</div>", "</details>", "</section>"])
+    lines.extend(["</div>", "</details>", _back_to_top_html(), "</section>"])
     return "\n".join(lines)
 
 
@@ -636,6 +660,7 @@ def _technical_section(summary: dict[str, Any]) -> str:
             lines.append(_dict_table(block))
             lines.append("</div>")
             lines.append("</details>")
+    lines.append(_back_to_top_html())
     lines.append("</section>")
     return "\n".join(lines)
 
@@ -689,8 +714,12 @@ def _notes_section() -> str:
             f'<textarea id="note-{index}" data-note-label="{_h(label)}"></textarea>'
         )
         lines.append("</div>")
-    lines.extend(["</div>", "</section>"])
+    lines.extend(["</div>", _back_to_top_html(), "</section>"])
     return "\n".join(lines)
+
+
+def _back_to_top_html() -> str:
+    return '<p class="back-to-top"><a href="#top">Back to top</a></p>'
 
 
 def _notes_script() -> str:
@@ -756,7 +785,14 @@ h2::before {
   flex: 0 0 auto;
 }
 h3 { margin: 0; }
-.subtitle { font-size: 14.5px; color: var(--text-muted); margin-bottom: 16px; }
+.subtitle { font-size: 14.5px; color: var(--text-muted); margin-bottom: 6px; }
+.report-positioning {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  max-width: 76ch;
+  margin: 0 0 16px;
+  text-wrap: pretty;
+}
 .meta-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .chip { display: inline-flex; gap: 6px; background: var(--chip-bg); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; color: var(--text-muted); }
 .chip strong { color: var(--text); font-weight: 550; }
@@ -777,6 +813,17 @@ section { margin-top: 40px; }
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
 }
 .how-to-read strong { display: block; margin-bottom: 4px; color: var(--text); }
+.how-to-read .how-to-read-title {
+  display: block;
+  border: 0;
+  padding: 0;
+  margin: 0 0 4px;
+  font-size: inherit;
+  font-weight: 680;
+  line-height: inherit;
+  color: var(--text);
+}
+.how-to-read .how-to-read-title::before { content: none; }
 .how-to-read p { margin: 4px 0; }
 .section-intro {
   font-size: 13.6px;
@@ -807,10 +854,17 @@ section { margin-top: 40px; }
 .category { font-size: 11px; background: var(--trait-bg); color: var(--trait-text); padding: 3px 8px; border-radius: 999px; border: 1px solid var(--trait-border); }
 .finding-title { font-size: 17.5px; font-weight: 680; margin: 0 0 10px; line-height: 1.3; }
 .evidence, .why { margin: 8px 0; color: var(--text-muted); }
+.why-limit {
+  background: var(--surface-muted);
+  border-left: 3px solid var(--callout-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
 .evidence-list { margin: 6px 0 10px; padding-left: 20px; }
 .evidence-list li { margin-bottom: 4px; }
 .checks { margin: 6px 0 2px; padding-left: 20px; }
 .checks li { margin-bottom: 4px; }
+.checks li::marker { color: var(--accent); }
 .finding-card h4 { margin: 14px 0 5px; font-size: 13px; color: var(--text); }
 .time-ranges {
   font-size: 12.5px;
@@ -840,6 +894,7 @@ section { margin-top: 40px; }
 .plot-desc { font-size: 12.5px; color: var(--text-muted); margin: 8px 0 0; }
 details { margin-bottom: 10px; overflow: hidden; }
 details summary { padding: 12px 15px; font-weight: 600; cursor: pointer; user-select: none; font-size: 14px; color: var(--text); }
+details summary:hover { color: var(--accent); }
 details[open] summary { border-bottom: 1px solid var(--border); }
 .details-body { padding: 14px 16px 16px; font-size: 13px; }
 .glossary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
@@ -847,8 +902,9 @@ details[open] summary { border-bottom: 1px solid var(--border); }
 .glossary-item h3 { font-size: 14px; margin-bottom: 5px; color: var(--text); }
 .glossary-item p { margin: 0; color: var(--text-muted); }
 .metrics-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.metrics-table td { padding: 6px 0; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+.metrics-table td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
 .metrics-table td:first-child { width: 36%; color: var(--text-muted); }
+.metrics-table td:last-child { overflow-wrap: anywhere; }
 .notes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .note-box { padding: 14px 15px; }
 .note-box label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 7px; color: var(--text-muted); }
@@ -859,6 +915,14 @@ details[open] summary { border-bottom: 1px solid var(--border); }
 .note-actions button:hover { border-color: var(--accent); background: var(--accent-muted); }
 .notes-status { min-height: 1.5em; margin: 0 0 12px; color: var(--text-muted); font-size: 12.5px; }
 .footer-note { margin-top: 48px; font-size: 11.5px; color: var(--text-soft); border-top: 1px solid var(--border); padding-top: 16px; }
+.back-to-top { margin: 18px 0 0; font-size: 12.5px; text-align: right; }
+.back-to-top a { color: var(--accent); text-decoration: none; font-weight: 550; }
+.back-to-top a:hover { text-decoration: underline; }
+@media print {
+  h2 { break-after: avoid; }
+  .metrics-grid, .plot-card, .finding-card { break-inside: avoid; }
+  .back-to-top { display: none !important; }
+}
 @media (max-width: 520px) {
   .plots-grid { grid-template-columns: 1fr; }
   .container { padding: 20px 12px 56px; }

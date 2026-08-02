@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -23,6 +22,8 @@ from audioatlas.errors import (
 )
 from audioatlas.output import (
     OUTPUT_MARKER_FILENAME,
+    SourceBinding,
+    manifest_matches_source_binding,
     output_transaction,
     read_output_manifest,
     staged_output_directory,
@@ -57,6 +58,14 @@ class AppInputInfo:
             self.duration_seconds > LARGE_FILE_DURATION_SECONDS
             or self.estimated_decoded_bytes > LARGE_FILE_DECODED_BYTES
         )
+
+
+@dataclass(frozen=True)
+class AppOutputPreflight:
+    """Reusable proof of a selected report directory and its source binding."""
+
+    directory: Path
+    source_binding: SourceBinding
 
 
 AppPreparationStage = Literal["inspecting", "confirming", "initializing"]
@@ -109,21 +118,23 @@ def safe_report_directory(
     input_path: str | Path,
     *,
     output_parent: str | Path | None = None,
+    source_binding: SourceBinding | None = None,
 ) -> Path:
     """Choose a reusable owned report folder without adopting user data."""
 
     source = Path(input_path).expanduser()
+    binding = source_binding or compute_app_source_binding(source)
     parent = source.parent if output_parent is None else Path(output_parent).expanduser()
     labels = [source.stem]
     if source.name != source.stem:
         labels.append(source.name)
     for label in labels:
         candidate = parent / _report_component(label)
-        if _candidate_matches_source(candidate, source.name):
+        if _candidate_matches_source(candidate, binding):
             return candidate
     for number in range(2, 10_000):
         candidate = parent / _report_component(f"{source.name} ({number})")
-        if _candidate_matches_source(candidate, source.name):
+        if _candidate_matches_source(candidate, binding):
             return candidate
     raise AppInputError("AudioAtlas could not choose a safe report-folder name.")
 
@@ -221,7 +232,7 @@ def analyze_for_app(
     input_path: str | Path,
     *,
     output_parent: str | Path | None = None,
-    _preflighted_output_dir: str | Path | None = None,
+    _preflighted_output_dir: str | Path | AppOutputPreflight | None = None,
     progress_callback: Callable[[AnalysisProgress], None] | None = None,
     cancellation_token: CancellationToken | None = None,
 ) -> AnalysisRunResult:
@@ -230,11 +241,20 @@ def analyze_for_app(
     from audioatlas.graphs.selection import GraphSelection
 
     source = validate_app_input(input_path)
-    out_dir = (
-        safe_report_directory(source, output_parent=output_parent)
-        if _preflighted_output_dir is None
-        else Path(_preflighted_output_dir).expanduser()
-    )
+    if isinstance(_preflighted_output_dir, AppOutputPreflight):
+        out_dir = _preflighted_output_dir.directory
+        source_binding = _preflighted_output_dir.source_binding
+    else:
+        source_binding = compute_app_source_binding(source)
+        out_dir = (
+            safe_report_directory(
+                source,
+                output_parent=output_parent,
+                source_binding=source_binding,
+            )
+            if _preflighted_output_dir is None
+            else Path(_preflighted_output_dir).expanduser()
+        )
     return _analyze_file(
         source,
         out_dir,
@@ -244,6 +264,7 @@ def analyze_for_app(
         include_local_paths=False,
         progress_callback=progress_callback,
         cancellation_token=cancellation_token,
+        source_binding=source_binding,
     )
 
 
@@ -251,7 +272,8 @@ def preflight_app_output(
     input_path: str | Path,
     *,
     output_parent: str | Path | None = None,
-) -> Path:
+    source_binding: SourceBinding | None = None,
+) -> AppOutputPreflight:
     """Prove a desktop report destination is owned, unlocked, and writable.
 
     This lightweight check happens before scientific initialization. The real
@@ -260,10 +282,15 @@ def preflight_app_output(
     """
 
     source = validate_app_input(input_path)
-    out_dir = safe_report_directory(source, output_parent=output_parent)
+    source_binding = source_binding or compute_app_source_binding(source)
+    out_dir = safe_report_directory(
+        source,
+        output_parent=output_parent,
+        source_binding=source_binding,
+    )
     with output_transaction(out_dir), staged_output_directory(out_dir):
         pass
-    return out_dir
+    return AppOutputPreflight(directory=out_dir, source_binding=source_binding)
 
 
 def _analyze_file(*args: object, **kwargs: object) -> AnalysisRunResult:
@@ -272,6 +299,14 @@ def _analyze_file(*args: object, **kwargs: object) -> AnalysisRunResult:
     from audioatlas.pipeline import analyze_file
 
     return analyze_file(*args, **kwargs)
+
+
+def compute_app_source_binding(source: str | Path) -> SourceBinding:
+    """Load raw-file hashing only after the desktop worker has started."""
+
+    from audioatlas.io import compute_source_binding
+
+    return compute_source_binding(source)
 
 
 def _emit_preparation(
@@ -307,7 +342,7 @@ def friendly_error_message(error: BaseException) -> str:
     return "AudioAtlas could not create this report. The previous report was left unchanged."
 
 
-def _candidate_matches_source(candidate: Path, source_filename: str) -> bool:
+def _candidate_matches_source(candidate: Path, source_binding: SourceBinding) -> bool:
     if candidate.is_symlink():
         return False
     if not candidate.exists():
@@ -323,15 +358,7 @@ def _candidate_matches_source(candidate: Path, source_filename: str) -> bool:
     manifest = read_output_manifest(candidate / OUTPUT_MARKER_FILENAME)
     if manifest is None or manifest.get("kind") != "single-track-report":
         return False
-    summary_path = candidate / "summary.json"
-    if summary_path.is_symlink() or not summary_path.is_file():
-        return False
-    try:
-        summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return False
-    metadata = summary.get("metadata") if isinstance(summary, dict) else None
-    return isinstance(metadata, dict) and metadata.get("filename") == source_filename
+    return manifest_matches_source_binding(manifest, source_binding)
 
 
 def _report_component(label: str) -> str:

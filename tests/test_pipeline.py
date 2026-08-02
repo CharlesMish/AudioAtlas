@@ -64,6 +64,8 @@ def test_pipeline_writes_expected_outputs(tmp_path: Path, sr: int):
 
     summary = json.loads(result.summary_path.read_text(encoding="utf-8"))
     findings = json.loads(result.findings_path.read_text(encoding="utf-8"))
+    manifest_text = (result.out_dir / OUTPUT_MARKER_FILENAME).read_text(encoding="utf-8")
+    manifest = json.loads(manifest_text)
     html = result.html_report_path.read_text(encoding="utf-8")
 
     assert summary["schema_version"] == SUMMARY_SCHEMA_VERSION
@@ -72,13 +74,21 @@ def test_pipeline_writes_expected_outputs(tmp_path: Path, sr: int):
     assert summary["metadata"]["local_paths_included"] is False
     assert summary["source_identity"] == {"kind": "none", "track_id_sha256": None}
     provenance = summary["analysis_provenance"]
-    assert provenance["audioatlas_version"] == "0.2.0a7"
+    assert provenance["audioatlas_version"] == "0.2.0a8"
     assert provenance["summary_schema_version"] == SUMMARY_SCHEMA_VERSION
     assert len(provenance["analysis_config_sha256"]) == 64
     assert len(provenance["measurement_code_sha256"]) == 64
     assert len(provenance["compatible_analysis_sha256"]) == 64
     assert len(provenance["exact_environment_sha256"]) == 64
     assert str(tmp_path) not in json.dumps(summary)
+    assert str(tmp_path) not in manifest_text
+    assert manifest["source_binding"] == {
+        "format": "audioatlas-source-binding",
+        "version": 1,
+        "algorithm": "sha256",
+        "digest": manifest["source_binding"]["digest"],
+    }
+    assert re.fullmatch(r"[0-9a-f]{64}", manifest["source_binding"]["digest"])
     assert "levels" in summary
     assert "peak_timeline" in summary
     assert summary["average_spectrum"]["band_measurement"] == (
@@ -504,6 +514,8 @@ def test_reusing_output_between_catalog_and_single_report_removes_only_known_art
     analyze_folder(input_dir, out, config=cfg, selection=selection)
     human_file = out / "my-listening-notes.txt"
     human_file.write_text("keep this", encoding="utf-8")
+    unrelated_reserved_file = out / "revision_diff.html"
+    unrelated_reserved_file.write_bytes(b"unrelated reserved-name bytes")
     assert (out / "catalog.html").exists()
     assert (out / "song" / "report.html").exists()
 
@@ -515,6 +527,7 @@ def test_reusing_output_between_catalog_and_single_report_removes_only_known_art
     assert not (out / "catalog_summary.json").exists()
     assert not (out / "song").exists()
     assert human_file.read_text(encoding="utf-8") == "keep this"
+    assert unrelated_reserved_file.read_bytes() == b"unrelated reserved-name bytes"
 
     analyze_folder(input_dir, out, config=cfg, selection=selection)
 
@@ -524,3 +537,4 @@ def test_reusing_output_between_catalog_and_single_report_removes_only_known_art
         assert not (out / filename).exists()
     assert not list(out.glob("*.png"))
     assert human_file.read_text(encoding="utf-8") == "keep this"
+    assert unrelated_reserved_file.read_bytes() == b"unrelated reserved-name bytes"

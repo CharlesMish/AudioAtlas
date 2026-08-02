@@ -3,6 +3,12 @@
 AudioAtlas ships one analysis engine in two interfaces. The Python wheel is the
 advanced interface; `AudioAtlas.app` is the one-track Apple Silicon interface.
 
+For the `0.2.0a8` public alpha, the Python package and CLI are the recommended
+route. Any included native application is an **unsigned Apple Silicon technical
+preview**, not signed, notarized, Gatekeeper-approved, or generally
+release-ready. The signed DMG process below remains the gate for a future
+authenticated macOS download; it did not complete for this release.
+
 ## Local beta build
 
 On an Apple Silicon Mac with Python 3.11 and `uv`:
