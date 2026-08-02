@@ -34,7 +34,7 @@
     },
     {
       "path": ".github/workflows/testpypi.yml",
-      "sha256": "bef88c3568f81570e0d28e3a302f734a6e7b92e6e519f7db815c430c0004c7fc"
+      "sha256": "306b3298ff14ae1da96277ed5c1c307750cca604e7cb7bede872ae4605b14fa7"
     },
     {
       "path": ".github/workflows/windows-demo-candidate.yml",
@@ -666,7 +666,7 @@
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "5363079ee4a6b32b53cf5ea857b5a67253d01ddd0823f83ad8d573195c9e0379"
+      "sha256": "2a0189b6be59648f8b4b4a19c36392bc5a948a3eae61b4e1b09743096cdf9e54"
     },
     {
       "path": "tests/test_report.py",
@@ -720,6 +720,6 @@
   "format_version": 1,
   "included_file_count": 179,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "72838084f1a0b355b91fc975b230870b8c56839b90c5e284f8c9604b8eaad3aa",
+  "public_tree_sha256": "d9f2c305ec5ec53d852420b9ccf0c9be9d2062029e7d091cdad808f4e78482f1",
   "source_commit": "3c9841e59ec38be74efd2015d581e13a24b6c0f7"
 }
