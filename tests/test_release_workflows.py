@@ -113,6 +113,9 @@ def test_python_only_release_is_manual_exact_and_native_free() -> None:
         encoding="utf-8"
     )
 
+    assert workflow["permissions"] == {"contents": "read", "actions": "read"}
+    assert "pull_request" not in workflow["on"]
+
     assert jobs["prepare"]["outputs"]["release_mode"] == (
         "${{ steps.package.outputs.release_mode }}"
     )
@@ -184,8 +187,28 @@ def test_python_only_release_is_manual_exact_and_native_free() -> None:
         "macos-evidence",
         "macos-acceptance",
     ]
-    assert python_assets["permissions"] == {"contents": "read", "actions": "read"}
+    assert python_assets["permissions"] == {"contents": "write", "actions": "read"}
     assert "needs.prepare.outputs.release_mode == 'python-only'" in python_assets["if"]
+    assert all(
+        "actions/checkout@" not in step.get("uses", "")
+        for step in python_assets["steps"]
+    )
+    python_assets_commands = "\n".join(
+        step.get("run", "") for step in python_assets["steps"]
+    )
+    assert python_assets_commands.count("gh release view") == 3
+    assert python_assets_commands.count("gh release download") == 1
+    for forbidden in (
+        "gh release create",
+        "gh release edit",
+        "gh release upload",
+        "gh release delete",
+        "gh api",
+        "git push",
+        "git tag",
+        "git update-ref",
+    ):
+        assert forbidden not in python_assets_commands
     assert 'test "${MACOS_APP_RESULT}" = "skipped"' in text
     assert 'test "${MACOS_EVIDENCE_RESULT}" = "skipped"' in text
     assert 'test "${MACOS_ACCEPTANCE_RESULT}" = "skipped"' in text
@@ -212,6 +235,9 @@ def test_python_only_release_is_manual_exact_and_native_free() -> None:
         "6c039a367ed5cf3569d3de2b83eb6361c945404d33f033928469ff2f128d61ca",
     ):
         assert text.count(digest) == 2
+    for size in (166024, 1442625, 19576394, 2203840, 4025986, 659, 2709):
+        assert f'"size": {size}' in text
+    assert "Release asset size mismatch" in text
     assert "Release asset boundary mismatch" in text
     assert "Release asset boundary changed after PyPI verification" in text
     assert "AudioAtlas 0.2.0a8 — Public Alpha" in text
