@@ -99,6 +99,8 @@ def test_release_requires_version_tag_and_uses_trusted_publishing() -> None:
     assert "--require-present" in text
     assert "uv sync --locked --extra dev" in text
     assert "uv run python -m build" in text
+    assert "uv run --with twine python -m twine check dist/*" in text
+    assert "uv run python -m twine check dist/*" not in text
     assert "uv run python -m pytest" in text
     assert "uv run pytest" not in text
     assert "uv run pip-audit --require-hashes" in text

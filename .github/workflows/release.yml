@@ -121,7 +121,7 @@ jobs:
             --output-file /tmp/audioatlas-runtime-requirements.txt
           uv run pip-audit --require-hashes -r /tmp/audioatlas-runtime-requirements.txt
           uv run python -m build
-          uv run python -m twine check dist/*
+          uv run --with twine python -m twine check dist/*
 
       - name: Build release extras and checksums
         if: steps.package.outputs.release_mode == 'native'
