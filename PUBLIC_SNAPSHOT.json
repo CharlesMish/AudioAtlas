@@ -9,6 +9,10 @@
       "sha256": "4f4173338864165589a0e5ac471bc0c406c00aea190107e6b0fed4d84d05c001"
     },
     {
+      "path": ".github/pages-assets/audioatlas-0.2.0a8-release-hero.png",
+      "sha256": "a0457c41066b0133de6773f86e8d4c59aefa9f900cd2928392946da3fbc19343"
+    },
+    {
       "path": ".github/workflows/ci.yml",
       "sha256": "87cf6a770e19ed44206d7738141a92c3c78a0f31fc6c23e7d6b58f192255fb0f"
     },
@@ -22,11 +26,11 @@
     },
     {
       "path": ".github/workflows/pages.yml",
-      "sha256": "d74cb9420fcd7b378d725b76e30373ea10ac09c7f4a9614438406b4f79622936"
+      "sha256": "c0bc5e843c8893f3459c8bc421d6b399a1088f7a0fd1a04a04a98f6c720b203b"
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "690982cf08e9dd5beaf4fc60257857351873e61bb4003a4f28514641e88d2c9f"
+      "sha256": "b97ac70d6b52756f3d5a11c9b435eaa6dac4c2108c2347ee74ed9c5be13e85e9"
     },
     {
       "path": ".github/workflows/testpypi.yml",
@@ -662,7 +666,7 @@
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "c8adda740e02c442165f9502dd82ed8596bd03e5e6d9f82f0f45fa95071da74d"
+      "sha256": "b97c55ed0828a74212344d112ed0304c641e2751e164634204bd6837324cbe23"
     },
     {
       "path": "tests/test_report.py",
@@ -714,8 +718,8 @@
     }
   ],
   "format_version": 1,
-  "included_file_count": 178,
+  "included_file_count": 179,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "98aaeb9eca1e5f2203ef1284330db7a6f45e2c3963748a3ea9b22c81b49cb992",
-  "source_commit": "8ca03581d4afcf98b5cfcfc7cc794da0f71031ca"
+  "public_tree_sha256": "77fb1de61d24fb3eba982c9ec4f9b9c9c0e7ae1bb554428ccdb074e3a2ce216e",
+  "source_commit": "e3703658931e4c2180cad3fd69bb6f4ef03f6825"
 }
