@@ -73,7 +73,13 @@ def test_release_requires_version_tag_and_uses_trusted_publishing() -> None:
                     "type": "choice",
                     "default": "python-only",
                     "options": ["python-only"],
-                }
+                },
+                "release_tag": {
+                    "description": "Immutable release tag",
+                    "required": True,
+                    "type": "string",
+                    "default": "v0.2.0a8",
+                },
             }
         },
     }
@@ -86,15 +92,15 @@ def test_release_requires_version_tag_and_uses_trusted_publishing() -> None:
     assert workflow["jobs"]["finalize-release"]["environment"]["name"] == "github-release"
     text = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     assert "pypa/gh-action-pypi-publish@" in text
-    assert 'test "${GITHUB_REF_NAME}" = "v${version}"' in text
     assert "git merge-base --is-ancestor" in text
-    assert "testpypi.yml/runs?head_sha=${GITHUB_SHA}&status=success" in text
+    assert "testpypi.yml/runs?head_sha=${source_commit}&status=success" in text
     assert "--draft" in text
     assert "--draft=false" in text
     assert "--require-present" in text
     assert "uv sync --locked --extra dev" in text
     assert "uv run python -m build" in text
-    assert "uv run pytest" in text
+    assert "uv run python -m pytest" in text
+    assert "uv run pytest" not in text
     assert "uv run pip-audit --require-hashes" in text
 
 
@@ -108,11 +114,63 @@ def test_python_only_release_is_manual_exact_and_native_free() -> None:
     assert jobs["prepare"]["outputs"]["release_mode"] == (
         "${{ steps.package.outputs.release_mode }}"
     )
-    assert 'test "${GITHUB_REF}" = "refs/tags/v0.2.0a8"' in text
+    assert jobs["prepare"]["outputs"]["release_tag"] == (
+        "${{ steps.package.outputs.release_tag }}"
+    )
+    assert jobs["prepare"]["outputs"]["source_commit"] == (
+        "${{ steps.package.outputs.source_commit }}"
+    )
+    assert 'test "${GITHUB_REF}" = "refs/heads/main"' in text
     assert 'test "${version}" = "0.2.0a8"' in text
     assert 'release_mode="python-only"' in text
     assert 'release_mode="native"' in text
     assert 'test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"' in text
+    assert 'test "${GITHUB_SHA}" != "${expected_source_commit}"' in text
+
+    expected_tag_object = "c54c85baaa7f7fa7f25d900a585be99e7f75879a"
+    expected_source_commit = "bab9802e786caadfeb2bb609a49a062a0a93c074"
+    assert f'expected_tag_object="{expected_tag_object}"' in text
+    assert f'expected_source_commit="{expected_source_commit}"' in text
+    assert (
+        'test "$(git cat-file -t "refs/tags/${RELEASE_TAG_INPUT}")" = "tag"'
+        in text
+    )
+    assert (
+        'test "$(git rev-parse "refs/tags/${RELEASE_TAG_INPUT}")" = '
+        '"${expected_tag_object}"' in text
+    )
+    assert (
+        'test "$(git rev-parse "refs/tags/${RELEASE_TAG_INPUT}^{}")" = '
+        '"${expected_source_commit}"' in text
+    )
+    assert (
+        'git ls-remote --refs --tags origin "refs/tags/${RELEASE_TAG_INPUT}"'
+        in text
+    )
+    assert (
+        'git ls-remote --tags origin "refs/tags/${RELEASE_TAG_INPUT}^{}"'
+        in text
+    )
+    assert 'test "$(git rev-parse HEAD)" = "${expected_source_commit}"' in text
+
+    prepare_checkout = jobs["prepare"]["steps"][0]
+    assert prepare_checkout["with"]["fetch-depth"] == 0
+    assert prepare_checkout["with"]["ref"] == (
+        "${{ github.event_name == 'workflow_dispatch' && "
+        f"'{expected_source_commit}' || github.sha }}}}"
+    )
+    for job_name in ("macos-app", "index-state", "verify-index", "pypi-smoke"):
+        checkout = jobs[job_name]["steps"][0]
+        assert checkout["with"]["ref"] == "${{ needs.prepare.outputs.source_commit }}"
+
+    for forbidden in (
+        "git tag ",
+        "git push",
+        "git update-ref",
+        "--force",
+        "gh api -X DELETE",
+    ):
+        assert forbidden not in text
 
     for native_job in ("macos-app", "macos-evidence", "macos-acceptance", "draft-release"):
         assert jobs[native_job]["if"] == "needs.prepare.outputs.release_mode == 'native'"

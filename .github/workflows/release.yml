@@ -12,6 +12,11 @@ name: Release
         default: python-only
         options:
           - python-only
+      release_tag:
+        description: Immutable release tag
+        required: true
+        type: string
+        default: v0.2.0a8
 
 permissions:
   contents: read
@@ -34,11 +39,14 @@ jobs:
     outputs:
       version: ${{ steps.package.outputs.version }}
       release_mode: ${{ steps.package.outputs.release_mode }}
+      release_tag: ${{ steps.package.outputs.release_tag }}
+      source_commit: ${{ steps.package.outputs.source_commit }}
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'bab9802e786caadfeb2bb609a49a062a0a93c074' || github.sha }}
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
@@ -59,36 +67,53 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_MODE_INPUT: ${{ inputs.release_mode || '' }}
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag || '' }}
         shell: bash
         run: |
+          git fetch origin main --tags
           version="$(uv run python -c 'import audioatlas; print(audioatlas.__version__)')"
-          test "${GITHUB_REF_NAME}" = "v${version}"
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             test "${RELEASE_MODE_INPUT}" = "python-only"
-            test "${GITHUB_REF}" = "refs/tags/v0.2.0a8"
+            test "${RELEASE_TAG_INPUT}" = "v0.2.0a8"
+            test "${GITHUB_REF}" = "refs/heads/main"
             test "${version}" = "0.2.0a8"
+            expected_tag_object="c54c85baaa7f7fa7f25d900a585be99e7f75879a"
+            expected_source_commit="bab9802e786caadfeb2bb609a49a062a0a93c074"
+            test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"
+            test "${GITHUB_SHA}" != "${expected_source_commit}"
+            test "$(git cat-file -t "refs/tags/${RELEASE_TAG_INPUT}")" = "tag"
+            test "$(git rev-parse "refs/tags/${RELEASE_TAG_INPUT}")" = "${expected_tag_object}"
+            test "$(git rev-parse "refs/tags/${RELEASE_TAG_INPUT}^{}")" = "${expected_source_commit}"
+            test "$(git ls-remote --refs --tags origin "refs/tags/${RELEASE_TAG_INPUT}" | cut -f1)" = "${expected_tag_object}"
+            test "$(git ls-remote --tags origin "refs/tags/${RELEASE_TAG_INPUT}^{}" | cut -f1)" = "${expected_source_commit}"
+            test "$(git rev-parse HEAD)" = "${expected_source_commit}"
             release_mode="python-only"
+            release_tag="${RELEASE_TAG_INPUT}"
+            source_commit="${expected_source_commit}"
           else
             test "${GITHUB_EVENT_NAME}" = "push"
             test -z "${RELEASE_MODE_INPUT}"
+            test -z "${RELEASE_TAG_INPUT}"
+            git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+            test "$(git rev-list -n 1 "${GITHUB_REF_NAME}")" = "${GITHUB_SHA}"
+            test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
             release_mode="native"
+            release_tag="${GITHUB_REF_NAME}"
+            source_commit="${GITHUB_SHA}"
           fi
-          git fetch origin main --tags
-          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
-          if [ "${release_mode}" = "python-only" ]; then
-            test "${GITHUB_SHA}" = "$(git rev-parse origin/main)"
-          fi
-          test "$(git rev-list -n 1 "${GITHUB_REF_NAME}")" = "${GITHUB_SHA}"
+          test "${release_tag}" = "v${version}"
           successful_preflights="$(gh api \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/testpypi.yml/runs?head_sha=${GITHUB_SHA}&status=success&per_page=1" \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/testpypi.yml/runs?head_sha=${source_commit}&status=success&per_page=1" \
             --jq '.total_count')"
           test "${successful_preflights}" -gt 0
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "release_mode=${release_mode}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${release_tag}" >> "$GITHUB_OUTPUT"
+          echo "source_commit=${source_commit}" >> "$GITHUB_OUTPUT"
 
       - name: Run release gates
         run: |
-          uv run pytest
+          uv run python -m pytest
           uv run ruff check .
           uv run python scripts/verify_public_snapshot.py
           uv export --locked --no-dev --no-emit-project \
@@ -143,6 +168,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.prepare.outputs.source_commit }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
@@ -446,6 +473,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.prepare.outputs.source_commit }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: audioatlas-python-dist
@@ -529,12 +558,13 @@ jobs:
       - name: Download the prepared draft assets
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
         run: |
-          test "$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json isDraft --jq .isDraft)" = "true"
-          test "$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json isPrerelease --jq .isPrerelease)" = "true"
-          test "$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json name --jq .name)" = "AudioAtlas 0.2.0a8 — Public Alpha"
+          test "$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json isDraft --jq .isDraft)" = "true"
+          test "$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json isPrerelease --jq .isPrerelease)" = "true"
+          test "$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json name --jq .name)" = "AudioAtlas 0.2.0a8 — Public Alpha"
           mkdir release-assets
-          gh release download "${GITHUB_REF_NAME}" \
+          gh release download "${RELEASE_TAG}" \
             --repo "${GITHUB_REPOSITORY}" --dir release-assets
 
       - name: Verify the exact Python-only release boundary
@@ -620,6 +650,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.prepare.outputs.source_commit }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: audioatlas-python-dist
@@ -660,6 +692,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.prepare.outputs.source_commit }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -687,7 +721,7 @@ jobs:
     timeout-minutes: 5
     environment:
       name: github-release
-      url: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.release_tag }}
     permissions:
       contents: write
 
@@ -696,12 +730,13 @@ jobs:
         if: needs.prepare.outputs.release_mode == 'python-only'
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
         shell: bash
         run: |
-          test "$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json isDraft --jq .isDraft)" = "true"
-          test "$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json isPrerelease --jq .isPrerelease)" = "true"
+          test "$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json isDraft --jq .isDraft)" = "true"
+          test "$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json isPrerelease --jq .isPrerelease)" = "true"
           mkdir release-assets
-          gh release download "${GITHUB_REF_NAME}" \
+          gh release download "${RELEASE_TAG}" \
             --repo "${GITHUB_REPOSITORY}" --dir release-assets
           python - <<'PY'
           import hashlib
@@ -728,13 +763,14 @@ jobs:
       - name: Publish GitHub prerelease
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
         run: |
           if [ "${{ needs.prepare.outputs.release_mode }}" = "python-only" ]; then
             title="AudioAtlas 0.2.0a8 — Public Alpha"
           else
-            title="AudioAtlas ${GITHUB_REF_NAME}"
+            title="AudioAtlas ${RELEASE_TAG}"
           fi
-          gh release edit "${GITHUB_REF_NAME}" \
+          gh release edit "${RELEASE_TAG}" \
             --repo "${GITHUB_REPOSITORY}" \
             --title "${title}" \
             --draft=false \
