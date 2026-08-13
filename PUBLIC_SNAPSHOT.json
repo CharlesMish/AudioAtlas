@@ -210,7 +210,7 @@
     },
     {
       "path": "scripts/public_snapshot.py",
-      "sha256": "418d881e1b1a379f315e44b03c789979e7184892bc454c610c0fc8d083e0d749"
+      "sha256": "6386c16455a9faf99d5b4a85dd2c64aaadb82649b79ed9c71b79c422d6349a5d"
     },
     {
       "path": "scripts/run_audioatlas_mac.command",
@@ -226,7 +226,7 @@
     },
     {
       "path": "scripts/verify_windows_candidate.py",
-      "sha256": "2ebd5035bfbd73d67c655cf366e0217b7baa44b75042225b775f9afe3b5ea259"
+      "sha256": "50abb19a4b02e40a71a996a23c4004dcb3ad595440c2112577efde6a03348675"
     },
     {
       "path": "scripts/windows_inventory.py",
@@ -658,7 +658,7 @@
     },
     {
       "path": "tests/test_public_snapshot.py",
-      "sha256": "9bbbe7989dc1f75489d36786875f214bc40b01443229bdce5253f967efe3c57a"
+      "sha256": "2cd99afbb7ac5a8e5a912dfbc8c151c69ee1a8ad280a1bb3437061f715dc30fa"
     },
     {
       "path": "tests/test_release.py",
@@ -702,7 +702,7 @@
     },
     {
       "path": "tests/test_windows_candidate_hardening.py",
-      "sha256": "027367c0cbe49320a6427ff47388f26179bc1bd1dc156ba51250689efd791d1f"
+      "sha256": "dd07c55f722f51a2fe4701459221d7e5f9f8b608f1d04a6a83897b7e2c13b786"
     },
     {
       "path": "tests/test_windows_native_audit.py",
@@ -720,6 +720,6 @@
   "format_version": 1,
   "included_file_count": 179,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "efba18968853223f10244fa78e0d11847a5224e91c101f69e29bfe28330217e5",
-  "source_commit": "1d78362e812e0d56a62b1fe1bd0145258c794fd2"
+  "public_tree_sha256": "780bf919714dd84c76db4924be46fcbb6badf4b2fd96c0e783c430e4a6f2f0be",
+  "source_commit": "9124ac0752a6a49d3e8c4d6b5a0fbaad154bfa0f"
 }
