@@ -413,9 +413,11 @@ def _extract_transactionally(
             target.parent.mkdir(parents=True, exist_ok=True)
             with target.open("wb") as output:
                 _stream_member(archive, info, output)
-        if destination.exists():
-            shutil.rmtree(destination)
-        temporary.replace(destination)
+        if destination.exists() or destination.is_symlink():
+            raise CandidateVerificationError(
+                f"Extraction destination already exists: {destination.name}"
+            )
+        temporary.rename(destination)
     except BaseException:
         shutil.rmtree(temporary, ignore_errors=True)
         raise
@@ -595,8 +597,40 @@ def _verify_sidecar(path: Path) -> None:
         raise CandidateVerificationError(f"Archive checksum differs: {path.name}")
 
 
+def _refuse_existing_extract_root(extract_root: Path) -> None:
+    try:
+        mode = extract_root.lstat().st_mode
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise CandidateVerificationError(
+            f"Extraction destination cannot be inspected: {extract_root.name}"
+        ) from exc
+
+    if stat.S_ISLNK(mode):
+        target_type = "symlink"
+    elif stat.S_ISREG(mode):
+        target_type = "file"
+    elif stat.S_ISDIR(mode):
+        try:
+            target_type = (
+                "nonempty directory" if any(extract_root.iterdir()) else "directory"
+            )
+        except OSError as exc:
+            raise CandidateVerificationError(
+                f"Extraction destination cannot be inspected: {extract_root.name}"
+            ) from exc
+    else:
+        target_type = "unsupported target type"
+    raise CandidateVerificationError(
+        f"Extraction destination already exists as a {target_type}: {extract_root.name}"
+    )
+
+
 def verify_candidate(candidate_dir: Path, *, extract_root: Path | None = None) -> dict[str, Any]:
     candidate_dir = candidate_dir.resolve()
+    if extract_root is not None:
+        _refuse_existing_extract_root(extract_root)
     readme = candidate_dir / "README_FIRST.txt"
     if (
         not readme.is_file()
@@ -650,9 +684,8 @@ def verify_candidate(candidate_dir: Path, *, extract_root: Path | None = None) -
                 )
             )
         if extraction_staging is not None:
-            if extract_root.exists():
-                shutil.rmtree(extract_root)
-            extraction_staging.replace(extract_root)
+            _refuse_existing_extract_root(extract_root)
+            extraction_staging.rename(extract_root)
     except BaseException:
         if extraction_staging is not None:
             shutil.rmtree(extraction_staging, ignore_errors=True)

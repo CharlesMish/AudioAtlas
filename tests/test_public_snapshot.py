@@ -34,6 +34,13 @@ def _tree(tmp_path: Path) -> Path:
     return root
 
 
+def _tree_beneath_unrelated_git_repository(tmp_path: Path) -> Path:
+    ancestor = tmp_path / "unrelated"
+    ancestor.mkdir()
+    subprocess.run(["git", "init"], cwd=ancestor, check=True, capture_output=True)
+    return _tree(ancestor / "fixtures")
+
+
 def test_public_snapshot_accepts_canonical_tree(tmp_path: Path) -> None:
     assert verify_manifest(_tree(tmp_path)) == []
 
@@ -65,6 +72,42 @@ def test_public_snapshot_detects_unexpected_file(tmp_path: Path) -> None:
     errors = verify_manifest(root)
 
     assert "included file is unlisted: extra.txt" in errors
+    assert any(error.startswith("included_file_count:") for error in errors)
+
+
+def test_public_snapshot_detects_modified_file_beneath_unrelated_git_repository(
+    tmp_path: Path,
+) -> None:
+    root = _tree_beneath_unrelated_git_repository(tmp_path)
+    (root / "README.md").write_text("changed\n", encoding="utf-8")
+
+    errors = verify_manifest(root)
+
+    assert "stale file hash: README.md" in errors
+    assert any(error.startswith("public_tree_sha256:") for error in errors)
+
+
+def test_public_snapshot_detects_missing_file_beneath_unrelated_git_repository(
+    tmp_path: Path,
+) -> None:
+    root = _tree_beneath_unrelated_git_repository(tmp_path)
+    (root / "src" / "module.py").unlink()
+
+    errors = verify_manifest(root)
+
+    assert "listed file is missing: src/module.py" in errors
+    assert any(error.startswith("included_file_count:") for error in errors)
+
+
+def test_public_snapshot_detects_unexpected_file_beneath_unrelated_git_repository(
+    tmp_path: Path,
+) -> None:
+    root = _tree_beneath_unrelated_git_repository(tmp_path)
+    (root / "extra file-β.txt").write_text("unexpected\n", encoding="utf-8")
+
+    errors = verify_manifest(root)
+
+    assert "included file is unlisted: extra file-β.txt" in errors
     assert any(error.startswith("included_file_count:") for error in errors)
 
 
