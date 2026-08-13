@@ -30,17 +30,25 @@ def source_files(root: Path) -> list[Path]:
     """Return sorted artifact files, preferring Git's tracked-file contract."""
 
     try:
-        result = subprocess.run(
+        top_level = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        if Path(top_level.stdout.strip()).resolve() != root.resolve():
+            raise ValueError("the requested root is not the Git worktree root")
+        tracked = subprocess.run(
             ["git", "-C", str(root), "ls-files", "-z"],
             check=True,
             capture_output=True,
         )
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError, ValueError):
         paths = (path.relative_to(root) for path in root.rglob("*") if path.is_file())
     else:
         paths = (
             Path(raw.decode("utf-8"))
-            for raw in result.stdout.split(b"\0")
+            for raw in tracked.stdout.split(b"\0")
             if raw
         )
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import stat
 import struct
 import sys
@@ -139,6 +140,131 @@ def test_candidate_verifier_round_trips_both_exact_kits(tmp_path: Path) -> None:
     assert len(list((extracted / "installer").glob("*-setup.exe"))) == 1
     assert len(list((extracted / "portable").glob("*-portable.zip"))) == 1
     assert (extracted / "portable-app" / "AudioAtlas" / "AudioAtlas.exe").is_file()
+
+
+def test_candidate_verifier_refuses_nonempty_extract_root_without_changing_sentinel(
+    tmp_path: Path,
+) -> None:
+    verifier = _script("verify_windows_candidate")
+    candidate = _candidate(tmp_path)
+    extracted = tmp_path / "extracted"
+    extracted.mkdir()
+    sentinel = extracted / "keep.bin"
+    sentinel.write_bytes(b"owner data\x00must survive")
+
+    with pytest.raises(verifier.CandidateVerificationError, match="nonempty directory"):
+        verifier.verify_candidate(candidate, extract_root=extracted)
+
+    assert sentinel.read_bytes() == b"owner data\x00must survive"
+    assert sorted(path.name for path in extracted.iterdir()) == ["keep.bin"]
+    assert not list(tmp_path.glob(".extracted-partial-*"))
+
+
+def test_candidate_verifier_refuses_empty_extract_root(tmp_path: Path) -> None:
+    verifier = _script("verify_windows_candidate")
+    candidate = _candidate(tmp_path)
+    extracted = tmp_path / "extracted"
+    extracted.mkdir()
+
+    with pytest.raises(verifier.CandidateVerificationError, match="as a directory"):
+        verifier.verify_candidate(candidate, extract_root=extracted)
+
+    assert extracted.is_dir()
+    assert not list(extracted.iterdir())
+
+
+def test_candidate_verifier_refuses_file_extract_root_without_changing_it(
+    tmp_path: Path,
+) -> None:
+    verifier = _script("verify_windows_candidate")
+    candidate = _candidate(tmp_path)
+    extracted = tmp_path / "extracted"
+    extracted.write_bytes(b"owner file")
+
+    with pytest.raises(verifier.CandidateVerificationError, match="as a file"):
+        verifier.verify_candidate(candidate, extract_root=extracted)
+
+    assert extracted.read_bytes() == b"owner file"
+
+
+def test_candidate_verifier_refuses_symlink_extract_root_without_changing_target(
+    tmp_path: Path,
+) -> None:
+    verifier = _script("verify_windows_candidate")
+    candidate = _candidate(tmp_path)
+    owned = tmp_path / "owned"
+    owned.mkdir()
+    sentinel = owned / "keep.bin"
+    sentinel.write_bytes(b"linked owner data")
+    extracted = tmp_path / "extracted"
+    try:
+        extracted.symlink_to(owned, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink creation is unavailable: {exc}")
+
+    with pytest.raises(verifier.CandidateVerificationError, match="as a symlink"):
+        verifier.verify_candidate(candidate, extract_root=extracted)
+
+    assert extracted.is_symlink()
+    assert sentinel.read_bytes() == b"linked owner data"
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="FIFO creation is unavailable")
+def test_candidate_verifier_refuses_unsupported_extract_root_type(tmp_path: Path) -> None:
+    verifier = _script("verify_windows_candidate")
+    candidate = _candidate(tmp_path)
+    extracted = tmp_path / "extracted"
+    os.mkfifo(extracted)
+
+    with pytest.raises(verifier.CandidateVerificationError, match="unsupported target type"):
+        verifier.verify_candidate(candidate, extract_root=extracted)
+
+    assert stat.S_ISFIFO(extracted.lstat().st_mode)
+
+
+def test_candidate_verification_failure_does_not_publish_extract_root(
+    tmp_path: Path,
+) -> None:
+    verifier = _script("verify_windows_candidate")
+    candidate = _candidate(tmp_path)
+    kit = next(candidate.glob("*-installer-test-kit.zip"))
+    Path(f"{kit}.sha256").write_text(f"{'0' * 64}  {kit.name}\n", encoding="utf-8")
+    extracted = tmp_path / "extracted"
+
+    with pytest.raises(verifier.CandidateVerificationError, match="checksum differs"):
+        verifier.verify_candidate(candidate, extract_root=extracted)
+
+    assert not extracted.exists()
+    assert not extracted.is_symlink()
+    assert not list(tmp_path.glob(".extracted-partial-*"))
+
+
+def test_candidate_verifier_refuses_late_extract_root_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    verifier = _script("verify_windows_candidate")
+    candidate = _candidate(tmp_path)
+    extracted = tmp_path / "extracted"
+    original_verify_archive = verifier._verify_archive
+    verified_archives = 0
+
+    def verify_archive_with_collision(*args, **kwargs):
+        nonlocal verified_archives
+        report = original_verify_archive(*args, **kwargs)
+        verified_archives += 1
+        if verified_archives == 1:
+            extracted.mkdir()
+            (extracted / "keep.bin").write_bytes(b"late owner data")
+        return report
+
+    monkeypatch.setattr(verifier, "_verify_archive", verify_archive_with_collision)
+
+    with pytest.raises(verifier.CandidateVerificationError, match="nonempty directory"):
+        verifier.verify_candidate(candidate, extract_root=extracted)
+
+    assert (extracted / "keep.bin").read_bytes() == b"late owner data"
+    assert sorted(path.name for path in extracted.iterdir()) == ["keep.bin"]
+    assert not list(tmp_path.glob(".extracted-partial-*"))
 
 
 def test_candidate_verifier_rejects_outer_hash_mismatch(tmp_path: Path) -> None:
