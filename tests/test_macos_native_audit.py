@@ -40,10 +40,51 @@ def _app_fixture(tmp_path: Path) -> tuple[Path, Path]:
         "CFBundleVersion": "1",
         "CFBundleExecutable": "AudioAtlas",
         "LSMinimumSystemVersion": "14.0",
+        "LSApplicationCategoryType": "public.app-category.music",
+        "NSHumanReadableCopyright": "Copyright © 2026 Charles Mish",
+        "CFBundleIconFile": "AudioAtlas.icns",
     }
+    icon = contents / "Resources" / "AudioAtlas.icns"
+    icon.parent.mkdir(parents=True)
+    icon.write_bytes(b"icns fixture")
     with (contents / "Info.plist").open("wb") as stream:
         plistlib.dump(info, stream)
     return app, executable
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("LSApplicationCategoryType", "public.app-category.utilities"),
+        ("NSHumanReadableCopyright", "Copyright © somebody else"),
+        ("CFBundleIconFile", "Wrong.icns"),
+    ],
+)
+def test_show_and_tell_metadata_must_match_packaging_contract(
+    tmp_path: Path,
+    key: str,
+    value: str,
+) -> None:
+    build = _build_script()
+    app, _ = _app_fixture(tmp_path)
+    info_path = app / "Contents" / "Info.plist"
+    with info_path.open("rb") as stream:
+        info = plistlib.load(stream)
+    info[key] = value
+    with info_path.open("wb") as stream:
+        plistlib.dump(info, stream)
+
+    with pytest.raises(SystemExit, match=key):
+        build._audit_bundle(app)
+
+
+def test_declared_application_icon_must_exist(tmp_path: Path) -> None:
+    build = _build_script()
+    app, _ = _app_fixture(tmp_path)
+    (app / "Contents" / "Resources" / "AudioAtlas.icns").unlink()
+
+    with pytest.raises(SystemExit, match="CFBundleIconFile is missing"):
+        build._audit_bundle(app)
 
 
 class MockNativeTools:
@@ -238,7 +279,7 @@ def test_dependency_is_not_accepted_by_basename_or_wrong_directory(
     build = _build_script()
     app, executable = _app_fixture(tmp_path)
     misplaced = app / "Contents" / placement / "libfoo.dylib"
-    misplaced.parent.mkdir(parents=True)
+    misplaced.parent.mkdir(parents=True, exist_ok=True)
     misplaced.write_bytes(contents)
     tools = MockNativeTools(
         dependencies={executable: ["@rpath/libfoo.dylib"]},

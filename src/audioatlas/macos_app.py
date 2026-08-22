@@ -18,6 +18,7 @@ from audioatlas.desktop_runtime import (
 
 _logger = configure_desktop_logger("audioatlas.macos_app")
 _log_path = log_path()
+APP_NAME = "AudioAtlas"
 
 
 def main() -> None:
@@ -55,7 +56,56 @@ def _run_native_gui() -> None:
     app.setActivationPolicy_(NSApplicationActivationPolicyRegular)
     delegate = _make_app_delegate()
     app.setDelegate_(delegate)
+    app.setMainMenu_(_make_main_menu(app))
     AppHelper.runEventLoop()
+
+
+def _make_main_menu(app: Any) -> Any:
+    """Build the conventional AudioAtlas application menu."""
+
+    from AppKit import (  # type: ignore[import-not-found]
+        NSEventModifierFlagCommand,
+        NSEventModifierFlagOption,
+        NSMenu,
+        NSMenuItem,
+    )
+
+    main_menu = NSMenu.alloc().initWithTitle_("")
+    app_menu_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+        APP_NAME, None, ""
+    )
+    main_menu.addItem_(app_menu_item)
+
+    app_menu = NSMenu.alloc().initWithTitle_(APP_NAME)
+    app_menu_item.setSubmenu_(app_menu)
+
+    def add_item(title: str, action: str, key: str = "") -> Any:
+        item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(title, action, key)
+        item.setTarget_(app)
+        app_menu.addItem_(item)
+        return item
+
+    add_item(f"About {APP_NAME}", "orderFrontStandardAboutPanel:")
+    app_menu.addItem_(NSMenuItem.separatorItem())
+
+    services_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+        "Services", None, ""
+    )
+    services_menu = NSMenu.alloc().initWithTitle_("Services")
+    services_item.setSubmenu_(services_menu)
+    app_menu.addItem_(services_item)
+    app.setServicesMenu_(services_menu)
+
+    app_menu.addItem_(NSMenuItem.separatorItem())
+    add_item(f"Hide {APP_NAME}", "hide:", "h")
+    hide_others = add_item("Hide Others", "hideOtherApplications:", "h")
+    hide_others.setKeyEquivalentModifierMask_(
+        NSEventModifierFlagCommand | NSEventModifierFlagOption
+    )
+    add_item("Show All", "unhideAllApplications:")
+    app_menu.addItem_(NSMenuItem.separatorItem())
+    add_item(f"Quit {APP_NAME}", "terminate:", "q")
+    return main_menu
 
 
 def _show_generic_error() -> None:

@@ -139,6 +139,9 @@ def _audit_bundle(app: Path) -> tuple[ResolvedDependency, ...]:
     expected = {
         "CFBundleIdentifier": "com.charlesmish.audioatlas",
         "LSMinimumSystemVersion": "14.0",
+        "LSApplicationCategoryType": "public.app-category.music",
+        "NSHumanReadableCopyright": "Copyright © 2026 Charles Mish",
+        "CFBundleIconFile": "AudioAtlas.icns",
     }
     for key, value in expected.items():
         if info.get(key) != value:
@@ -149,6 +152,9 @@ def _audit_bundle(app: Path) -> tuple[ResolvedDependency, ...]:
     if not isinstance(executable_name, str) or not executable_name:
         raise SystemExit("Bundle audit failed: CFBundleExecutable is missing")
     executable = app / "Contents" / "MacOS" / executable_name
+    icon = app / "Contents" / "Resources" / str(info["CFBundleIconFile"])
+    if icon.is_symlink() or not icon.is_file():
+        raise SystemExit("Bundle audit failed: CFBundleIconFile is missing")
 
     root_contents = {entry.name for entry in app.iterdir()}
     if root_contents != PACKAGE_ROOT_ENTRIES:

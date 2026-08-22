@@ -17,6 +17,9 @@ if not bundle_build_version.isdigit() or int(bundle_build_version) <= 0:
 PACKAGING_CONTRACT = {
     "bundle_identifier": "com.charlesmish.audioatlas",
     "minimum_macos": "14.0",
+    "application_category": "public.app-category.music",
+    "copyright": "Copyright © 2026 Charles Mish",
+    "icon_file": "AudioAtlas.icns",
     "architectures": ["arm64"],
     "hardened_runtime": True,
     "entitlements": {
@@ -86,6 +89,7 @@ collection = COLLECT(
 app = BUNDLE(
     collection,
     name="AudioAtlas.app",
+    icon=str(root / "packaging" / "macos" / PACKAGING_CONTRACT["icon_file"]),
     bundle_identifier=PACKAGING_CONTRACT["bundle_identifier"],
     version=version,
     info_plist={
@@ -93,6 +97,8 @@ app = BUNDLE(
         "CFBundleShortVersionString": version,
         "CFBundleVersion": bundle_build_version,
         "LSMinimumSystemVersion": PACKAGING_CONTRACT["minimum_macos"],
+        "LSApplicationCategoryType": PACKAGING_CONTRACT["application_category"],
+        "NSHumanReadableCopyright": PACKAGING_CONTRACT["copyright"],
         "NSHighResolutionCapable": True,
         "CFBundleDocumentTypes": [
             {

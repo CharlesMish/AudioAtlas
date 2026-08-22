@@ -40,6 +40,35 @@ def test_cocoa_delegate_imports_and_registers_without_prototype_errors():
     assert callable(delegate._showLargeConfirmation_)
 
 
+@pytest.mark.skipif(sys.platform != "darwin", reason="native Cocoa contract")
+def test_cocoa_main_menu_has_standard_about_and_quit_items():
+    AppKit = pytest.importorskip("AppKit")
+
+    from audioatlas.macos_app import _make_main_menu
+
+    app = AppKit.NSApplication.sharedApplication()
+    menu = _make_main_menu(app)
+    app_menu = menu.itemAtIndex_(0).submenu()
+    items = {
+        item.title(): item
+        for item in app_menu.itemArray()
+        if not item.isSeparatorItem()
+    }
+
+    assert list(items) == [
+        "About AudioAtlas",
+        "Services",
+        "Hide AudioAtlas",
+        "Hide Others",
+        "Show All",
+        "Quit AudioAtlas",
+    ]
+    assert str(items["About AudioAtlas"].action()) == "orderFrontStandardAboutPanel:"
+    assert str(items["Quit AudioAtlas"].action()) == "terminate:"
+    assert items["Quit AudioAtlas"].keyEquivalent() == "q"
+    assert items["Quit AudioAtlas"].target() is app
+
+
 def test_cocoa_submission_starts_worker_before_metadata_inspection() -> None:
     source = (ROOT / "src" / "audioatlas" / "macos_app.py").read_text(encoding="utf-8")
     submit = source[source.index("def submitFile_") : source.index("def cancelAnalysis_")]
@@ -62,6 +91,10 @@ def test_bundle_contract_is_arm64_macos_14_and_has_no_openmp_pool() -> None:
 
     assert '"minimum_macos": "14.0"' in spec
     assert '"LSMinimumSystemVersion": PACKAGING_CONTRACT["minimum_macos"]' in spec
+    assert '"LSApplicationCategoryType": PACKAGING_CONTRACT["application_category"]' in spec
+    assert '"NSHumanReadableCopyright": PACKAGING_CONTRACT["copyright"]' in spec
+    assert 'icon=str(root / "packaging" / "macos"' in spec
+    assert (ROOT / "packaging" / "macos" / "AudioAtlas.icns").is_file()
     assert '"CFBundleVersion": bundle_build_version' in spec
     assert '"numba.np.ufunc.omppool"' in spec
     assert hook.index('NUMBA_THREADING_LAYER", "workqueue') < hook.index("import numba")
