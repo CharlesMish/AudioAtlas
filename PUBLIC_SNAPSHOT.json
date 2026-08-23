@@ -290,7 +290,7 @@
     },
     {
       "path": "src/audioatlas/app_core.py",
-      "sha256": "bd109038e9dd9bc4702a401046bd400ec64e288cf014465cb6dfdd9b012920d3"
+      "sha256": "407b183da6921483ceab92aa790ff3152ef3326d6a25d604d276fc9f444d3f7e"
     },
     {
       "path": "src/audioatlas/batch.py",
@@ -310,7 +310,7 @@
     },
     {
       "path": "src/audioatlas/desktop_controller.py",
-      "sha256": "02d12dfc0a88ed76517bb59928e2beb281cac313eb4efb29a9d25cf23c718894"
+      "sha256": "4e48c65a2dac4c8aae9ae4fc1f9898f959f236baf850bd2fcb73e9b3e6c51453"
     },
     {
       "path": "src/audioatlas/desktop_runtime.py",
@@ -538,7 +538,7 @@
     },
     {
       "path": "tests/test_app_core.py",
-      "sha256": "d12ebe967e8b8b593ccbb0c3e9aa312f9905bf7eaa4ec90d9cf14723954add1c"
+      "sha256": "055a1e933427871917ce332266042625fa3443d17f51aab8fc3cbe15028f2768"
     },
     {
       "path": "tests/test_batch.py",
@@ -566,7 +566,7 @@
     },
     {
       "path": "tests/test_desktop_controller.py",
-      "sha256": "e29af15f9ec43d19fd6367ea63fc1d6c64ef000a7686a474bb5ce8c17b241ec7"
+      "sha256": "84a893ab8ffb25bb9c1963173fb5aa87199ff02b3e06e29d5249495f459fccf2"
     },
     {
       "path": "tests/test_desktop_runtime.py",
@@ -728,6 +728,6 @@
   "format_version": 1,
   "included_file_count": 181,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "4324b401932bbaa12578708ee528975792e7d0cc361136ad6cf40b45973720a4",
-  "source_commit": "916d014a9d4810208d64cb00cb699ba62cb3c005"
+  "public_tree_sha256": "13c46c2ca592da637e94513244784a5ad0d0dad0d163a37f9e962a6fca91ff80",
+  "source_commit": "c046fb13367c00b906e22dcd11a28d7bce69390e"
 }
