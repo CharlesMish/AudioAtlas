@@ -538,3 +538,27 @@ def test_friendly_error_does_not_surface_unexpected_internal_paths():
 
     assert "/Users/private" not in message
     assert "previous report" in message
+
+
+def test_friendly_audio_load_error_is_concise_and_actionable(tmp_path: Path):
+    source = tmp_path / "broken master.wav"
+    error = AudioLoadError(
+        source,
+        f"audio metadata could not be decoded (Error opening '{source}': "
+        "Error in WAV file. No 'data' chunk marker.)",
+    )
+
+    message = friendly_error_message(error)
+
+    assert message == (
+        "AudioAtlas couldn’t read ‘broken master.wav’ as audio. "
+        "Try another file, or export this track again as WAV or FLAC."
+    )
+    assert source.name in message
+    assert "Try another file" in message
+    assert "WAV or FLAC" in message
+    assert "Error opening" not in message
+    assert "chunk marker" not in message
+    assert str(tmp_path) not in message
+    assert "Error opening" in str(error)
+    assert "chunk marker" in str(error)

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from audioatlas.app_core import AppInputInfo
+from audioatlas.app_core import AppInputError, AppInputInfo
 from audioatlas.desktop_controller import DesktopRunController
 from audioatlas.errors import AudioLoadError
 from audioatlas.run_contract import (
@@ -286,24 +286,72 @@ def test_controller_preserves_previous_success_across_later_failure(tmp_path: Pa
     source = tmp_path / "song.wav"
     source.touch()
     first = _result(tmp_path, "first")
-    outcomes: list[object] = [first, AudioLoadError(source, "bad metadata")]
+    inspections: list[object] = [
+        _info(source),
+        AudioLoadError(
+            source,
+            "audio metadata could not be decoded (Error opening song.wav: bad metadata)",
+        ),
+    ]
+    analysis_calls = 0
 
-    def analyze(*args: object, **kwargs: object) -> AnalysisRunResult:
-        outcome = outcomes.pop(0)
+    def inspect(path: Path) -> AppInputInfo:
+        outcome = inspections.pop(0)
         if isinstance(outcome, BaseException):
             raise outcome
         return outcome
 
+    def analyze(*args: object, **kwargs: object) -> AnalysisRunResult:
+        nonlocal analysis_calls
+        analysis_calls += 1
+        return first
+
     controller = DesktopRunController(
-        logger=_logger(), inspector=lambda path: _info(source), analyzer=analyze
+        logger=_logger(), inspector=inspect, analyzer=analyze
     )
     controller.start(source)
     assert controller.wait(2)
     controller.start(source)
     assert controller.wait(2)
     assert controller.state.phase is DesktopRunPhase.FAILED
+    assert controller.state.message == (
+        "AudioAtlas couldn’t read ‘song.wav’ as audio. "
+        "Try another file, or export this track again as WAV or FLAC."
+    )
     assert controller.state.previous_result is first
     assert not controller.state.show_log
+    assert analysis_calls == 1
+
+
+def test_controller_treats_unsupported_input_as_expected(tmp_path: Path) -> None:
+    source = tmp_path / "notes.txt"
+    source.touch()
+    analysis_calls = 0
+
+    def analyze(*args: object, **kwargs: object) -> AnalysisRunResult:
+        nonlocal analysis_calls
+        analysis_calls += 1
+        return _result(tmp_path)
+
+    controller = DesktopRunController(
+        logger=_logger(),
+        inspector=lambda path: (_ for _ in ()).throw(
+            AppInputError(
+                "That file type is not supported. "
+                "Choose AIF, AIFF, FLAC, MP3, OGG, WAV, WAVE audio."
+            )
+        ),
+        analyzer=analyze,
+    )
+    controller.start(source)
+    assert controller.wait(2)
+    assert controller.state.phase is DesktopRunPhase.FAILED
+    assert controller.state.message == (
+        "That file type is not supported. "
+        "Choose AIF, AIFF, FLAC, MP3, OGG, WAV, WAVE audio."
+    )
+    assert not controller.state.show_log
+    assert analysis_calls == 0
 
 
 def test_controller_hides_unexpected_error_details_and_offers_log(tmp_path: Path) -> None:

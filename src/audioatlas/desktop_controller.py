@@ -10,6 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from audioatlas.app_core import (
+    AppInputError,
     AppInputInfo,
     AppOutputPreflight,
     analyze_for_app,
@@ -244,7 +245,7 @@ class DesktopRunController:
                 error=friendly_error_message(error),
             )
         except Exception as error:
-            expected = isinstance(error, AudioAtlasError)
+            expected = isinstance(error, (AudioAtlasError, AppInputError))
             if expected:
                 self._logger.info("Analysis stopped: %s", type(error).__name__)
             else:

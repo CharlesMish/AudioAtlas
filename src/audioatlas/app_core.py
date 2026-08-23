@@ -332,7 +332,10 @@ def friendly_error_message(error: BaseException) -> str:
     if isinstance(error, SourceChangedError):
         return str(error)
     if isinstance(error, AudioLoadError):
-        return str(error)
+        return (
+            f"AudioAtlas couldn’t read ‘{error.path.name}’ as audio. "
+            "Try another file, or export this track again as WAV or FLAC."
+        )
     if isinstance(error, PermissionError):
         return "AudioAtlas could not write beside this file. Choose another report location."
     if isinstance(error, OSError):
