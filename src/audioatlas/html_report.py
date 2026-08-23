@@ -227,8 +227,8 @@ def write_report_html(
         _chip("Profile", profile_label) if profile_label is not None else "",
         _chip("Generated", build_metadata["generated_at"]),
         _chip("AudioAtlas", build_metadata["audioatlas_version"]),
-        _chip("Git", build_metadata.get("git_hash", "unavailable")),
-        _chip("Release", RELEASE_LABEL),
+        _chip("Git", build_metadata["git_hash"]) if build_metadata.get("git_hash") else "",
+        _chip("Release", _hero_release_label(RELEASE_LABEL)),
         "</div>",
         "</header>",
         '<nav class="top-nav" aria-label="Report sections">',
@@ -305,6 +305,13 @@ def _h(value: Any) -> str:
 
 def _chip(label: str, value: Any) -> str:
     return f'<div class="chip"><strong>{_h(label)}</strong> {_h(value)}</div>'
+
+
+def _hero_release_label(release_label: str) -> str:
+    """Return the concise public identity used in the user-facing hero."""
+
+    public_label, separator, _engineering_context = release_label.partition(" · ")
+    return public_label if separator else release_label
 
 
 def _profile_label(summary: dict[str, Any]) -> str | None:

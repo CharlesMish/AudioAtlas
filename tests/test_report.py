@@ -802,7 +802,8 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
 
     assert path.name == "report.html"
     assert "Measurement-based findings, not quality judgments." in text
-    assert RELEASE_LABEL in text
+    assert "<strong>Release</strong> public alpha 8" in text
+    assert "desktop release hardening" not in text
     assert f"AudioAtlas</strong> {__version__}" in text
     assert "Start with Key metrics for level and headroom context" in text
     assert ">Findings<" in text
@@ -818,6 +819,53 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
     assert "Delivery / headroom context" in text
     assert "playback system using a lower loudness reference" in text
     assert "streaming normalization reference levels" not in text
+
+
+def test_write_report_html_shows_known_git_revision_in_hero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr(
+        "audioatlas.html_report.report_build_metadata",
+        lambda: {
+            "generated_at": "2026-08-23T12:00:00Z",
+            "audioatlas_version": __version__,
+            "git_hash": "abc1234",
+        },
+    )
+    summary = _make_summary()
+
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert '<div class="chip"><strong>Git</strong> abc1234</div>' in text
+    assert "Git unavailable" not in text
+
+
+def test_write_report_html_omits_unavailable_git_and_shortens_release_hero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr(
+        "audioatlas.html_report.report_build_metadata",
+        lambda: {
+            "generated_at": "2026-08-23T12:00:00Z",
+            "audioatlas_version": __version__,
+        },
+    )
+    summary = _make_summary()
+    original_summary = copy.deepcopy(summary)
+
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert "Git unavailable" not in text
+    assert "<strong>Git</strong>" not in text
+    assert "<strong>Generated</strong> 2026-08-23T12:00:00Z" in text
+    assert f"<strong>AudioAtlas</strong> {__version__}" in text
+    assert "<strong>Duration</strong> 65.50s (1:06)" in text
+    assert "<strong>Release</strong> public alpha 8" in text
+    assert "desktop release hardening" not in text
+    assert RELEASE_LABEL == "public alpha 8 · desktop release hardening"
+    assert summary == original_summary
 
 
 def test_report_html_shows_source_range_for_manual_section(tmp_path: Path):
