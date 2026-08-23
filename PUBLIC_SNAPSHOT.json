@@ -161,12 +161,20 @@
       "sha256": "c045f6c52217cbc5b014547d45ec173617c5723f7ca08b85c4d71dcc8d061188"
     },
     {
+      "path": "packaging/macos/AudioAtlas-icon.png",
+      "sha256": "ce83cda9ec053ea6b37edfc95dcf2ac40a11c5088da22a64cfb3aca0f0f8d1b1"
+    },
+    {
       "path": "packaging/macos/AudioAtlas.entitlements",
       "sha256": "e17065189988b1dc2012dba557f2546c427db8f147979b1faff85f90cfd37bde"
     },
     {
+      "path": "packaging/macos/AudioAtlas.icns",
+      "sha256": "5818499d662f7f5c16d5bcbcaefcff9b11f0aa21a8c2f2d1e386fcb9de00682e"
+    },
+    {
       "path": "packaging/macos/AudioAtlas.spec",
-      "sha256": "d48d5adefbe580f5adc62d1d2a3c5b6d64ec493e46d102fc28bd0fab3a3fb1b1"
+      "sha256": "a8d707ce0911e2fcd8a399b4a80cc38b769f02d400d56cbad0d95da421f5bf87"
     },
     {
       "path": "packaging/windows/AudioAtlas.iss",
@@ -190,7 +198,7 @@
     },
     {
       "path": "scripts/build_macos_app.py",
-      "sha256": "4a12a12cf401f80b19e7cd9a4e008c27e057bb600859bd24124ddc2f0f72997b"
+      "sha256": "25217d95ca9048a4aed266d5cf09538a97c0b033bc6e1fe8b9cdb798fee4c0bd"
     },
     {
       "path": "scripts/build_windows_app.py",
@@ -346,7 +354,7 @@
     },
     {
       "path": "src/audioatlas/macos_app.py",
-      "sha256": "473aa56647fd85d73a474754abaa7f97016e83bf95bb9ceef8ed4103d9b7bd9a"
+      "sha256": "bfc7eae01e889fcaf75fdc12be984593ae6f995862eea4d2c4e0dc67d4ce9245"
     },
     {
       "path": "src/audioatlas/markdown.py",
@@ -610,11 +618,11 @@
     },
     {
       "path": "tests/test_macos_app.py",
-      "sha256": "90f45ee69d7ea38456d1a4d15ac8690872e63bca4faac8c1c11157c18c1d0ee0"
+      "sha256": "5eb937e90b8e749602a5d0cf7776950fdc68f73a02b180623f6edaaec7cb5296"
     },
     {
       "path": "tests/test_macos_native_audit.py",
-      "sha256": "30b5fed76a891e56a2034a12403e2c5159be40ca08ea2410f3285eafa1f89f0f"
+      "sha256": "e3197f8cc4df0ae93e6645a32042b28a84e33286cfbefa5dfdb5d5283ccc4eef"
     },
     {
       "path": "tests/test_malformed_audio.py",
@@ -718,8 +726,8 @@
     }
   ],
   "format_version": 1,
-  "included_file_count": 179,
+  "included_file_count": 181,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "780bf919714dd84c76db4924be46fcbb6badf4b2fd96c0e783c430e4a6f2f0be",
-  "source_commit": "9124ac0752a6a49d3e8c4d6b5a0fbaad154bfa0f"
+  "public_tree_sha256": "4324b401932bbaa12578708ee528975792e7d0cc361136ad6cf40b45973720a4",
+  "source_commit": "916d014a9d4810208d64cb00cb699ba62cb3c005"
 }
