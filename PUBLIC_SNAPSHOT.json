@@ -346,7 +346,7 @@
     },
     {
       "path": "src/audioatlas/html_report.py",
-      "sha256": "4a0f4715aea40ef45452a11e82f8538236461184cf02437f0b13fbd1e3436510"
+      "sha256": "0a5f189dc6bd4f82cafbee9aa093e1d70f731bc3afa51e668608f135dd1d73e7"
     },
     {
       "path": "src/audioatlas/io.py",
@@ -678,7 +678,7 @@
     },
     {
       "path": "tests/test_report.py",
-      "sha256": "e3d75cd285eb8346d07390918b2a3dd3d12355dae89fadcf396bc606a7218d68"
+      "sha256": "32611fe9a15ef5d1d441a596fe3a57feec15631859371281ada8c100cf09f275"
     },
     {
       "path": "tests/test_revision_diff.py",
@@ -728,6 +728,6 @@
   "format_version": 1,
   "included_file_count": 181,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "13c46c2ca592da637e94513244784a5ad0d0dad0d163a37f9e962a6fca91ff80",
-  "source_commit": "c046fb13367c00b906e22dcd11a28d7bce69390e"
+  "public_tree_sha256": "ba93223e5c020863dcb810e039283f39726c8a80e1283c319bf2fee3b1d61a6d",
+  "source_commit": "a547173258c0f8b05c8387fecac79648e296c92c"
 }
