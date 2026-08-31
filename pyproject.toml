@@ -33,7 +33,7 @@ dependencies = [
   "librosa>=0.11",
   # Numba 0.66.0 / llvmlite 0.48.0 stalled and crashed during a clean
   # Python 3.13 report smoke; 0.65.1 / 0.47.0 completed the same run.
-  "numba>=0.65.1,<0.66",
+  "numba>=0.65.1,<0.68",
   "matplotlib>=3.8",
   "pyloudnorm>=0.1.1",
   "click>=8.1",
@@ -61,12 +61,12 @@ dev = [
   "pip-audit>=2.10,<3",
 ]
 app-build = [
-  "pyinstaller==6.21.0",
+  "pyinstaller==6.22.2",
   "pyobjc-core>=11,<13",
   "pyobjc-framework-Cocoa>=11,<13",
 ]
 windows-app-build = [
-  "pyinstaller==6.21.0",
+  "pyinstaller==6.22.2",
   "pefile>=2024.8.26,<2027",
   "pip-licenses>=5,<6",
 ]
