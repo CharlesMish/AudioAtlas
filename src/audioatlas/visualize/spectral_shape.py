@@ -10,6 +10,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from audioatlas.analysis.spectral import SpectralShapeResult
+from audioatlas.plot_theme import plot_role
 
 
 def plot_spectral_shape(
@@ -26,18 +27,21 @@ def plot_spectral_shape(
         shape.spectral_centroid_hz,
         linewidth=1.1,
         label="Spectral centroid",
+        **plot_role("s1"),
     )
     ax.plot(
         shape.times_seconds,
         shape.spectral_rolloff_85_hz,
         linewidth=1.0,
         label="Rolloff 85%",
+        **plot_role("s2"),
     )
     ax.plot(
         shape.times_seconds,
         shape.spectral_rolloff_95_hz,
         linewidth=1.0,
         label="Rolloff 95%",
+        **plot_role("s3"),
     )
     ax.set_title(title)
     ax.set_xlabel("Time (s)")

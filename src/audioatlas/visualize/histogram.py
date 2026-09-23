@@ -12,6 +12,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from audioatlas.config import AnalysisConfig
+from audioatlas.plot_theme import plot_role
 from audioatlas.utils import ensure_2d_audio
 
 
@@ -28,11 +29,11 @@ def plot_sample_histogram(
     audio = ensure_2d_audio(y)
     flattened = audio.reshape(-1)
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.hist(flattened, bins=200, log=True)
-    ax.axvline(cfg.near_clipping_threshold, linestyle="--", linewidth=1, label="near clip +")
-    ax.axvline(-cfg.near_clipping_threshold, linestyle="--", linewidth=1, label="near clip -")
-    ax.axvline(cfg.clipping_threshold, linestyle=":", linewidth=1, label="clip +")
-    ax.axvline(-cfg.clipping_threshold, linestyle=":", linewidth=1, label="clip -")
+    ax.hist(flattened, bins=200, log=True, **plot_role("s1"))
+    ax.axvline(cfg.near_clipping_threshold, linestyle="--", linewidth=1, label="near clip +", **plot_role("event"))
+    ax.axvline(-cfg.near_clipping_threshold, linestyle="--", linewidth=1, label="near clip -", **plot_role("event"))
+    ax.axvline(cfg.clipping_threshold, linestyle=":", linewidth=1, label="clip +", **plot_role("threshold"))
+    ax.axvline(-cfg.clipping_threshold, linestyle=":", linewidth=1, label="clip -", **plot_role("threshold"))
     ax.set_title(title)
     ax.set_xlabel("Sample amplitude (1.0 = nominal full scale)")
     ax.set_ylabel("Count (log scale)")

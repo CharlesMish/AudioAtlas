@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 
 from audioatlas.analysis.stereo import MidSideEnergyResult, StereoCorrelationResult
 from audioatlas.config import AnalysisConfig
+from audioatlas.plot_theme import plot_role
 
 
 def plot_stereo_correlation(
@@ -23,10 +24,10 @@ def plot_stereo_correlation(
     """Save a left/right correlation timeline plot."""
 
     fig, ax = plt.subplots(figsize=(14, 4))
-    ax.plot(stereo.times_seconds, stereo.correlation, linewidth=1.2)
-    ax.axhline(1.0, linestyle=":", linewidth=0.8, alpha=0.5)
-    ax.axhline(0.0, linestyle="--", linewidth=0.8, alpha=0.5)
-    ax.axhline(-1.0, linestyle=":", linewidth=0.8, alpha=0.5)
+    ax.plot(stereo.times_seconds, stereo.correlation, linewidth=1.2, **plot_role("s1"))
+    ax.axhline(1.0, linestyle=":", linewidth=0.8, **plot_role("reference", alpha=0.5))
+    ax.axhline(0.0, linestyle="--", linewidth=0.8, **plot_role("reference", alpha=0.5))
+    ax.axhline(-1.0, linestyle=":", linewidth=0.8, **plot_role("reference", alpha=0.5))
     ax.set_title(title)
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Pearson r (L/R)")
@@ -54,10 +55,10 @@ def plot_mid_side_energy(
         2, 1, figsize=(14, 6), sharex=True, height_ratios=(2, 1)
     )
     ax_energy.plot(
-        mid_side.times_seconds, mid_side.mid_rms_dbfs, linewidth=1.2, label="Mid RMS"
+        mid_side.times_seconds, mid_side.mid_rms_dbfs, linewidth=1.2, label="Mid RMS", **plot_role("s1")
     )
     ax_energy.plot(
-        mid_side.times_seconds, mid_side.side_rms_dbfs, linewidth=1.2, label="Side RMS"
+        mid_side.times_seconds, mid_side.side_rms_dbfs, linewidth=1.2, label="Side RMS", **plot_role("s2")
     )
     ax_energy.set_title(title)
     ax_energy.set_ylabel("RMS (dBFS)")
@@ -66,9 +67,9 @@ def plot_mid_side_energy(
     ax_energy.legend(fontsize=9)
 
     ax_ratio.plot(
-        mid_side.times_seconds, mid_side.side_to_mid_ratio_db, linewidth=1.0
+        mid_side.times_seconds, mid_side.side_to_mid_ratio_db, linewidth=1.0, **plot_role("s1")
     )
-    ax_ratio.axhline(0.0, linestyle="--", linewidth=0.8, alpha=0.45)
+    ax_ratio.axhline(0.0, linestyle="--", linewidth=0.8, **plot_role("reference", alpha=0.45))
     ax_ratio.set_xlabel("Time (s)")
     ax_ratio.set_ylabel("Side-to-mid ratio (dB)")
     ax_ratio.set_ylim(cfg.db_floor, 12)
@@ -91,8 +92,8 @@ def plot_stereo_correlation_histogram(
 
     finite = stereo.correlation[np.isfinite(stereo.correlation)]
     fig, ax = plt.subplots(figsize=(10, 4))
-    ax.hist(finite, bins=40, range=(-1.0, 1.0), alpha=0.85)
-    ax.axvline(0.0, linestyle="--", linewidth=0.8, alpha=0.5)
+    ax.hist(finite, bins=40, range=(-1.0, 1.0), **plot_role("s1", alpha=0.85))
+    ax.axvline(0.0, linestyle="--", linewidth=0.8, **plot_role("reference", alpha=0.5))
     ax.set_title(title)
     ax.set_xlabel("Pearson r (L/R)")
     ax.set_ylabel("Frame count")

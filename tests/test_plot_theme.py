@@ -30,7 +30,8 @@ def test_matplotlib_theme_rc_uses_report_surface_and_text_tokens():
     assert style["axes.facecolor"] == theme.tokens["surface"]
     assert style["axes.titlecolor"] == theme.tokens["text"]
     assert style["grid.color"] == theme.tokens["border"]
-    assert style["legend.facecolor"] == theme.tokens["surface_muted"]
+    assert style["legend.facecolor"] == theme.tokens["surface"]
+    assert style["legend.framealpha"] == 1.0
 
 
 def test_every_theme_plot_palette_is_distinct_and_visible():

@@ -10,6 +10,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from audioatlas.analysis.dynamics import OnsetDensityResult
+from audioatlas.plot_theme import plot_role
 
 
 def plot_onset_density(
@@ -31,13 +32,14 @@ def plot_onset_density(
         onset.times_seconds,
         onset.normalized_onset_strength,
         linewidth=0.8,
-        alpha=0.45,
+        **plot_role("s1", alpha=0.45),
         label="Normalized onset strength",
     )
     ax.plot(
         onset.times_seconds,
         display_density,
         linewidth=1.4,
+        **plot_role("s2"),
         label="Smoothed onset density (normalized for display)",
     )
     ax.set_title(title)

@@ -17,6 +17,7 @@ from audioatlas.analysis.levels import (
     RmsEnvelopeResult,
 )
 from audioatlas.config import AnalysisConfig
+from audioatlas.plot_theme import plot_role
 from audioatlas.utils import to_mono
 
 
@@ -51,7 +52,7 @@ def plot_waveform_rms(
     times = idx / sr
 
     fig, ax1 = plt.subplots(figsize=(14, 5))
-    ax1.plot(times, samples, linewidth=0.35, alpha=0.8)
+    ax1.plot(times, samples, linewidth=0.35, **plot_role("waveform", alpha=0.8))
     ax1.set_title(title)
     ax1.set_xlabel("Time (s)")
     ax1.set_ylabel("Amplitude (full scale)")
@@ -59,7 +60,7 @@ def plot_waveform_rms(
     ax1.grid(True, alpha=0.25)
 
     ax2 = ax1.twinx()
-    ax2.plot(rms.times_seconds, rms.rms_dbfs, linewidth=1.2, alpha=0.9)
+    ax2.plot(rms.times_seconds, rms.rms_dbfs, linewidth=1.2, **plot_role("rms", alpha=0.9))
     ax2.set_ylabel("RMS (dBFS)")
     ax2.set_ylim(cfg.db_floor, 0)
 
@@ -80,7 +81,7 @@ def plot_crest_factor_timeline(
     """Save a per-frame crest-factor timeline in dB."""
 
     fig, ax = plt.subplots(figsize=(14, 4))
-    ax.plot(crest.times_seconds, crest.crest_factor_db, linewidth=1.25)
+    ax.plot(crest.times_seconds, crest.crest_factor_db, linewidth=1.25, **plot_role("s1"))
     ax.set_title(title)
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Crest factor (dB)")
@@ -109,8 +110,8 @@ def plot_rms_timeline(
 
     cfg = config or AnalysisConfig()
     fig, ax = plt.subplots(figsize=(14, 4))
-    ax.plot(rms.times_seconds, rms.rms_dbfs, linewidth=1.25)
-    ax.fill_between(rms.times_seconds, cfg.db_floor, rms.rms_dbfs, alpha=0.2)
+    ax.plot(rms.times_seconds, rms.rms_dbfs, linewidth=1.25, **plot_role("rms"))
+    ax.fill_between(rms.times_seconds, cfg.db_floor, rms.rms_dbfs, **plot_role("fill", alpha=0.2, essential=False))
     ax.set_title(title)
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("RMS (dBFS)")
@@ -135,7 +136,7 @@ def plot_peak_timeline(
 
     cfg = config or AnalysisConfig()
     fig, ax = plt.subplots(figsize=(14, 4))
-    ax.plot(peaks.times_seconds, peaks.frame_peak_dbfs, linewidth=1.25, label="Sample peak")
+    ax.plot(peaks.times_seconds, peaks.frame_peak_dbfs, linewidth=1.25, label="Sample peak", **plot_role("s1"))
 
     near_mask = peaks.near_clipping_counts > 0
     clipped_mask = peaks.clipped_counts > 0
@@ -144,7 +145,7 @@ def plot_peak_timeline(
             peaks.times_seconds[near_mask],
             peaks.frame_peak_dbfs[near_mask],
             s=18,
-            alpha=0.75,
+            **plot_role("event", alpha=0.75),
             label="Near-clipping frame",
         )
     if np.any(clipped_mask):
@@ -153,7 +154,7 @@ def plot_peak_timeline(
             peaks.frame_peak_dbfs[clipped_mask],
             s=24,
             marker="x",
-            alpha=0.9,
+            **plot_role("threshold", alpha=0.9),
             label="Clipping-threshold frame",
         )
 
@@ -185,8 +186,8 @@ def plot_peak_vs_rms(
 
     cfg = config or AnalysisConfig()
     fig, ax = plt.subplots(figsize=(14, 4))
-    ax.plot(peaks.times_seconds, peaks.frame_peak_dbfs, linewidth=1.2, label="Sample peak")
-    ax.plot(rms.times_seconds, rms.rms_dbfs, linewidth=1.2, label="RMS")
+    ax.plot(peaks.times_seconds, peaks.frame_peak_dbfs, linewidth=1.2, label="Sample peak", **plot_role("s1"))
+    ax.plot(rms.times_seconds, rms.rms_dbfs, linewidth=1.2, label="RMS", **plot_role("rms"))
     finite = np.concatenate(
         [
             peaks.frame_peak_dbfs[np.isfinite(peaks.frame_peak_dbfs)],
@@ -220,7 +221,7 @@ def plot_rms_histogram(
     cfg = config or AnalysisConfig()
     finite = rms.rms_dbfs[np.isfinite(rms.rms_dbfs)]
     fig, ax = plt.subplots(figsize=(10, 4))
-    ax.hist(finite, bins=40, range=(cfg.db_floor, 0), alpha=0.85)
+    ax.hist(finite, bins=40, range=(cfg.db_floor, 0), **plot_role("rms", alpha=0.85))
     ax.set_title(title)
     ax.set_xlabel("RMS (dBFS)")
     ax.set_ylabel("Frame count")

@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from audioatlas.analysis.loudness import ShortTermLufsResult
+from audioatlas.plot_theme import plot_role
 
 
 def plot_short_term_lufs(
@@ -27,6 +28,7 @@ def plot_short_term_lufs(
             lufs_result.times_seconds,
             lufs_result.lufs,
             linewidth=1.2,
+            **plot_role("s1"),
             label="Short-term LUFS (3 s)",
         )
         if lufs_result.integrated_lufs is not None and np.isfinite(lufs_result.integrated_lufs):
@@ -34,8 +36,7 @@ def plot_short_term_lufs(
                 lufs_result.integrated_lufs,
                 linestyle="--",
                 linewidth=1.0,
-                alpha=0.7,
-                color="C1",
+                **plot_role("reference", alpha=0.7),
                 label=f"Integrated: {lufs_result.integrated_lufs:.1f} LUFS",
             )
         # Reasonable y range for music
