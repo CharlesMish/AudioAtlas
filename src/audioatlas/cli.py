@@ -20,11 +20,13 @@ from audioatlas.execution import ANALYSIS_MODES, default_graph_profile
 from audioatlas.graph_profiles import VALID_PROFILES
 from audioatlas.markdown import markdown_code_span, markdown_text
 from audioatlas.presentation import VALID_PRESENTATION_MODES
+from audioatlas.report_depth import REPORT_DEPTHS, resolve_report_plan
 
 if TYPE_CHECKING:
     from audioatlas.config import AnalysisConfig
     from audioatlas.graphs.selection import GraphSelection
     from audioatlas.pipeline import AnalysisRunResult
+    from audioatlas.report_depth import ReportPlan
 
 
 @click.group()
@@ -78,7 +80,8 @@ def main() -> None:
     "--graphs-profile",
     type=click.Choice(VALID_PROFILES),
     default=None,
-    help="Graph render profile. Defaults to standard unless --graphs-config sets it.",
+    help="Advanced plot selection. Defaults to compact for compact computation, otherwise "
+         "standard; --graphs-config can set it.",
 )
 @click.option(
     "--enable",
@@ -112,8 +115,12 @@ def main() -> None:
     is_flag=True,
     help="Include resolved machine-local paths in JSON metadata (off by default for sharing).",
 )
-@click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default="full", show_default=True,
-              help="Computation breadth. Compact defaults to four plots unless explicitly selected.")
+@click.option("--report-depth", type=click.Choice(tuple(REPORT_DEPTHS)), default=None,
+              help="Overview: key measurements, all current finding checks, 4 plots; "
+                   "Standard: all measurements, 14 plots (default); "
+                   "Detailed: all measurements, 17 plots.")
+@click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default=None,
+              help="Advanced computation breadth. Defaults to full unless --report-depth sets it.")
 def analyze(
     input_path: Path,
     out_dir: Path | None,
@@ -128,7 +135,8 @@ def analyze(
     theme: str | None,
     presentation: str | None,
     graphs_profile: str | None,
-    analysis_mode: str,
+    analysis_mode: str | None,
+    report_depth: str | None,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
     graphs_config: Path | None,
@@ -140,8 +148,10 @@ def analyze(
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     _validate_source_range_options(start_seconds, end_seconds, max_duration)
     selected_theme = _validate_theme_for_cli(theme)
-    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config,
-                                default_profile=default_graph_profile(analysis_mode))
+    plan = _make_report_plan(report_depth, analysis_mode, graphs_profile,
+                             graph_enable, graph_disable, graphs_config)
+    analysis_mode, selection = plan.analysis_mode, plan.selection
+    click.echo(plan.display())
     if out_dir is None:
         out_dir = _default_report_out(input_path)
         click.echo(f"No --out supplied; using: {out_dir}")
@@ -216,7 +226,8 @@ def analyze(
     "--graphs-profile",
     type=click.Choice(VALID_PROFILES),
     default=None,
-    help="Graph render profile. Defaults to standard unless --graphs-config sets it.",
+    help="Advanced plot selection. Defaults to compact for compact computation, otherwise "
+         "standard; --graphs-config can set it.",
 )
 @click.option(
     "--enable",
@@ -247,8 +258,12 @@ def analyze(
     is_flag=True,
     help="Include resolved machine-local paths in JSON metadata (off by default for sharing).",
 )
-@click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default="full", show_default=True,
-              help="Computation breadth; independent of graph selection.")
+@click.option("--report-depth", type=click.Choice(tuple(REPORT_DEPTHS)), default=None,
+              help="Overview: key measurements, all current finding checks, 4 plots; "
+                   "Standard: all measurements, 14 plots (default); "
+                   "Detailed: all measurements, 17 plots.")
+@click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default=None,
+              help="Advanced computation breadth. Defaults to full unless --report-depth sets it.")
 def batch(
     input_folder: Path,
     out_dir: Path,
@@ -261,7 +276,8 @@ def batch(
     theme: str | None,
     presentation: str | None,
     graphs_profile: str | None,
-    analysis_mode: str,
+    analysis_mode: str | None,
+    report_depth: str | None,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
     graphs_config: Path | None,
@@ -273,8 +289,10 @@ def batch(
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     _validate_optional_seconds(max_duration, option="--max-duration", allow_zero=False)
     selected_theme = _validate_theme_for_cli(theme)
-    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config,
-                                default_profile=default_graph_profile(analysis_mode))
+    plan = _make_report_plan(report_depth, analysis_mode, graphs_profile,
+                             graph_enable, graph_disable, graphs_config)
+    analysis_mode, selection = plan.analysis_mode, plan.selection
+    click.echo(plan.display())
     click.echo(f"Preparing AudioAtlas batch from: {input_folder.name}")
     from audioatlas.batch import analyze_folder
 
@@ -366,7 +384,8 @@ def batch(
     "--graphs-profile",
     type=click.Choice(VALID_PROFILES),
     default=None,
-    help="Graph render profile. Defaults to standard unless --graphs-config sets it.",
+    help="Advanced plot selection. Defaults to compact for compact computation, otherwise "
+         "standard; --graphs-config can set it.",
 )
 @click.option(
     "--enable",
@@ -400,8 +419,12 @@ def batch(
     is_flag=True,
     help="Include resolved machine-local paths in JSON metadata (off by default for sharing).",
 )
-@click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default="full", show_default=True,
-              help="Computation breadth for every section; independent of graph selection.")
+@click.option("--report-depth", type=click.Choice(tuple(REPORT_DEPTHS)), default=None,
+              help="Overview: key measurements, all current finding checks, 4 plots; "
+                   "Standard: all measurements, 14 plots (default); "
+                   "Detailed: all measurements, 17 plots.")
+@click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default=None,
+              help="Advanced computation breadth. Defaults to full unless --report-depth sets it.")
 def sections(
     input_path: Path,
     out_dir: Path,
@@ -415,7 +438,8 @@ def sections(
     theme: str | None,
     presentation: str | None,
     graphs_profile: str | None,
-    analysis_mode: str,
+    analysis_mode: str | None,
+    report_depth: str | None,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
     graphs_config: Path | None,
@@ -431,8 +455,10 @@ def sections(
     parsed_sections = _collect_section_definitions(section_specs, config_path)
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
-    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config,
-                                default_profile=default_graph_profile(analysis_mode))
+    plan = _make_report_plan(report_depth, analysis_mode, graphs_profile,
+                             graph_enable, graph_disable, graphs_config)
+    analysis_mode, selection = plan.analysis_mode, plan.selection
+    click.echo(plan.display())
     click.echo(f"Preparing {len(parsed_sections)} manual section report(s) for: {input_path.name}")
     from audioatlas.pipeline import analyze_file
 
@@ -716,6 +742,42 @@ def _validate_theme_for_cli(theme: str | None) -> str:
         return validate_theme_name(theme)
     except ValueError as exc:
         raise click.BadParameter(str(exc), param_hint="--theme") from exc
+
+
+def _make_report_plan(
+    report_depth: str | None,
+    analysis_mode: str | None,
+    graphs_profile: str | None,
+    graph_enable: tuple[str, ...],
+    graph_disable: tuple[str, ...],
+    graphs_config: Path | None,
+) -> ReportPlan:
+    from audioatlas.graph_profiles import selection_profile
+
+    # With a preset, every explicit profile must agree, even if the normal
+    # CLI-over-YAML precedence would hide an opposing file setting.
+    if report_depth is not None:
+        preset_mode, preset_profile = REPORT_DEPTHS[report_depth]
+        file_config = _parse_graphs_config(graphs_config) if graphs_config else {}
+        for source, profile in (("--graphs-profile", graphs_profile),
+                                ("graphs.profile in YAML", file_config.get("profile"))):
+            if profile is not None and selection_profile(profile) != selection_profile(preset_profile):
+                raise click.UsageError(
+                    f"--report-depth {report_depth} conflicts with {source}={profile}. "
+                    "Remove --report-depth to customize computation and plots, or use "
+                    f"{preset_profile!r} for this profile."
+                )
+        mode = analysis_mode or preset_mode
+        default_profile = preset_profile
+    else:
+        mode = analysis_mode or "full"
+        default_profile = default_graph_profile(mode)
+    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config,
+                                default_profile=default_profile)
+    try:
+        return resolve_report_plan(report_depth, mode, selection)
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
 
 
 def _make_selection(

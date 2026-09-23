@@ -16,7 +16,7 @@ AudioAtlas provides:
 
 - local analysis with no intentional audio upload;
 - portable HTML, Markdown, JSON, and PNG reports;
-- Compact, Standard, and Full plot selections over the same complete analysis;
+- selectable plot profiles and bounded measurement reports;
 - bounded review prompts that describe measurements without grading the music.
 
 ## Quick start
@@ -70,6 +70,21 @@ the native application is neither abandoned nor represented as ready.
 uv sync
 uv run audioatlas analyze song.wav
 ```
+
+This local source prototype adds report-depth presets; these examples do not
+claim availability in the published `0.2.0a8` package:
+
+```bash
+uv run audioatlas analyze song.wav --report-depth overview
+```
+
+Overview includes key current measurements, all current finding checks, and four
+plots. Standard (the default) includes all measurements and fourteen plots;
+`--report-depth detailed` includes all measurements and seventeen plots. Compact
+computation reduces measurement breadth, not numerical fidelity. Advanced users
+can still control computation and graphs independently; see the
+[report-depth guide](docs/USER_GUIDE.md#report-depth).
+
 
 The first analysis in a fresh environment may take a little longer while the
 scientific libraries initialize. Lightweight commands such as `--version`,

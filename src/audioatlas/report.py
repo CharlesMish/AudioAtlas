@@ -13,6 +13,7 @@ from typing import Any
 
 from audioatlas import __version__
 from audioatlas.alt_text import plot_alt_text
+from audioatlas.explanations import ANALYZED_SCOPE_NOTE, RANGE_TIME_NOTE, measurement_note
 from audioatlas.graphs.registry import RELATIVE_DB_NOTE, graph_by_filename
 from audioatlas.markdown import markdown_text
 from audioatlas.release import RELEASE_LABEL
@@ -402,6 +403,10 @@ def write_report_md(
         lines.append(f"- Comparable-analysis SHA-256: `{compatible_hash}`")
     lines.append("")
 
+    lines.extend([ANALYZED_SCOPE_NOTE, ""])
+    if source_range is not None:
+        lines.extend([RANGE_TIME_NOTE, ""])
+
     lines.append("## Level metrics\n")
     lines.append("| Metric | Value | Unit |")
     lines.append("|---|---|---|")
@@ -445,12 +450,14 @@ def write_report_md(
         lines.append("")
 
     lines.append("## Frame RMS envelope summary\n")
+    lines.append(measurement_note("rms") + "\n")
     for key, value in rms.items():
         lines.append(f"- {key}: {_fmt_value(value)}")
     lines.append("")
 
     if crest_timeline:
         lines.append("## Crest factor timeline summary\n")
+        lines.append(measurement_note("crest-factor") + "\n")
         for key, label, unit in CREST_TIMELINE_DISPLAY:
             if key in crest_timeline:
                 unit_suffix = f" {unit}" if unit else ""
@@ -462,7 +469,7 @@ def write_report_md(
 
     if spectrum:
         lines.append("## Average spectrum summary\n")
-        lines.append(f"{RELATIVE_DB_NOTE}\n")
+        lines.append(measurement_note("average-spectrum") + "\n")
         for key, value in spectrum.items():
             if key in {"band_energies", "band_mean_power"}:
                 continue
@@ -494,6 +501,8 @@ def write_report_md(
 
     if spectral_shape:
         lines.append("## Spectral shape summary\n")
+        for key in ("spectral-centroid", "rolloff", "spectral-bandwidth"):
+            lines.append(measurement_note(key) + "\n")
         for key, value in spectral_shape.items():
             if key == "warnings":
                 continue
@@ -537,6 +546,7 @@ def write_report_md(
 
     if onset_density:
         lines.append("## Onset / transient density summary\n")
+        lines.append(measurement_note("onset-density") + "\n")
         for key, value in onset_density.items():
             if key == "warnings":
                 continue
@@ -548,10 +558,7 @@ def write_report_md(
 
     if chroma_cqt:
         lines.append("## Chroma CQT summary\n")
-        lines.append(
-            "Pitch-class energy within this track. This is not key detection "
-            "and values are not calibrated across unrelated songs.\n"
-        )
+        lines.append(measurement_note("chroma-cqt") + "\n")
         for key, value in chroma_cqt.items():
             if key in {"warnings", "mean_chroma", "pitch_classes"}:
                 continue
@@ -571,10 +578,7 @@ def write_report_md(
 
     if short_term_lufs:
         lines.append("## Short-term LUFS summary\n")
-        lines.append(
-            "K-weighted loudness over 3 s windows. This is distinct from the RMS timeline "
-            "and from integrated LUFS, which summarizes the whole track.\n"
-        )
+        lines.append(measurement_note("short-term-lufs") + "\n")
         for key, label, unit in SHORT_TERM_LUFS_DISPLAY:
             if key in short_term_lufs:
                 unit_suffix = f" {unit}" if unit else ""
@@ -586,6 +590,7 @@ def write_report_md(
 
     if stereo:
         lines.append("## Stereo correlation summary\n")
+        lines.append(measurement_note("stereo-correlation") + "\n")
         for key, value in stereo.items():
             if key == "warnings":
                 continue
@@ -597,6 +602,7 @@ def write_report_md(
 
     if mid_side:
         lines.append("## Mid/side energy summary\n")
+        lines.append(measurement_note("side-mid-ratio") + "\n")
         for key, value in mid_side.items():
             if key == "warnings":
                 continue

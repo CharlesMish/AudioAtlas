@@ -498,8 +498,9 @@ def test_report_repeats_relative_db_explanation_near_relative_sections(tmp_path:
     )
 
     assert text.count(note) >= 4
-    assert text.index(note) > text.index("## Average spectrum summary")
-    assert text.index(note) < text.index("- nperseg:")
+    spectrum_note = "Values describe shape within this analyzed view, not calibrated dBFS"
+    assert text.index(spectrum_note) > text.index("## Average spectrum summary")
+    assert text.index(spectrum_note) < text.index("- nperseg:")
 
 
 def test_write_report_md_reports_suppressed_findings(tmp_path: Path):
@@ -809,7 +810,7 @@ def test_write_report_html_contains_key_sections_and_metrics(tmp_path: Path):
     assert ">Findings<" in text
     assert "Listening prompts" not in text
     assert "Integrated LUFS" in text
-    assert "True peak" in text
+    assert "Approximate true peak" in text
     assert "Median stereo correlation" in text
     assert "Does not mean:" in text
     assert "This does not mean the passage is clipped." in text
@@ -887,15 +888,39 @@ def test_write_report_html_contains_glossary_and_explanations(tmp_path: Path):
 
     assert "Understanding these numbers" in text
     assert "Short-term LUFS is a time-varying K-weighted loudness measurement" in text
-    assert "Onset density is an attack/activity map for this track" in text
+    assert "Onset density is a smoothed onset-strength activity measure" in text
     assert "It is not punch, groove quality, drum hits per second, or mix quality." in text
     assert "Relative dB plots show shape within this track." in text
     assert "PLR is approximate true peak minus integrated loudness" in text
     assert "does not by itself identify compression" in text
-    assert "+1 means nearly identical channels" in text
-    assert "0 dB means side and mid energy are similar" in text
-    assert "moves higher when energy shifts upward in frequency" in text
+    assert "+1 means matching variation, not necessarily equal levels" in text
+    assert "zero means equal RMS, and positive means side-dominant" in text
+    assert "Higher values mean more weight at higher frequencies" in text
     assert "not comparable to dBFS values from meters or other songs" in text
+
+
+def test_report_html_true_peak_qualification_matches_user_guide(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(summary, summary["plots"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+    guide = (Path(__file__).resolve().parents[1] / "docs" / "USER_GUIDE.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'href="#glossary-true-peak">Approximate true peak</a>' in text
+    assert "<h3>Approximate true peak</h3>" in text
+    assert "not a standards-grade true-peak measurement" in text
+    assert "not a standards-grade true-peak measurement" in guide
+
+
+def test_report_html_spectral_shape_caption_matches_drawn_features(tmp_path: Path):
+    summary = _make_summary()
+    path = write_report_html(summary, ["spectral_shape.png"], tmp_path, _html_findings())
+    text = path.read_text(encoding="utf-8")
+
+    assert "spectral centroid and 85%/95% rolloff movement over time" in text
+    assert "Bandwidth is reported in the technical summary, not drawn here." in text
+    assert "spectral centroid, rolloff, and bandwidth movement over time" not in text
 
 
 def test_write_report_html_renders_relative_plot_links_and_curated_names(
@@ -945,7 +970,7 @@ def test_report_html_captions_include_conservative_context_boundaries(tmp_path: 
 
     for boundary in (
         "It is amplitude context, not a quality judgment.",
-        "It describes energy movement within this track, not a loudness target.",
+        "It describes level movement within this track, not a loudness target.",
         "Threshold markers do not prove audible distortion.",
         "Low-correlation passages are listening prompts, not defects.",
         "Side-heavy passages can be intentional; this is context, not a width judgment.",

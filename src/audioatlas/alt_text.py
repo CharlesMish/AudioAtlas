@@ -146,7 +146,7 @@ def plot_alt_text(filename: str, summary: dict[str, Any]) -> str:
             )
         if rolloff is not None:
             details.append(f"median 95-percent rolloff {_fmt(rolloff, 0)} Hz")
-        return _sentence(f"{title}{duration_text}", details or ["spectral centroid, rolloff, and bandwidth"])
+        return _sentence(f"{title}{duration_text}", details or ["spectral centroid and 85/95-percent rolloff"])
 
     if key == "band_energy_timeline":
         block = _block(summary, "band_power_timeline")
@@ -180,9 +180,9 @@ def plot_alt_text(filename: str, summary: dict[str, Any]) -> str:
         maximum = _number(onset.get("onset_density_max"))
         details: list[str] = []
         if median is not None:
-            details.append(f"median {_fmt(median, 3)}")
+            details.append(f"raw-scale median {_fmt(median, 3)}")
         if maximum is not None:
-            details.append(f"maximum {_fmt(maximum, 3)}")
+            details.append(f"raw-scale maximum {_fmt(maximum, 3)}")
         details.append("relative attack activity, not punch or quality")
         return _sentence(f"{title}{duration_text}", details)
 

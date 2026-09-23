@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from audioatlas.alt_text import plot_alt_text
+from audioatlas.explanations import ANALYZED_SCOPE_NOTE, GLOSSARY, RANGE_TIME_NOTE
 from audioatlas.graphs.registry import graph_by_filename, graph_by_key
 from audioatlas.presentation import (
     presentation_controls_html,
@@ -31,117 +32,6 @@ from audioatlas.report import (
 )
 from audioatlas.theme import default_theme_name, theme_css_variables, validate_theme_name
 from audioatlas.utils import mmss
-
-GLOSSARY: list[tuple[str, str, str]] = [
-    (
-        "lufs",
-        "LUFS",
-        "Integrated LUFS is a whole-track loudness measurement weighted toward human hearing. "
-        "It gives delivery context, not a quality judgment.",
-    ),
-    (
-        "short-term-lufs",
-        "Short-term LUFS",
-        "Short-term LUFS is a time-varying K-weighted loudness measurement using 3 s windows. "
-        "It shows where this track is louder or quieter over time and is distinct from RMS.",
-    ),
-    (
-        "true-peak",
-        "True peak",
-        "True peak estimates reconstructed peaks between samples. Values above 0 dBTP can matter "
-        "for playback, conversion, or encoding headroom.",
-    ),
-    (
-        "sample-peak",
-        "Sample peak",
-        "Sample peak is the largest stored sample value in the file. It is not loudness or density.",
-    ),
-    (
-        "rms",
-        "RMS",
-        "RMS is average signal energy. The RMS timeline is useful for seeing where energy rises "
-        "or falls across the track.",
-    ),
-    (
-        "crest-factor",
-        "Crest factor",
-        "Crest factor is peak-to-RMS contrast in dB. It describes measured peak contrast, "
-        "not punch, quality, or dynamic range.",
-    ),
-    (
-        "plr",
-        "PLR",
-        "PLR is approximate true peak minus integrated loudness. It describes the measured "
-        "distance between those two values; it does not by itself identify compression, "
-        "transient quality, or a delivery problem.",
-    ),
-    (
-        "clipping",
-        "Clipping / near-clipping",
-        "Clipping counts samples at the configured ceiling; near-clipping counts samples close to it. "
-        "Use the waveform and histogram to inspect where these samples occur.",
-    ),
-    (
-        "stereo-correlation",
-        "Stereo correlation",
-        "Stereo correlation describes the L/R relationship. +1 means nearly identical channels; "
-        "0 means loosely related; negative values indicate opposite-polarity/decorrelated content.",
-    ),
-    (
-        "side-mid-ratio",
-        "Side/mid ratio",
-        "Side/mid ratio compares stereo-difference energy with center energy. 0 dB means side "
-        "and mid energy are similar; more negative means mid-dominant; closer to 0 means more side energy.",
-    ),
-    (
-        "spectral-centroid",
-        "Spectral centroid",
-        "Spectral centroid is the spectrum's center-of-mass frequency. It moves higher when "
-        "energy shifts upward in frequency, and lower when energy is weighted toward lows/mids.",
-    ),
-    (
-        "rolloff",
-        "Rolloff",
-        "Spectral rolloff marks the frequency below which most measured spectral energy sits.",
-    ),
-    (
-        "spectral-bandwidth",
-        "Spectral bandwidth",
-        "Spectral bandwidth describes how spread out the spectrum is around the centroid.",
-    ),
-    (
-        "average-spectrum",
-        "Average spectrum",
-        "Average spectrum is the long-term frequency profile of the track. Relative values show "
-        "shape within the file.",
-    ),
-    (
-        "relative-band-power",
-        "Relative mean band power",
-        "This view averages spectral power per included FFT bin in each broad frequency "
-        "band, then normalizes values within the file. It is not integrated total band "
-        "energy and does not indicate absolute dBFS level.",
-    ),
-    (
-        "onset-density",
-        "Onset density",
-        "Onset density is an attack/activity map for this track. It is not punch, groove quality, "
-        "drum hits per second, or mix quality. Absolute onset-density values are not reliable "
-        "quality comparisons across songs.",
-    ),
-    (
-        "chroma-cqt",
-        "Chroma CQT",
-        "Chroma CQT shows pitch-class energy within this track. It is not key detection, "
-        "chord detection, or harmonic-quality analysis.",
-    ),
-    (
-        "relative-db",
-        "Relative dB",
-        "Relative dB plots show shape within this track. They are useful for shape within this "
-        "track; not comparable to dBFS values from meters or other songs.",
-    ),
-]
 
 TECHNICAL_BLOCKS: list[tuple[str, str]] = [
     ("Level metrics", "levels"),
@@ -251,6 +141,8 @@ def write_report_html(
         "and verify by listening.</p>",
         "<p>This report provides descriptive context, not professional mastering approval "
         "or a universal pass/fail result.</p>",
+        f"<p>{_h(ANALYZED_SCOPE_NOTE)}</p>",
+        *([f"<p>{_h(RANGE_TIME_NOTE)}</p>"] if source_range is not None else []),
         f"<p>{_h(RELATIVE_DB_NOTE)}</p>",
         "<p>Check before delivery / worth a listen / for reference indicate priority, not quality.</p>",
         "<p>A report can have no prioritized findings; the plots still describe the track's measured shape.</p>",
@@ -261,7 +153,7 @@ def write_report_html(
         "<h2>Key metrics</h2>",
         '<div class="metrics-grid">',
         _metric_card("Integrated LUFS", levels.get("integrated_lufs"), "LUFS", "lufs"),
-        _metric_card("True peak", levels.get("true_peak_dbtp"), "dBTP", "true-peak"),
+        _metric_card("Approximate true peak", levels.get("true_peak_dbtp"), "dBTP", "true-peak"),
         _metric_card("Sample peak", levels.get("sample_peak_dbfs"), "dBFS", "sample-peak"),
         _metric_card("RMS", levels.get("rms_dbfs"), "dBFS", "rms"),
         _metric_card("PLR", levels.get("plr_db"), "dB", "plr"),

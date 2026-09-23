@@ -80,6 +80,38 @@ audioatlas analyze song.wav --out reports/song
 Open `report.html`. The Markdown and JSON files beside it are intended for
 archiving, source inspection, or downstream scripts.
 
+### Measurement scope and scales
+
+Measurements describe the analyzed audio: the whole file or the selected range.
+For a selected range, plot and finding times start from that range, not the
+original file. Add the displayed source start time to locate the same point in
+the original file. No timestamp conversion is applied to the measurements.
+
+- **RMS** measures amplitude, not energy or hearing-weighted loudness. Headline
+  RMS pools all channel samples. The RMS timeline uses the arithmetic-average
+  mono signal, so opposing channels can cancel. Headline and frame crest use
+  all channels; the crest timeline is not derived from the mono RMS timeline.
+- **Average spectrum** uses the mono signal and a reference within the analyzed
+  view: its strongest averaged bin at or above 20 Hz is 0 relative dB for
+  measurable audio. It does not report calibrated dBFS.
+- **Spectral shape** uses spectral magnitude: centroid is the weighted mean
+  frequency, rolloff contains 85% or 95% of summed magnitude, and bandwidth is
+  the weighted root-mean-square spread around centroid. All are in Hz; they do
+  not establish note pitch, a filter cutoff, or musical quality.
+- **Onset density** retains raw smoothed onset-strength values in summaries;
+  each displayed onset curve is independently normalized to a maximum of 1
+  (zero for no activity). It is not a count of events per second.
+- **Chroma** folds pitch-class energy across octaves and normalizes each nonzero
+  frame to a maximum of 1. It is not exact note pitch (F0) or tuning accuracy.
+- **Stereo correlation** is Pearson r: +1 means matching variation, not
+  necessarily equal levels; negative values mean opposing variation. **Mid/side**
+  uses `(L + R) / 2` and `(L - R) / 2`; positive side/mid dB means more side RMS,
+  negative means more mid RMS. Undefined ratios are not zero. Neither metric
+  directly measures perceived width.
+
+HTML links key metrics to the glossary. Markdown places the same definitions
+beside the relevant measurement summaries.
+
 ### Focus and Studio presentation
 
 Every generated HTML report can switch between:
@@ -100,10 +132,60 @@ The report remembers the selected view locally for that report path when the
 browser permits local storage. Both modes remain usable without JavaScript; the
 opening mode is present in the HTML itself.
 
-### Graph depth
+### Report depth
 
-Graph profiles control which PNGs are rendered. They do not skip the complete
-analysis summary.
+These presets are a local source prototype, not a published-package availability claim.
+
+Choose a report depth for `analyze`, `batch`, or `sections`:
+
+| Depth | Computation | Graph profile | Report contents |
+|---|---|---|---|
+| `overview` | Compact | Compact | Key current measurements, all current finding checks, 4 plots |
+| `standard` | Full | Standard | All measurements, 14 plots; default |
+| `detailed` | Full | Full | All measurements, 17 plots |
+
+```bash
+audioatlas analyze song.wav --report-depth overview
+audioatlas batch recordings --out reports/catalog --report-depth standard
+audioatlas sections song.wav --section verse:30:62 --out reports/sections --report-depth detailed
+```
+
+Compact computation reduces measurement breadth, not numerical fidelity. It
+retains levels, RMS, peaks, spectral shape, stereo, mid/side, and spectrogram for
+the default Overview plots. Every current finding rule has its required inputs;
+this does not mean full analysis was run. Detailed adds plots to Standard, not
+higher measurement fidelity. These presets make no runtime guarantee.
+
+Before analysis, the CLI prints resolved depth, computation breadth, plot count
+per report, and any optional analyses restored by graph selection. With no depth
+or advanced flags, behavior remains Standard. Without a preset, combinations
+matching a fixed pair display its depth; other combinations display `Custom`.
+
+A preset promises a fixed computation/profile pair. Matching explicit settings
+are accepted, including `minimal` as the Overview graph alias and graph changes
+that leave the selected set unchanged. Accepted preset selections are stored as
+the preset's canonical graph profile without redundant enable/disable entries.
+Conflicting computation, profiles, or effective graph changes fail before report
+output is created. This includes a conflicting YAML profile even if a CLI profile
+would otherwise override it. Remove `--report-depth` to customize both axes.
+
+Report depth is separate from Focus/Studio presentation, themes, source ranges,
+and the future measurements-only snapshot operation. Projects currently persist
+only graph profile and run full computation; report-depth persistence needs a
+separate project compatibility/schema decision and is not added here.
+
+### Advanced computation and graph controls
+
+`--analysis-mode full` remains the default. `--analysis-mode compact` defaults to
+four plots unless an explicit CLI or YAML graph profile selects another set.
+Graph profiles select PNGs; they alone do not reduce computation. Graph additions
+restore their required analyses once, including in compact computation. For
+example, compact computation with standard graphs restores all current families.
+The pre-run plan lists these restored families before computation begins.
+
+Existing `--analysis-mode`, `--graphs-profile`, `--enable`, `--disable`, and YAML
+commands remain available independently of report depth. Without a preset, CLI
+profile still takes precedence over YAML profile and enable/disable lists merge.
 
 | Profile | Plots | Notes |
 |---|---:|---|
@@ -175,6 +257,7 @@ A useful order is:
 Important boundaries:
 
 - Findings are threshold-backed prompts, not proof of audibility or a defect.
+- Approximate true peak is not a standards-grade true-peak measurement.
 - Relative-dB plots describe shape within the current analysis view. They are
   not absolute dBFS values and should not be compared as meters across songs.
 - PLR is approximate true peak minus integrated loudness. Constant loudness

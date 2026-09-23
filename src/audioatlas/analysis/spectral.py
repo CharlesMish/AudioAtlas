@@ -440,8 +440,20 @@ def compute_spectral_shape(
     if len(mono) == 0:
         raise ValueError("audio has zero samples")
 
+    # These features use the same magnitude STFT. Keep the existing float64
+    # input and explicit FFT size so precision and odd-size bin locations stay
+    # identical to the independent y-based feature calls.
+    magnitude = np.abs(
+        librosa.stft(
+            mono,
+            n_fft=cfg.n_fft,
+            hop_length=cfg.hop_length,
+            window=cfg.window,
+            center=True,
+        )
+    )
     centroid = librosa.feature.spectral_centroid(
-        y=mono,
+        S=magnitude,
         sr=sr,
         n_fft=cfg.n_fft,
         hop_length=cfg.hop_length,
@@ -449,7 +461,7 @@ def compute_spectral_shape(
         center=True,
     )[0].astype(np.float64)
     rolloff_85 = librosa.feature.spectral_rolloff(
-        y=mono,
+        S=magnitude,
         sr=sr,
         n_fft=cfg.n_fft,
         hop_length=cfg.hop_length,
@@ -458,7 +470,7 @@ def compute_spectral_shape(
         roll_percent=0.85,
     )[0].astype(np.float64)
     rolloff_95 = librosa.feature.spectral_rolloff(
-        y=mono,
+        S=magnitude,
         sr=sr,
         n_fft=cfg.n_fft,
         hop_length=cfg.hop_length,
@@ -467,7 +479,7 @@ def compute_spectral_shape(
         roll_percent=0.95,
     )[0].astype(np.float64)
     bandwidth = librosa.feature.spectral_bandwidth(
-        y=mono,
+        S=magnitude,
         sr=sr,
         n_fft=cfg.n_fft,
         hop_length=cfg.hop_length,

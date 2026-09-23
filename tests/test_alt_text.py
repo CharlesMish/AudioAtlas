@@ -126,3 +126,15 @@ def test_html_and_markdown_embed_the_measured_alt_text(tmp_path: Path) -> None:
     assert f"![{waveform_alt}](waveform_rms.png)" in markdown
     assert f"![{short_lufs_alt}](short_term_lufs.png)" in markdown
     assert 'alt="Waveform + RMS Envelope"' not in html
+
+
+def test_spectral_shape_fallback_alt_text_only_names_plotted_features() -> None:
+    text = plot_alt_text("spectral_shape.png", {})
+    assert "spectral centroid and 85/95-percent rolloff" in text
+    assert "bandwidth" not in text
+
+
+def test_onset_alt_text_identifies_summary_scale_instead_of_plot_scale() -> None:
+    text = plot_alt_text("onset_density.png", _summary())
+    assert "raw-scale median 0.120" in text
+    assert "raw-scale maximum 0.900" in text

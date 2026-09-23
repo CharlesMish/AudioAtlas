@@ -77,8 +77,8 @@ GRAPHS: tuple[GraphSpec, ...] = (
         enabled_by_default=True,
         profiles=frozenset({"minimal", "standard", "full"}),
         html_caption=(
-            "What this shows: frame-by-frame RMS energy over time. "
-            "It describes energy movement within this track, not a loudness target."
+            "What this shows: frame-by-frame RMS amplitude of the arithmetic-average mono signal. "
+            "It describes level movement within this track, not a loudness target."
         ),
         summary_key="rms_envelope",
     ),
@@ -175,7 +175,7 @@ GRAPHS: tuple[GraphSpec, ...] = (
         enabled_by_default=True,
         profiles=_DEFAULT_PROFILES,
         html_caption=(
-            "What this shows: mid and side RMS energy over time with the side-to-mid ratio. "
+            "What this shows: mid and side RMS amplitude over time with the side-to-mid ratio. "
             "Side-heavy passages can be intentional; this is context, not a width judgment."
         ),
         summary_key="mid_side_energy",
@@ -191,7 +191,8 @@ GRAPHS: tuple[GraphSpec, ...] = (
         enabled_by_default=True,
         profiles=_DEFAULT_PROFILES,
         html_caption=(
-            "What this shows: spectral centroid, rolloff, and bandwidth movement over time. "
+            "What this shows: spectral centroid and 85%/95% rolloff movement over time. "
+            "Bandwidth is reported in the technical summary, not drawn here. "
             "It shows shape within this track, not brightness quality."
         ),
         summary_key="spectral_shape",
