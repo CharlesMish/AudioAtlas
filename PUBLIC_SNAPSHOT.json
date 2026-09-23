@@ -114,7 +114,7 @@
     },
     {
       "path": "docs/SUMMARY_SCHEMA.md",
-      "sha256": "b83cecf20a84a23a69bcbbfafb72bbaa03959b9993b445219bb307df935d0abd"
+      "sha256": "b43c07a8e04851a58e6bdafe651108def4ae0a5e3b427aae18950b8e70be55d7"
     },
     {
       "path": "docs/USER_GUIDE.md",
@@ -334,7 +334,7 @@
     },
     {
       "path": "src/audioatlas/execution.py",
-      "sha256": "1f5cb627914883bf387d7e02cfc7c29bdfd0ff2942d8070e5e36316d8a2961f8"
+      "sha256": "41f68040f4909768f4489b6b2a6c957b50bc977ce72d492faeb65a94b65a4ab3"
     },
     {
       "path": "src/audioatlas/graph_profiles.py",
@@ -566,11 +566,11 @@
     },
     {
       "path": "tests/test_compact_execution.py",
-      "sha256": "51a3820b8300199fd5b4128f374ac9073ae5d87d0d12c4ae7f820a1736e8cffb"
+      "sha256": "896daceb186de8e25696e5708b73eee6b00a49ffa973672140466fe9006d11a0"
     },
     {
       "path": "tests/test_compact_reports.py",
-      "sha256": "f582968c3dea3b685dcbbf4f5d645228ffaed3c7fea95d3b0fe94dec49a66835"
+      "sha256": "00a9b409678c60d5a68e2174f494593eeea0c865ef5f5569e8190d1f08851a0b"
     },
     {
       "path": "tests/test_config.py",
@@ -748,6 +748,6 @@
   "format_version": 1,
   "included_file_count": 186,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "fd743e8d8430be0345b1a68b2fe0071efec62a8c26511b78297c347a3c0ce88a",
-  "source_commit": "c69128511d5c0cd2a93cc1e482005df04eee8c91"
+  "public_tree_sha256": "689a110856abce139706b1620e4cd03292a08195b0b59e10c0be9cc9f36ea739",
+  "source_commit": "6ff23c3318118af33945d1631d9a2ba75290a906"
 }
