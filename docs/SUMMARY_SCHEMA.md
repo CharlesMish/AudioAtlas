@@ -6,12 +6,31 @@ AudioAtlas `0.2.0a8`.
 | Artifact | Schema version | Purpose |
 |---|---:|---|
 | `summary.json` | `0.2.1` | Canonical measurements, identity assertion, and run provenance for one analyzed range. |
+| Compact `summary.json` | `0.3.0` | Explicit partial computation; absent optional blocks are declared in execution coverage. |
 | `findings.json` | `0.2.0` | Rule-based checks derived from the summary. |
 | `catalog_summary.json` | `0.2.0` | Neutral folder-level index of successful and skipped files. |
 | `revision_diff.json` | `0.1.0` | Guarded descriptive deltas between two asserted revisions of one track. |
 | calibration replay JSON | `0.1.0` | Anonymous prompt churn against a hash-verified review ledger. |
 
 Schema constants live in `src/audioatlas/release.py`.
+
+## Compact computation extension
+
+Full remains the default and preserves the `0.2.1` contract. Explicit compact
+runs use `0.3.0` and add `analysis_execution` to summary and findings:
+`format_version: 1`, `mode: compact`, ordered `computed`/`skipped` family names,
+`summary_blocks` actually emitted, and `findings_scope: full`. All current
+finding inputs remain present. Optional blocks are absent when skipped; this
+does not mean a measured zero or an undefined computed result. Findings retain
+schema `0.2.0` and unchanged rules. The provenance summary-schema field matches
+the emitted schema while retained measurement signatures remain comparable.
+
+Catalog `0.2.0` gains additive per-track execution and `analysis_coverage` when
+compact tracks are present. Optional spectrum patterns add `evaluated_count`
+when the denominator differs from `track_count`; only defined measured spectrum
+bands are evaluated. Onset statistics retain numeric-count/missing-count/null
+semantics. See [Compact computation](COMPACT_COMPUTATION.md) for family and
+profile precedence contracts.
 
 ## Privacy contract
 

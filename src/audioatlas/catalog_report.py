@@ -86,7 +86,7 @@ def build_catalog_summary(
     common_patterns = detect_common_patterns(enriched_tracks)
     input_label = _catalog_path_label(input_folder, include_local_paths)
     output_label = _catalog_path_label(output_folder, include_local_paths)
-    return {
+    catalog = {
         "schema_version": CATALOG_SCHEMA_VERSION,
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "input_folder": input_label,
@@ -100,6 +100,48 @@ def build_catalog_summary(
         "common_patterns": common_patterns,
         "decoded_audio_context": decoded_audio_context(enriched_tracks),
     }
+    if any(_is_compact(track) for track in enriched_tracks):
+        catalog["analysis_coverage"] = {
+            "compact_track_count": sum(_is_compact(track) for track in enriched_tracks),
+            **{
+                name: {
+                    "computed_count": sum(_analysis_computed(track, name) for track in enriched_tracks),
+                    "skipped_count": sum(not _analysis_computed(track, name) for track in enriched_tracks),
+                }
+                for name in ("average_spectrum", "onset")
+            },
+        }
+    return catalog
+
+
+def _is_compact(track: dict[str, Any]) -> bool:
+    execution = track.get("analysis_execution")
+    return isinstance(execution, dict) and execution.get("mode") == "compact"
+
+
+def _analysis_computed(track: dict[str, Any], name: str) -> bool:
+    execution = track.get("analysis_execution")
+    if isinstance(execution, dict):
+        return name in execution.get("computed", [])
+    # Records predating compact computation were produced by full analysis.
+    return True
+
+
+def _catalog_coverage_note(catalog: dict[str, Any]) -> str | None:
+    coverage = catalog.get("analysis_coverage")
+    if not isinstance(coverage, dict):
+        return None
+    count = catalog.get("track_count", 0)
+    note = f"{coverage['compact_track_count']} of {count} tracks used compact computation. "
+    for key, label in (("average_spectrum", "Average spectrum"), ("onset", "Onset density")):
+        note += f"{label}: computed for {coverage[key]['computed_count']} of {count} tracks. "
+    return note + "Skipped analyses are not zero measurements; measured results can also be undefined."
+
+
+def _band_display(track: dict[str, Any]) -> Any:
+    if not _analysis_computed(track, "average_spectrum"):
+        return "Not computed"
+    return _track_highest_band(track) or "—"
 
 
 def calculate_catalog_statistics(tracks: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -213,9 +255,14 @@ def detect_common_patterns(tracks: list[dict[str, Any]]) -> list[dict[str, Any]]
     ]
     out: list[dict[str, Any]] = []
     for pattern_id, title, explanation, caveat, predicate in pattern_defs:
-        matching = [track for track in tracks if predicate(track)]
+        evaluated = tracks
+        if pattern_id == "bass_sub_highest_mean_power_band" and any(_is_compact(t) for t in tracks):
+            # Count only defined, measured spectrum bands in a mixed-coverage catalog.
+            evaluated = [t for t in tracks if _analysis_computed(t, "average_spectrum")
+                         and _track_highest_band(t) is not None]
+        matching = [track for track in evaluated if predicate(track)]
         count = len(matching)
-        share = count / track_count
+        share = count / len(evaluated) if evaluated else 0.0
         if share > COMMON_PATTERN_THRESHOLD:
             out.append(
                 {
@@ -228,6 +275,13 @@ def detect_common_patterns(tracks: list[dict[str, Any]]) -> list[dict[str, Any]]
                     "does_not_mean": caveat,
                 }
             )
+            if len(evaluated) != track_count:
+                out[-1]["evaluated_count"] = len(evaluated)
+                out[-1]["title"] = "Bass/sub has the highest mean spectral power among measured tracks"
+                out[-1]["explanation"] = (
+                    "Among tracks with defined average-spectrum measurements, bass or sub "
+                    "has the highest mean power per included FFT bin on many tracks."
+                )
     return out
 
 
@@ -282,7 +336,7 @@ def track_record_from_run(
     if not isinstance(shown, list):
         shown = []
 
-    return {
+    record = {
         "filename": filename,
         "report_path": report_path,
         "duration_seconds": levels.get("duration_seconds"),
@@ -309,6 +363,10 @@ def track_record_from_run(
         "findings_suppressed_count": findings.get("findings_suppressed_count", 0),
         "top_findings": _top_findings(shown),
     }
+    execution = summary.get("analysis_execution")
+    if isinstance(execution, dict):
+        record["analysis_execution"] = execution
+    return record
 
 
 def write_catalog_summary_json(catalog: dict[str, Any], out_dir: str | Path) -> Path:
@@ -341,6 +399,9 @@ def write_catalog_md(catalog: dict[str, Any], out_dir: str | Path) -> Path:
         f"- Output folder: {markdown_text(_short_path(catalog.get('output_folder', '')))}",
         "",
     ]
+    coverage_note = _catalog_coverage_note(catalog)
+    if coverage_note is not None:
+        lines.extend(["## Analysis coverage", "", coverage_note, ""])
     lines.extend(_common_patterns_md(catalog))
     lines.extend(_decoded_context_md(catalog))
     lines.extend([
@@ -370,7 +431,7 @@ def write_catalog_md(catalog: dict[str, Any], out_dir: str | Path) -> Path:
                         "median_side_to_mid_ratio_db",
                         track.get("median_side_to_mid_ratio_db"),
                     ),
-                    _md_cell(_track_highest_band(track)),
+                    _md_cell(_band_display(track)),
                     ", ".join(_trait_tags_for_display(track)) or "—",
                     _fmt(track.get("findings_shown_count"), digits=0),
                     f"[report.html]({_md_cell(track.get('report_path'))})",
@@ -423,6 +484,9 @@ def _common_patterns_md(catalog: dict[str, Any]) -> list[str]:
         "## Common patterns in this folder",
         "",
         (
+            "These traits describe measured tracks; skipped analyses do not establish folder-wide patterns."
+            if any("evaluated_count" in pattern for pattern in patterns)
+            else
             "These traits appear across many tracks in this folder. Because they are shared, "
             "they describe the folder as a whole rather than any single track. They are "
             "measurement-based observations, not quality judgments."
@@ -435,8 +499,11 @@ def _common_patterns_md(catalog: dict[str, Any]) -> list[str]:
         lines.append(f"### {_md_cell(pattern.get('title'))}")
         lines.append(
             f"- Count: {_fmt(pattern.get('count'), digits=0)} of "
-            f"{_fmt(pattern.get('track_count'), digits=0)} tracks"
+            f"{_fmt(pattern.get('evaluated_count', pattern.get('track_count')), digits=0)} "
+            + ("measured tracks" if "evaluated_count" in pattern else "tracks")
         )
+        if "evaluated_count" in pattern:
+            lines.append(f"- Folder total: {_fmt(pattern.get('track_count'), digits=0)} tracks")
         lines.append(f"- Context: {_md_cell(pattern.get('explanation'))}")
         lines.append(f"- Does not mean: {_md_cell(pattern.get('does_not_mean'))}")
         lines.append("")
@@ -474,6 +541,7 @@ def write_catalog_html(
     selected_presentation = validate_presentation_mode(presentation_mode)
     folder_name = Path(str(catalog.get("input_folder", "folder"))).name
     stats = catalog.get("statistics") if isinstance(catalog.get("statistics"), dict) else {}
+    coverage_note = _catalog_coverage_note(catalog)
     lines = [
         "<!DOCTYPE html>",
         '<html lang="en">',
@@ -513,6 +581,8 @@ def write_catalog_html(
             "judge quality.</p>"
         ),
         "</section>",
+        *([f'<section id="analysis-coverage"><h2>Analysis coverage</h2><p>{_h(coverage_note)}</p></section>']
+          if coverage_note is not None else []),
         _decoded_context_html(catalog),
         _common_patterns_html(catalog),
         '<section id="summary">',
@@ -583,9 +653,11 @@ def _common_patterns_html(catalog: dict[str, Any]) -> str:
     lines = [
         '<section id="common-patterns">',
         "<h2>Common patterns in this folder</h2>",
-        '<p class="section-intro">These traits appear across many tracks in this folder. '
+        ('<p class="section-intro">These traits describe measured tracks; skipped analyses do not establish folder-wide patterns.</p>'
+         if any("evaluated_count" in pattern for pattern in patterns)
+         else '<p class="section-intro">These traits appear across many tracks in this folder. '
         "Because they are shared, they describe the folder as a whole rather than any "
-        "single track. They are measurement-based observations, not quality judgments.</p>",
+        "single track. They are measurement-based observations, not quality judgments.</p>"),
         '<div class="pattern-grid">',
     ]
     for pattern in patterns:
@@ -595,8 +667,11 @@ def _common_patterns_html(catalog: dict[str, Any]) -> str:
         lines.append(f"<h3>{_h(pattern.get('title', 'Common pattern'))}</h3>")
         lines.append(
             f'<div class="pattern-count">{_h(_fmt(pattern.get("count"), digits=0))} '
-            f'of {_h(_fmt(pattern.get("track_count"), digits=0))} tracks</div>'
+            f'of {_h(_fmt(pattern.get("evaluated_count", pattern.get("track_count")), digits=0))} '
+            + ("measured tracks" if "evaluated_count" in pattern else "tracks") + "</div>"
         )
+        if "evaluated_count" in pattern:
+            lines.append(f"<p>Folder total: {_h(_fmt(pattern.get('track_count'), digits=0))} tracks</p>")
         lines.append(f"<p>{_h(pattern.get('explanation', ''))}</p>")
         caveat = pattern.get("does_not_mean")
         if caveat:
@@ -844,7 +919,7 @@ def _track_table(catalog: dict[str, Any]) -> str:
             _fmt_metric("plr_db", track.get("plr_db")),
             _fmt_metric("median_stereo_correlation", track.get("median_stereo_correlation")),
             _fmt_metric("median_side_to_mid_ratio_db", track.get("median_side_to_mid_ratio_db")),
-            _h(_track_highest_band(track) or "—"),
+            _h(_band_display(track)),
         ]
         for cell in cells:
             lines.append(f"<td>{cell}</td>")
@@ -952,7 +1027,7 @@ def _fingerprint_cards(catalog: dict[str, Any]) -> str:
         lines.append(
             "<p>"
             f"Correlation {_h(_fmt(track.get('median_stereo_correlation')))} · "
-            f"Highest mean-power band {_h(_track_highest_band(track) or '—')}"
+            f"Highest mean-power band {_h(_band_display(track))}"
             "</p>"
         )
         lines.append(f'<a href="{_h(track.get("report_path", ""))}">Open track report</a>')

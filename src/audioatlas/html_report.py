@@ -26,6 +26,7 @@ from audioatlas.report import (
     _positive_int,
     _select_time_range_examples,
     _source_range_label,
+    compact_analysis_note,
     report_build_metadata,
 )
 from audioatlas.theme import default_theme_name, theme_css_variables, validate_theme_name
@@ -196,6 +197,7 @@ def write_report_html(
     source_range = _source_range_label(metadata)
     build_metadata = report_build_metadata()
     profile_label = _profile_label(summary)
+    scope_note = compact_analysis_note(summary)
 
     lines = [
         "<!DOCTYPE html>",
@@ -225,6 +227,7 @@ def write_report_html(
         _chip("Channels", _fmt_value(metadata.get("channels"))),
         _chip("Format", f"{_fmt_value(metadata.get('format'))} / {_fmt_value(metadata.get('subtype'))}"),
         _chip("Profile", profile_label) if profile_label is not None else "",
+        _chip("Analysis", "Compact") if scope_note is not None else "",
         _chip("Generated", build_metadata["generated_at"]),
         _chip("AudioAtlas", build_metadata["audioatlas_version"]),
         _chip("Git", build_metadata["git_hash"]) if build_metadata.get("git_hash") else "",
@@ -252,6 +255,8 @@ def write_report_html(
         "<p>Check before delivery / worth a listen / for reference indicate priority, not quality.</p>",
         "<p>A report can have no prioritized findings; the plots still describe the track's measured shape.</p>",
         "</section>",
+        *([f'<section id="analysis-scope"><h2>Analysis scope</h2><p>{_h(scope_note)}</p></section>']
+          if scope_note is not None else []),
         '<section id="metrics">',
         "<h2>Key metrics</h2>",
         '<div class="metrics-grid">',

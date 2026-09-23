@@ -77,6 +77,28 @@ TIME_RANGE_KEYS: set[str] = {
 }
 
 
+ANALYSIS_LABELS = {
+    "levels": "level metrics", "rms": "RMS envelope", "crest": "crest factor timeline",
+    "short_term": "short-term LUFS", "peaks": "peak timeline",
+    "spectrogram": "log-frequency spectrogram", "average_spectrum": "average spectrum",
+    "spectral_shape": "spectral shape", "band_power": "relative mean band power timeline",
+    "onset": "onset density", "chroma": "chroma CQT",
+    "stereo": "stereo correlation", "mid_side": "mid/side energy",
+}
+
+
+def compact_analysis_note(summary: dict[str, Any]) -> str | None:
+    """Explain computation omissions separately from undefined measured results."""
+    execution = summary.get("analysis_execution")
+    if not isinstance(execution, dict) or execution.get("mode") != "compact":
+        return None
+    note = "Compact computation retains headline metrics and all current finding checks."
+    names = [ANALYSIS_LABELS.get(key, key) for key in execution.get("skipped", [])]
+    if names:
+        return note + " Not computed: " + ", ".join(names) + ". Skipped analyses are not zero measurements."
+    return note + " The selected plots required all analyses."
+
+
 def write_summary_json(summary: dict[str, Any], out_dir: str | Path) -> Path:
     """Write summary.json."""
 
@@ -364,6 +386,9 @@ def write_report_md(
     if "git_hash" in build_metadata:
         lines.append(f"- Git: {build_metadata['git_hash']}")
     lines.append(f"- Release label: {RELEASE_LABEL}")
+    scope_note = compact_analysis_note(summary)
+    if scope_note is not None:
+        lines.extend(["", "## Analysis scope", "", scope_note, ""])
     provenance = (
         summary.get("analysis_provenance")
         if isinstance(summary.get("analysis_provenance"), dict)
@@ -435,13 +460,14 @@ def write_report_md(
             lines.append(f"- Warning: {warning}")
         lines.append("")
 
-    lines.append("## Average spectrum summary\n")
-    lines.append(f"{RELATIVE_DB_NOTE}\n")
-    for key, value in spectrum.items():
-        if key in {"band_energies", "band_mean_power"}:
-            continue
-        lines.append(f"- {key}: {_fmt_value(value)}")
-    lines.append("")
+    if spectrum:
+        lines.append("## Average spectrum summary\n")
+        lines.append(f"{RELATIVE_DB_NOTE}\n")
+        for key, value in spectrum.items():
+            if key in {"band_energies", "band_mean_power"}:
+                continue
+            lines.append(f"- {key}: {_fmt_value(value)}")
+        lines.append("")
 
     band_mean_power = spectrum.get("band_mean_power")
     if not isinstance(band_mean_power, dict):

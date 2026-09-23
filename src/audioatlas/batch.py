@@ -15,6 +15,7 @@ from audioatlas.catalog_report import (
 )
 from audioatlas.config import AnalysisConfig
 from audioatlas.errors import AudioAtlasError
+from audioatlas.execution import validate_analysis_mode
 from audioatlas.graphs import all_graphs
 from audioatlas.graphs.selection import GraphSelection
 from audioatlas.output import (
@@ -50,6 +51,7 @@ def analyze_folder(
     theme_name: str | None = None,
     presentation_mode: str | None = None,
     selection: GraphSelection | None = None,
+    analysis_mode: str = "full",
     strict: bool = False,
     include_local_paths: bool = False,
 ) -> BatchRunResult:
@@ -59,6 +61,7 @@ def analyze_folder(
     successful track reports. Set ``strict`` to stop on the first bad file.
     """
 
+    validate_analysis_mode(analysis_mode)
     cfg = config or AnalysisConfig()
     cfg.validate()
     if selection is not None:
@@ -100,6 +103,7 @@ def analyze_folder(
                     theme_name=theme_name,
                     presentation_mode=presentation_mode,
                     selection=selection,
+                    analysis_mode=analysis_mode,
                     include_local_paths=include_local_paths,
                 )
             except (AudioAtlasError, ValueError) as exc:

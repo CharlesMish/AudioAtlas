@@ -8,6 +8,7 @@ from __future__ import annotations
 
 RELEASE_LABEL = "public alpha 8 · desktop release hardening"
 SUMMARY_SCHEMA_VERSION = "0.2.1"
+COMPACT_SUMMARY_SCHEMA_VERSION = "0.3.0"
 FINDINGS_SCHEMA_VERSION = "0.2.0"
 CATALOG_SCHEMA_VERSION = "0.2.0"
 FINDING_RULESET_VERSION = "0.2.0a2"

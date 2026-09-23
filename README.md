@@ -148,12 +148,23 @@ about the same track.
 
 ## Useful recipes
 
+Computation breadth is a separate, explicit choice: `--analysis-mode compact`
+retains headline measurements and all current finding checks while skipping
+optional analysis families unless selected plots need them. It defaults to four
+plots; explicit CLI/YAML graph profiles still take precedence. Full computation
+remains the default, including when `--graphs-profile compact` is used alone.
+Compact reports identify their omissions and use a distinct summary schema.
+See [Compact computation](docs/COMPACT_COMPUTATION.md) for coverage and timings.
+
 ```bash
 # Pick an output folder
 audioatlas analyze song.wav --out reports/song
 
 # Compact first read
 audioatlas analyze song.wav --graphs-profile compact
+
+# Explicitly narrower computation, with the same measurement fidelity
+audioatlas analyze song.wav --analysis-mode compact --out reports/compact-computation
 
 # Restrained opening presentation
 audioatlas analyze song.wav --presentation focus
@@ -174,7 +185,8 @@ A normal report folder contains:
 
 - `report.html` — the friendly browser report;
 - `report.md` — a portable text version;
-- `summary.json` — the complete measurement summary;
+- `summary.json` — the measurement summary (complete by default; explicit
+  compact computation declares skipped families);
 - `findings.json` — bounded review prompts and their evidence;
 - PNG plots;
 - `.audioatlas-output.json` — a manifest that lets AudioAtlas update its own

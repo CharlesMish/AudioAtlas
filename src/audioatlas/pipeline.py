@@ -18,6 +18,7 @@ from matplotlib import rc_context
 from audioatlas.analysis.bundle import AnalysisBundle
 from audioatlas.analysis.findings import generate_findings
 from audioatlas.config import AnalysisConfig
+from audioatlas.execution import SUMMARY_BLOCKS, default_graph_profile, plan_analysis
 from audioatlas.graphs import all_graphs
 from audioatlas.graphs.selection import GraphSelection
 from audioatlas.html_report import write_report_html
@@ -33,7 +34,7 @@ from audioatlas.output import (
 )
 from audioatlas.plot_theme import matplotlib_theme_rc
 from audioatlas.provenance import build_analysis_provenance, track_identity_block
-from audioatlas.release import SUMMARY_SCHEMA_VERSION
+from audioatlas.release import COMPACT_SUMMARY_SCHEMA_VERSION, SUMMARY_SCHEMA_VERSION
 from audioatlas.report import write_findings_json, write_report_md, write_summary_json
 from audioatlas.run_contract import (
     AnalysisProgress,
@@ -56,6 +57,7 @@ def analyze_file(
     theme_name: str | None = None,
     presentation_mode: str | None = None,
     selection: GraphSelection | None = None,
+    analysis_mode: str = "full",
     include_local_paths: bool = False,
     track_id: str | None = None,
     progress_callback: ProgressCallback | None = None,
@@ -81,6 +83,7 @@ def analyze_file(
             theme_name=theme_name,
             presentation_mode=presentation_mode,
             selection=selection,
+            analysis_mode=analysis_mode,
             include_local_paths=include_local_paths,
             track_id=track_id,
             progress_callback=progress_callback,
@@ -102,6 +105,7 @@ def _analyze_file_impl(
     theme_name: str | None = None,
     presentation_mode: str | None = None,
     selection: GraphSelection | None = None,
+    analysis_mode: str = "full",
     include_local_paths: bool = False,
     track_id: str | None = None,
     progress_callback: ProgressCallback | None = None,
@@ -117,9 +121,10 @@ def _analyze_file_impl(
     cfg = config or AnalysisConfig()
     cfg.validate()
     plot_style = matplotlib_theme_rc(theme_name)
-    graph_selection = selection or GraphSelection()
+    graph_selection = selection or GraphSelection(profile=default_graph_profile(analysis_mode))
     graph_specs = all_graphs()
     selected_graphs = graph_selection.resolve(graph_specs)
+    plan = plan_analysis(analysis_mode, selected_graphs)
     out = Path(out_dir)
 
     token = cancellation_token or CancellationToken()
@@ -143,41 +148,24 @@ def _analyze_file_impl(
 
         _emit_progress(progress_callback, "measuring", "Measuring track")
         bundle = AnalysisBundle(audio, cfg)
-        levels = _measurement(bundle, "levels", token)
-        rms = _measurement(bundle, "rms", token)
-        crest = _measurement(bundle, "crest", token)
-        short_term = _measurement(bundle, "short_term", token)
-        peaks = _measurement(bundle, "peaks", token)
-        avg = _measurement(bundle, "average_spectrum", token)
-        spectral_shape = _measurement(bundle, "spectral_shape", token)
-        band_power = _measurement(bundle, "band_power", token)
-        onset = _measurement(bundle, "onset", token)
-        chroma = _measurement(bundle, "chroma", token)
-        stereo = _measurement(bundle, "stereo", token)
-        mid_side = _measurement(bundle, "mid_side", token)
+        results = {name: _measurement(bundle, name, token) for name in plan.required}
+        measurement_blocks = {
+            SUMMARY_BLOCKS[name]: (
+                result.to_dict() if name == "levels" else result.to_summary_dict()
+            )
+            for name, result in results.items() if name in SUMMARY_BLOCKS
+        }
+        if "band_power_timeline" in measurement_blocks:
+            measurement_blocks["band_energy_timeline"] = measurement_blocks["band_power_timeline"]
 
         selected_filenames = [graph.filename for graph in selected_graphs]
-        band_power_summary = band_power.to_summary_dict()
         summary: dict[str, Any] = {
         "schema_version": SUMMARY_SCHEMA_VERSION,
         "metadata": audio.metadata.to_dict(),
         "source_identity": track_identity_block(track_id),
         "analysis_config": asdict(cfg),
         "analysis_provenance": build_analysis_provenance(cfg),
-        "levels": levels.to_dict(),
-        "rms_envelope": rms.to_summary_dict(),
-        "crest_factor_timeline": crest.to_summary_dict(),
-        "peak_timeline": peaks.to_summary_dict(),
-        "average_spectrum": avg.to_summary_dict(),
-        "spectral_shape": spectral_shape.to_summary_dict(),
-        "band_power_timeline": band_power_summary,
-        # Deprecated compatibility alias retained for the 0.2 alpha line.
-        "band_energy_timeline": band_power_summary,
-        "onset_density": onset.to_summary_dict(),
-        "chroma_cqt": chroma.to_summary_dict(),
-        "short_term_lufs": short_term.to_summary_dict(),
-        "stereo_correlation": stereo.to_summary_dict(),
-        "mid_side_energy": mid_side.to_summary_dict(),
+        **measurement_blocks,
         "plots": selected_filenames,
         "graphs": {
             "profile": graph_selection.profile,
@@ -186,7 +174,13 @@ def _analyze_file_impl(
             "selected_filenames": selected_filenames,
         },
         }
+        if analysis_mode == "compact":
+            summary["schema_version"] = COMPACT_SUMMARY_SCHEMA_VERSION
+            summary["analysis_provenance"]["summary_schema_version"] = COMPACT_SUMMARY_SCHEMA_VERSION
+            summary["analysis_execution"] = plan.coverage(tuple(results))
         findings = generate_findings(summary).to_dict()
+        if analysis_mode == "compact":
+            findings["analysis_execution"] = summary["analysis_execution"]
 
         # This constrains only the current staged report. Stale-file authority is
         # derived later from the destination's validated ownership manifest.

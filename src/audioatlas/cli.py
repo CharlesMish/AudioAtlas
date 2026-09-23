@@ -16,6 +16,7 @@ import yaml
 
 from audioatlas import __version__
 from audioatlas.errors import AudioAtlasError, RevisionDiffError
+from audioatlas.execution import ANALYSIS_MODES, default_graph_profile
 from audioatlas.graph_profiles import VALID_PROFILES
 from audioatlas.markdown import markdown_code_span, markdown_text
 from audioatlas.presentation import VALID_PRESENTATION_MODES
@@ -111,6 +112,8 @@ def main() -> None:
     is_flag=True,
     help="Include resolved machine-local paths in JSON metadata (off by default for sharing).",
 )
+@click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default="full", show_default=True,
+              help="Computation breadth. Compact defaults to four plots unless explicitly selected.")
 def analyze(
     input_path: Path,
     out_dir: Path | None,
@@ -125,6 +128,7 @@ def analyze(
     theme: str | None,
     presentation: str | None,
     graphs_profile: str | None,
+    analysis_mode: str,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
     graphs_config: Path | None,
@@ -136,7 +140,8 @@ def analyze(
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     _validate_source_range_options(start_seconds, end_seconds, max_duration)
     selected_theme = _validate_theme_for_cli(theme)
-    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
+    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config,
+                                default_profile=default_graph_profile(analysis_mode))
     if out_dir is None:
         out_dir = _default_report_out(input_path)
         click.echo(f"No --out supplied; using: {out_dir}")
@@ -154,6 +159,7 @@ def analyze(
             theme_name=selected_theme,
             presentation_mode=presentation,
             selection=selection,
+            analysis_mode=analysis_mode,
             include_local_paths=include_local_paths,
             track_id=track_id,
         )
@@ -241,6 +247,8 @@ def analyze(
     is_flag=True,
     help="Include resolved machine-local paths in JSON metadata (off by default for sharing).",
 )
+@click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default="full", show_default=True,
+              help="Computation breadth; independent of graph selection.")
 def batch(
     input_folder: Path,
     out_dir: Path,
@@ -253,6 +261,7 @@ def batch(
     theme: str | None,
     presentation: str | None,
     graphs_profile: str | None,
+    analysis_mode: str,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
     graphs_config: Path | None,
@@ -264,7 +273,8 @@ def batch(
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     _validate_optional_seconds(max_duration, option="--max-duration", allow_zero=False)
     selected_theme = _validate_theme_for_cli(theme)
-    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
+    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config,
+                                default_profile=default_graph_profile(analysis_mode))
     click.echo(f"Preparing AudioAtlas batch from: {input_folder.name}")
     from audioatlas.batch import analyze_folder
 
@@ -277,6 +287,7 @@ def batch(
             theme_name=selected_theme,
             presentation_mode=presentation,
             selection=selection,
+            analysis_mode=analysis_mode,
             strict=strict,
             include_local_paths=include_local_paths,
         )
@@ -389,6 +400,8 @@ def batch(
     is_flag=True,
     help="Include resolved machine-local paths in JSON metadata (off by default for sharing).",
 )
+@click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default="full", show_default=True,
+              help="Computation breadth for every section; independent of graph selection.")
 def sections(
     input_path: Path,
     out_dir: Path,
@@ -402,6 +415,7 @@ def sections(
     theme: str | None,
     presentation: str | None,
     graphs_profile: str | None,
+    analysis_mode: str,
     graph_enable: tuple[str, ...],
     graph_disable: tuple[str, ...],
     graphs_config: Path | None,
@@ -417,7 +431,8 @@ def sections(
     parsed_sections = _collect_section_definitions(section_specs, config_path)
     cfg = _make_config(n_fft, hop_length, rms_frame_length, db_floor, true_peak_oversample)
     selected_theme = _validate_theme_for_cli(theme)
-    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config)
+    selection = _make_selection(graphs_profile, graph_enable, graph_disable, graphs_config,
+                                default_profile=default_graph_profile(analysis_mode))
     click.echo(f"Preparing {len(parsed_sections)} manual section report(s) for: {input_path.name}")
     from audioatlas.pipeline import analyze_file
 
@@ -436,6 +451,7 @@ def sections(
                 theme_name=selected_theme,
                 presentation_mode=presentation,
                 selection=selection,
+                analysis_mode=analysis_mode,
                 include_local_paths=include_local_paths,
                 track_id=track_id,
             )
@@ -707,12 +723,14 @@ def _make_selection(
     cli_enable: tuple[str, ...],
     cli_disable: tuple[str, ...],
     graphs_config: Path | None,
+    *,
+    default_profile: str = "standard",
 ) -> GraphSelection:
     from audioatlas.graphs import all_graphs
     from audioatlas.graphs.selection import GraphSelection, GraphSelectionError
 
     file_selection = _parse_graphs_config(graphs_config) if graphs_config is not None else {}
-    profile = cli_profile or str(file_selection.get("profile", "standard"))
+    profile = cli_profile or str(file_selection.get("profile", default_profile))
     enable = _merge_graph_key_lists(
         tuple(file_selection.get("enable", ())),
         _parse_graph_key_options(cli_enable),
@@ -972,6 +990,10 @@ def _build_section_comparison_table(
         sm = mid_side.get("side_to_mid_ratio_db_median")
         roll = spectral.get("rolloff_95_median_hz")
         ons = onset.get("onset_density_median")
+        execution = summ.get("analysis_execution") or {}
+        onset_label = (
+            "Not computed" if "onset" in execution.get("skipped", []) else _fmt(ons, 3)
+        )
 
         end_label = "EOF" if end_seconds is None else f"{end_seconds:g}s"
         src = f"{start_seconds:g}s-{end_label}"
@@ -983,7 +1005,7 @@ def _build_section_comparison_table(
         row = (
             f"| {markdown_text(name)} | {src} | {_fmt(dur, 1)} | {_fmt(lufs, 1)} | {_fmt(plr, 1)} | "
             f"{_fmt(spk, 1)} | {_fmt(tpk, 1)} | {_fmt(rms, 1)} | {_fmt(corr, 2)} | "
-            f"{_fmt(sm, 1)} | {_fmt(roll, 0)} | {_fmt(ons, 3)} | {report_link} | {html_link} |"
+            f"{_fmt(sm, 1)} | {_fmt(roll, 0)} | {onset_label} | {report_link} | {html_link} |"
         )
         lines.append(row)
     return lines

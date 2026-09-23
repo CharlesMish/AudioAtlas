@@ -127,8 +127,10 @@ metadata. Absolute local paths are excluded unless `include_local_paths=True`.
 ## Analysis bundle
 
 `AnalysisBundle` lazily computes and memoizes named result blocks. Graph
-selection affects rendering only; `pipeline.py` requests the full analysis set
-before serialization. `band_energy` remains a deprecated request alias for
+selection remains a presentation choice; `execution.py` resolves the separate
+full/compact computation policy and selected graph dependencies. Full is the
+default; compact retains every current finding input and declares omissions.
+See [Compact computation](COMPACT_COMPUTATION.md). `band_energy` remains a deprecated request alias for
 `band_power` during the alpha compatibility window.
 
 ## Graph registry
