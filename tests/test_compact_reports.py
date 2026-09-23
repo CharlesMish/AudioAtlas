@@ -24,7 +24,7 @@ def _summary(*, average: bool = False, onset: bool = False) -> dict:
         "mid_side_energy": {"side_to_mid_ratio_db_median": -15.0},
         "analysis_execution": {
             "mode": "compact", "computed": computed, "skipped": skipped,
-            "summary_blocks": [], "findings_scope": "full",
+            "summary_blocks": [], "findings_coverage": "complete",
         },
     }
     if average:

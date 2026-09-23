@@ -61,7 +61,7 @@ class AnalysisPlan:
             "computed": [name for name in ANALYSIS_FAMILIES if name in names],
             "skipped": [name for name in ANALYSIS_FAMILIES if name not in names],
             "summary_blocks": blocks,
-            "findings_scope": "full",
+            "findings_coverage": "complete",
         }
 
 

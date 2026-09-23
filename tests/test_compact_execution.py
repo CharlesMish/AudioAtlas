@@ -97,7 +97,8 @@ def test_compact_default_really_skips_six_analyses(tmp_path, monkeypatch):
     }
     assert set(coverage["skipped"]) == set(OMITTED)
     assert set(coverage["summary_blocks"]) == CORE_SUMMARIES
-    assert coverage["findings_scope"] == "full"
+    assert coverage["findings_coverage"] == "complete"
+    assert "findings_scope" not in coverage
     assert result.findings["analysis_execution"] == coverage
     saved = json.loads(result.summary_path.read_text(encoding="utf-8"))
     assert saved["analysis_execution"] == coverage

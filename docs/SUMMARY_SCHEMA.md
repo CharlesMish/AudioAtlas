@@ -19,9 +19,12 @@ Schema constants live in `src/audioatlas/release.py`.
 Full remains the default and preserves the `0.2.1` contract. Explicit compact
 runs use `0.3.0` and add `analysis_execution` to summary and findings:
 `format_version: 1`, `mode: compact`, ordered `computed`/`skipped` family names,
-`summary_blocks` actually emitted, and `findings_scope: full`. All current
-finding inputs remain present. Optional blocks are absent when skipped; this
-does not mean a measured zero or an undefined computed result. Findings retain
+`summary_blocks` actually emitted, and `findings_coverage: complete`. Complete
+findings coverage means every currently-defined finding rule has all required
+inputs; it does not mean full analysis mode or complete summary measurement
+coverage. The separate `mode` field identifies the computation mode. Optional
+blocks are absent when skipped; this does not mean a measured zero or an
+undefined computed result. Findings retain
 schema `0.2.0` and unchanged rules. The provenance summary-schema field matches
 the emitted schema while retained measurement signatures remain comparable.
 
