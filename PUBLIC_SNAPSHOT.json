@@ -66,7 +66,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "89e54fd1af7edfb020ea28e079ba742349f5b0d602f19ba66463f69aa9ade805"
+      "sha256": "a5dd938cf7f3cacf146a63b104fe5ba21dc579572714754ed6413ce7877bc07f"
     },
     {
       "path": "README_EASY_RUN.md",
@@ -82,11 +82,15 @@
     },
     {
       "path": "docs/ARCHITECTURE.md",
-      "sha256": "92f3edcb779224509718fedc8d354dcc75c24494de82adc3065abdf35c85e7f3"
+      "sha256": "c00df5a9957ca735034e4d71eb517e033c17e43817acb944935a0e43c4c51dbf"
     },
     {
       "path": "docs/CHANGELOG.md",
       "sha256": "06f00c033a042576afff25e49747e127ae811ea292b5d56b55c4219edc073000"
+    },
+    {
+      "path": "docs/COMPACT_COMPUTATION.md",
+      "sha256": "14d6508b9a8bff22015e03bbdf651637ae8978a422b3bdfe3646918d3a533c64"
     },
     {
       "path": "docs/COMPATIBILITY.md",
@@ -110,7 +114,7 @@
     },
     {
       "path": "docs/SUMMARY_SCHEMA.md",
-      "sha256": "0c032bb98be0b0662cecb6d5ae1a3152d258157e131b5a60a596007804b2ca4f"
+      "sha256": "b83cecf20a84a23a69bcbbfafb72bbaa03959b9993b445219bb307df935d0abd"
     },
     {
       "path": "docs/USER_GUIDE.md",
@@ -195,6 +199,10 @@
     {
       "path": "scripts/audit_windows_distribution.py",
       "sha256": "9c6a80946f50335836ff3608cfe0ffafc56ffd9019384bd475a488a0e5df464a"
+    },
+    {
+      "path": "scripts/benchmark_compact.py",
+      "sha256": "7096157f38033d831d840e21b73b9cfa0c678afadaf0e5313006a2e4ad55c83b"
     },
     {
       "path": "scripts/build_macos_app.py",
@@ -294,15 +302,15 @@
     },
     {
       "path": "src/audioatlas/batch.py",
-      "sha256": "fceff76ed2cfc3803a582648a01f067128495c38e46b553cc7eef5ede8e4ac24"
+      "sha256": "37e1f1c703a41b0752f80e3d4b4563628474a02f74236302511d09ff832e9d84"
     },
     {
       "path": "src/audioatlas/catalog_report.py",
-      "sha256": "0e0be842be139e070b91bd32ce91bf00d9b4602b6d6c736ffc88368ab997eb52"
+      "sha256": "3fa2f3ac428b9f2f083d36a2076fd9a9ed7908244327edd425828b0e27d121d0"
     },
     {
       "path": "src/audioatlas/cli.py",
-      "sha256": "8c024c78d044f8c122026bf0d0675911e8e6ddec291d24a7605ccdb79e731844"
+      "sha256": "bfedf4c1b5754f0060a5e94f857336b00176fad31360487e136fce0c95109ab1"
     },
     {
       "path": "src/audioatlas/config.py",
@@ -323,6 +331,10 @@
     {
       "path": "src/audioatlas/errors.py",
       "sha256": "5a6a726382b3eb9e11019f78e5912137177eac76ce787e4e33fd848778d79b96"
+    },
+    {
+      "path": "src/audioatlas/execution.py",
+      "sha256": "1f5cb627914883bf387d7e02cfc7c29bdfd0ff2942d8070e5e36316d8a2961f8"
     },
     {
       "path": "src/audioatlas/graph_profiles.py",
@@ -346,7 +358,7 @@
     },
     {
       "path": "src/audioatlas/html_report.py",
-      "sha256": "0a5f189dc6bd4f82cafbee9aa093e1d70f731bc3afa51e668608f135dd1d73e7"
+      "sha256": "81a8cdd45f211daa9f0d2f8ecee9d980ac5757a955e0a5f0931d75873ae3e4ea"
     },
     {
       "path": "src/audioatlas/io.py",
@@ -366,7 +378,7 @@
     },
     {
       "path": "src/audioatlas/pipeline.py",
-      "sha256": "e860bc3954cbbf9013ce86367c5f90bfb0b4d497c8151cdadf4a90452c583996"
+      "sha256": "ad9856566bcebb7b71a1d79ecfb7d61a9c90a285b0da724c521efb730b9fcac8"
     },
     {
       "path": "src/audioatlas/plot_theme.py",
@@ -386,11 +398,11 @@
     },
     {
       "path": "src/audioatlas/release.py",
-      "sha256": "bcb0a68a2939670f237a241d56e9c184d74dcb95a58aa23207136cee68fe0f21"
+      "sha256": "2fba4cd2ae7d6b08ec46d6b6b69f9c8990ee6b8df4f3a9cdf98cc793cfa9f636"
     },
     {
       "path": "src/audioatlas/report.py",
-      "sha256": "d562801545af96bd89bd2f32b938da5dba6f0282992fae47554e21f32c8109c2"
+      "sha256": "41a5488520e180598cd64a1ef5117910e55b18a02bf5a9ee188359b301feea81"
     },
     {
       "path": "src/audioatlas/revision_diff.py",
@@ -551,6 +563,14 @@
     {
       "path": "tests/test_cli_hardening.py",
       "sha256": "37471acc9a2d363b68bd2946ac65d2fa32799e66743734f20a3e9b46eed19d3b"
+    },
+    {
+      "path": "tests/test_compact_execution.py",
+      "sha256": "51a3820b8300199fd5b4128f374ac9073ae5d87d0d12c4ae7f820a1736e8cffb"
+    },
+    {
+      "path": "tests/test_compact_reports.py",
+      "sha256": "f582968c3dea3b685dcbbf4f5d645228ffaed3c7fea95d3b0fe94dec49a66835"
     },
     {
       "path": "tests/test_config.py",
@@ -726,8 +746,8 @@
     }
   ],
   "format_version": 1,
-  "included_file_count": 181,
+  "included_file_count": 186,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "ba93223e5c020863dcb810e039283f39726c8a80e1283c319bf2fee3b1d61a6d",
-  "source_commit": "a547173258c0f8b05c8387fecac79648e296c92c"
+  "public_tree_sha256": "fd743e8d8430be0345b1a68b2fe0071efec62a8c26511b78297c347a3c0ce88a",
+  "source_commit": "c69128511d5c0cd2a93cc1e482005df04eee8c91"
 }
