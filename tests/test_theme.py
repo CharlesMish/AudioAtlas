@@ -33,7 +33,7 @@ def _contrast_ratio(foreground: str, background: str) -> float:
 def test_theme_library_exposes_all_theme_groups():
     names = available_theme_names()
 
-    assert len(names) == 25
+    assert len(names) == 27
     assert default_theme_name() == "default"
     assert "midnight_studio" in names
     assert "default" in featured_theme_names()

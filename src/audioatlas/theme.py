@@ -56,6 +56,7 @@ class Theme:
     recommended_use: str
     accessibility_notes: str
     tokens: dict[str, str]
+    plot_series: tuple[str, ...] = ()
 
 
 @cache
@@ -159,6 +160,12 @@ def _theme_from_dict(theme_id: str, value: Any) -> Theme:
         if not isinstance(token_value, str) or not _is_safe_token_value(token_value):
             raise ValueError(f"theme '{theme_id}' has unsafe token '{token_name}'")
         normalized_tokens[token_name] = token_value
+    series = value.get("plot_series", [])
+    if not isinstance(series, list) or (series and len(series) < 3) or any(
+        not isinstance(color, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", color)
+        for color in series
+    ):
+        raise ValueError(f"theme '{theme_id}' has invalid plot_series")
     return Theme(
         theme_id=theme_id,
         display_name=str(value.get("display_name", theme_id)),
@@ -166,6 +173,7 @@ def _theme_from_dict(theme_id: str, value: Any) -> Theme:
         recommended_use=str(value.get("recommended_use", "")),
         accessibility_notes=str(value.get("accessibility_notes", "")),
         tokens=normalized_tokens,
+        plot_series=tuple(series),
     )
 
 

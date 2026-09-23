@@ -55,6 +55,12 @@ def plot_palette(theme_name: str | None = None) -> tuple[str, ...]:
 
     theme = get_theme(theme_name or default_theme_name())
     surface = theme.tokens["surface"]
+    if theme.plot_series:
+        if len(set(theme.plot_series)) != len(theme.plot_series) or any(
+            _contrast_ratio(color, surface) < _MIN_DATA_CONTRAST for color in theme.plot_series
+        ):
+            raise ValueError(f"Theme {theme.theme_id!r} has duplicate or low-contrast plot_series")
+        return theme.plot_series
     colors: list[str] = []
     for token_name in _PALETTE_TOKEN_ORDER:
         color = theme.tokens[token_name]
