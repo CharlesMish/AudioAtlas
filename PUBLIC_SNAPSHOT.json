@@ -14,7 +14,7 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "87cf6a770e19ed44206d7738141a92c3c78a0f31fc6c23e7d6b58f192255fb0f"
+      "sha256": "356808c6ce7bd95c7f7d5c2ddd83f47a56e9a251348943ae1357f35eae316c73"
     },
     {
       "path": ".github/workflows/macos-app.yml",
@@ -796,6 +796,6 @@
   "format_version": 1,
   "included_file_count": 198,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "98807af444a4e636ad9c676f2570eb2f03d4fcac4a01b857dab68fea91493137",
-  "source_commit": "f0619d2be390d2593ebd126d67467cfcacf48fb2"
+  "public_tree_sha256": "3486739da20f4f615a7d461d6106e96e112a85e96d2f62654778292e53f79025",
+  "source_commit": "65ff8907ac1a81bc47ae07360110bd29e9477ecd"
 }
