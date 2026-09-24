@@ -90,7 +90,7 @@
     },
     {
       "path": "docs/COMPACT_COMPUTATION.md",
-      "sha256": "14d6508b9a8bff22015e03bbdf651637ae8978a422b3bdfe3646918d3a533c64"
+      "sha256": "4d83fd6141cc9ddff55beb55d53370f3bae030642806df0b3df7197903dd07d7"
     },
     {
       "path": "docs/COMPATIBILITY.md",
@@ -122,11 +122,11 @@
     },
     {
       "path": "docs/SUMMARY_SCHEMA.md",
-      "sha256": "b43c07a8e04851a58e6bdafe651108def4ae0a5e3b427aae18950b8e70be55d7"
+      "sha256": "564cb0d85d6ec5784426a05bf0a0bcb6790956222bf2b88789f0d64d9b777c1d"
     },
     {
       "path": "docs/USER_GUIDE.md",
-      "sha256": "94470b7a7810af0bbc44d0b6109362f24df7237a334ef4c33754326e8c78e4a4"
+      "sha256": "b67d52caad8e403a5d2a0238a246216ef02fb644a87ef269df94b19b80f84700"
     },
     {
       "path": "docs/WINDOWS_DEMO_GUIDE.md",
@@ -266,7 +266,7 @@
     },
     {
       "path": "src/audioatlas/alt_text.py",
-      "sha256": "5d80f8f0d15347d7f153e3f1d260d7af6ec4224f0e2468045e1cce20d3b48b50"
+      "sha256": "422fb21e1376f6ba5ae51792efca61ef0a6ab1c5029e79f25171eafa7170449d"
     },
     {
       "path": "src/audioatlas/analysis/__init__.py",
@@ -274,7 +274,7 @@
     },
     {
       "path": "src/audioatlas/analysis/bundle.py",
-      "sha256": "49b05833aee465c76c9fbd590c73341b2d6602c207f86f5bf1450417312a2c90"
+      "sha256": "0b6b5f8e84949c8c3d63af5ee9a1df2bc02d684fcf8c1e0a4f3664bb4ba1b8f9"
     },
     {
       "path": "src/audioatlas/analysis/dynamics.py",
@@ -291,6 +291,10 @@
     {
       "path": "src/audioatlas/analysis/loudness.py",
       "sha256": "5a7f6ddd6a2ca866eddeeb150b4057425bd97531096ef1d0f6c0bb4c07a905b4"
+    },
+    {
+      "path": "src/audioatlas/analysis/lr_balance.py",
+      "sha256": "d2619a42ced5ffd333ee4783a1b822282b34fd54cc9a78c8eee618985df1f7a4"
     },
     {
       "path": "src/audioatlas/analysis/spectral.py",
@@ -318,11 +322,11 @@
     },
     {
       "path": "src/audioatlas/cli.py",
-      "sha256": "0ae45159c6a617e71e49f05e1db8d7facb30ed54fc0c42090870272e08860f42"
+      "sha256": "0652023c774ebdb9217496eea3fdd7caa584922fdbbd575fae246a4a616046a3"
     },
     {
       "path": "src/audioatlas/config.py",
-      "sha256": "da33939b1d02031eb60e31bd00db2ecbb7a773c98640805230588de91fb1f609"
+      "sha256": "ec4fcefe219eb77df216a5d1fc278348a3f6a1173ef03ec22ebcb4fd19a9e864"
     },
     {
       "path": "src/audioatlas/desktop_controller.py",
@@ -342,11 +346,11 @@
     },
     {
       "path": "src/audioatlas/execution.py",
-      "sha256": "41f68040f4909768f4489b6b2a6c957b50bc977ce72d492faeb65a94b65a4ab3"
+      "sha256": "4934f2758d2a274866f0e3bc8979be4ec2e25f48e9aa542a1f3a79cd1b20f170"
     },
     {
       "path": "src/audioatlas/explanations.py",
-      "sha256": "15d8d41410b046158f2ab13376ebd9a702970674ebc17d5c9bf4e7057cd5e7a5"
+      "sha256": "dad6987eb16ea0f4e044343b796cd5079f2279bd744320f0f9556b5009763cef"
     },
     {
       "path": "src/audioatlas/graph_profiles.py",
@@ -358,11 +362,11 @@
     },
     {
       "path": "src/audioatlas/graphs/adapters.py",
-      "sha256": "c74f3406720ee1d01481f058fcd1e34efb6b31ab7776fbc54bedc759d01da799"
+      "sha256": "49a62f0e1cfd76c66a7bcc59f12fa85fad180bbd9c8dfa76426fbff4352e080a"
     },
     {
       "path": "src/audioatlas/graphs/registry.py",
-      "sha256": "dc0e1c462a99cfeccf846c990d48385145e2c4f523c41b34aaece7be38877f86"
+      "sha256": "9bfb4f563c9a94e3e30d722295c0040a016d9a5850ac3971042d43be77c431f9"
     },
     {
       "path": "src/audioatlas/graphs/selection.py",
@@ -370,7 +374,7 @@
     },
     {
       "path": "src/audioatlas/html_report.py",
-      "sha256": "74b7ea04502851d7004fa9cbbc5658909ca9804ad1f435cfdaef831abf834a81"
+      "sha256": "0ef582e9fad5be44fe0bfb54c4ebe1b840b1472ce95cd13edcd49d02bbc4b54b"
     },
     {
       "path": "src/audioatlas/io.py",
@@ -386,11 +390,11 @@
     },
     {
       "path": "src/audioatlas/output.py",
-      "sha256": "207ed81980bfd37a66b42f156a52eb7f2e5c3c5dd67b7f13d48ab4875c0362ec"
+      "sha256": "3695786bf5ac95d7efa8420dd02977cc385811357a873337f1512716abe625f2"
     },
     {
       "path": "src/audioatlas/pipeline.py",
-      "sha256": "ad9856566bcebb7b71a1d79ecfb7d61a9c90a285b0da724c521efb730b9fcac8"
+      "sha256": "7c7a14ce7c304ed46af479ada76876c770067447a120f61e4e23f889ccd7f216"
     },
     {
       "path": "src/audioatlas/plot_theme.py",
@@ -402,19 +406,19 @@
     },
     {
       "path": "src/audioatlas/project.py",
-      "sha256": "d95c8d289d9830cf6a015dbd9792a5d634f4d478fdd688ec9998822fa4d07d91"
+      "sha256": "41585aed730fbc0a3b92ce4a5d444930154daf3d9edc35e3fc4a557c47763850"
     },
     {
       "path": "src/audioatlas/provenance.py",
-      "sha256": "85b5037b9a30e7fd9d5134a2cbc0e088823b6dfe61d15c2899782ff7c8c87c36"
+      "sha256": "05e6372d71c90f603146dbc9a3b6a1420571c01780e47bdd256ffeb05540ed18"
     },
     {
       "path": "src/audioatlas/release.py",
-      "sha256": "2fba4cd2ae7d6b08ec46d6b6b69f9c8990ee6b8df4f3a9cdf98cc793cfa9f636"
+      "sha256": "17b0a4a6d3b95e5d8aa065e4a64a86bdd0b059d9e1ce06498f83d9dc7f207766"
     },
     {
       "path": "src/audioatlas/report.py",
-      "sha256": "bbb6b661a6430e4bc3e4e759696a6058a3a7f1b5f3181275544f2b95ac1d492d"
+      "sha256": "20d9b51e30064ebae26dfc726e3566336eb9c254512d5f51fc5696506701bf54"
     },
     {
       "path": "src/audioatlas/report_depth.py",
@@ -463,6 +467,10 @@
     {
       "path": "src/audioatlas/visualize/loudness.py",
       "sha256": "9a6f20ff7408d13e2018a37f4e7e128055aea69f0bc69f2096adfa8996b52981"
+    },
+    {
+      "path": "src/audioatlas/visualize/lr_balance.py",
+      "sha256": "2db99ad0df2e86847db353fd362be09eaf6ea43e467eca86a27b5bacd8850d4a"
     },
     {
       "path": "src/audioatlas/visualize/onset.py",
@@ -574,7 +582,7 @@
     },
     {
       "path": "tests/test_cli.py",
-      "sha256": "13423a1c1e9e5c7518c641eea8d989c8fb40765ae1f70fb1a538b3c32d9e66f9"
+      "sha256": "116ad0542477b87cce85c6771b5c021ece8d5b09666239b7bc232aaee16852fa"
     },
     {
       "path": "tests/test_cli_hardening.py",
@@ -582,7 +590,7 @@
     },
     {
       "path": "tests/test_compact_execution.py",
-      "sha256": "896daceb186de8e25696e5708b73eee6b00a49ffa973672140466fe9006d11a0"
+      "sha256": "f30b9bc53ea36291344fa3a52a513a1ae7d5cac33c4f0f492acaf1fc00da0cb8"
     },
     {
       "path": "tests/test_compact_reports.py",
@@ -618,7 +626,7 @@
     },
     {
       "path": "tests/test_explanations.py",
-      "sha256": "3306227405570734ff77480a0df6586ed544ffdb5c3aa24e10a7a6b37badb166"
+      "sha256": "1303b0be16122a274a6a47ceadf3a6fa8e13c5118b9d58b77fcd034934147ea5"
     },
     {
       "path": "tests/test_figurestead_skins.py",
@@ -634,11 +642,11 @@
     },
     {
       "path": "tests/test_graph_registry.py",
-      "sha256": "d83fbd0ccb0537d4712dff861be41296c9d9f55c14cf6a45133be76386c2e9f9"
+      "sha256": "454d429400f9ea169fc6fde8ee93443978e30d1ea92255fc9426d50e6e7ba2dc"
     },
     {
       "path": "tests/test_graph_selection.py",
-      "sha256": "a58d9a80743b3655a78893ed2e914bb123c69f2c8fe944c662536c606d0017bf"
+      "sha256": "926b40f3179d853cc0f4edec677465572455f2dd1181d646a0541c20b53312ad"
     },
     {
       "path": "tests/test_invariants.py",
@@ -659,6 +667,10 @@
     {
       "path": "tests/test_loudness.py",
       "sha256": "873a54cd51af9f9ee877e8f689f52bdf5a79b7d3b49955629908734e333f2fe4"
+    },
+    {
+      "path": "tests/test_lr_balance.py",
+      "sha256": "1c6179caf7c9a0aaf2fadadaee8da708adb56fa4220987b5e555be386adf99c6"
     },
     {
       "path": "tests/test_macos_app.py",
@@ -702,7 +714,7 @@
     },
     {
       "path": "tests/test_project.py",
-      "sha256": "c840437bc434bd266b25b6ed1036f63d643f727b32261d01904a516193d52127"
+      "sha256": "2b77193602065b8172b3694a843fb83374c16d41596f8cb5b8218a75f547f361"
     },
     {
       "path": "tests/test_provenance.py",
@@ -714,7 +726,7 @@
     },
     {
       "path": "tests/test_release.py",
-      "sha256": "a64612421f9607f2e7228b694dd4187318463fc70b12550d929e8f6e0749afa2"
+      "sha256": "e9e630872eb9bc5ab55a8814c088bff76ec0e3897a7efcb094b8d923144c865c"
     },
     {
       "path": "tests/test_release_workflows.py",
@@ -726,7 +738,7 @@
     },
     {
       "path": "tests/test_report_depth.py",
-      "sha256": "7f9224449a53b9f2e54010c10b4ff95523c50580d075bc25eb4c9250c2301b66"
+      "sha256": "6f14c6595522ccc4619ef90a0de297edc6c2e662a9619d99b8c2cc32ba9d8a9a"
     },
     {
       "path": "tests/test_revision_diff.py",
@@ -782,8 +794,8 @@
     }
   ],
   "format_version": 1,
-  "included_file_count": 195,
+  "included_file_count": 198,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "ce15a73d37b14c638868fc0257603a1eeab9ca76d93e30bca6ca198277e3257e",
-  "source_commit": "5385b7466ca9586bcebe09282818cfef2057321d"
+  "public_tree_sha256": "98807af444a4e636ad9c676f2570eb2f03d4fcac4a01b857dab68fea91493137",
+  "source_commit": "f0619d2be390d2593ebd126d67467cfcacf48fb2"
 }
