@@ -12,6 +12,7 @@ from audioatlas.analysis.levels import (
     RmsEnvelopeResult,
 )
 from audioatlas.analysis.loudness import ShortTermLufsResult
+from audioatlas.analysis.lr_balance import LRBalanceResult
 from audioatlas.analysis.spectral import (
     AverageSpectrumResult,
     BandPowerTimelineResult,
@@ -25,6 +26,7 @@ from audioatlas.visualize.band_energy import plot_band_power_timeline
 from audioatlas.visualize.chroma import plot_chroma_cqt
 from audioatlas.visualize.histogram import plot_sample_histogram
 from audioatlas.visualize.loudness import plot_short_term_lufs
+from audioatlas.visualize.lr_balance import plot_lr_balance
 from audioatlas.visualize.onset import plot_onset_density
 from audioatlas.visualize.spectral_shape import plot_spectral_shape
 from audioatlas.visualize.spectrogram import plot_log_spectrogram
@@ -199,3 +201,10 @@ def render_stereo_correlation_histogram(
     stereo = bundle.get("stereo")
     assert isinstance(stereo, StereoCorrelationResult)
     return plot_stereo_correlation_histogram(stereo, out_path)
+
+
+def render_lr_balance(bundle: AnalysisBundle, out_path: Path, config: AnalysisConfig) -> Path:
+    del config
+    result = bundle.get("lr_balance")
+    assert isinstance(result, LRBalanceResult)
+    return plot_lr_balance(result, out_path)

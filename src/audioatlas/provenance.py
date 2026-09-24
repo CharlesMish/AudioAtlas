@@ -32,6 +32,7 @@ _MEASUREMENT_CODE_PATHS = (
     "analysis/dynamics.py",
     "analysis/levels.py",
     "analysis/loudness.py",
+    "analysis/lr_balance.py",
     "analysis/spectral.py",
     "analysis/stereo.py",
     "analysis/tonal.py",
@@ -97,6 +98,15 @@ def build_analysis_provenance(config: AnalysisConfig) -> dict[str, object]:
     dependencies = _dependency_versions()
     decoder = _decoder_versions(dependencies)
     measurement_method = {
+        "lr_balance": {
+            "method": "20 * (log10(left_rms) - log10(right_rms))",
+            "channels": "exactly_two",
+            "framing": "complete_unwindowed_frames_center_times",
+            "frame_length": config.rms_frame_length,
+            "hop_length": config.hop_length,
+            "min_rms_dbfs_per_channel": config.lr_balance_min_rms_dbfs,
+            "floor_comparison": "rms >= 10 ** (min_rms_dbfs / 20)",
+        },
         "approximate_true_peak": {
             "method": (
                 "sample_peak"

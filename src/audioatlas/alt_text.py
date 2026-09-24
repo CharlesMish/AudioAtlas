@@ -10,6 +10,7 @@ import math
 from typing import Any
 
 ALT_GRAPH_METADATA: dict[str, tuple[str, str]] = {
+    "lr_balance.png": ("lr_balance", "L/R RMS Balance Timeline"),
     "waveform_rms.png": ("waveform_rms", "Waveform + RMS Envelope"),
     "rms_timeline.png": ("rms_timeline", "Frame RMS Timeline"),
     "crest_factor_timeline.png": (
@@ -52,6 +53,16 @@ def plot_alt_text(filename: str, summary: dict[str, Any]) -> str:
 
     duration = _number(_block(summary, "levels").get("duration_seconds"))
     duration_text = f" across {_fmt(duration, 2)} seconds" if duration is not None else ""
+
+    if key == "lr_balance":
+        block = _block(summary, "lr_balance")
+        median = _number(block.get("balance_db_median"))
+        value = f"Median {_fmt(median, 3)} dB." if median is not None else "No defined median."
+        return (
+            f"{title}. {value} Positive: Left higher RMS; negative: Right higher RMS. "
+            f"Defined frames: {block.get('defined_frames', 0)} of {block.get('frames', 0)}. "
+            f"Status: {block.get('status', 'not available')}. Gaps are undefined, not zero."
+        )
 
     if key in {"waveform_rms", "rms_timeline", "rms_histogram"}:
         rms = _block(summary, "rms_envelope")

@@ -25,6 +25,7 @@ SUMMARY_BLOCKS = {
     "chroma": "chroma_cqt",
     "stereo": "stereo_correlation",
     "mid_side": "mid_side_energy",
+    "lr_balance": "lr_balance",
 }
 ANALYSIS_FAMILIES = (*SUMMARY_BLOCKS, "spectrogram")
 # Current findings consume levels, peak ranges, stereo, and mid/side. RMS and

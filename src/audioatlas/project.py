@@ -711,7 +711,7 @@ def _validate_report_artifacts(report: Path, project_digest: str, label: str) ->
         )
     except (OSError, UnicodeError, ValueError) as exc:
         raise ProjectError(f"Revision {label!r} has invalid summary JSON.") from exc
-    if not isinstance(summary, dict) or summary.get("schema_version") != SUMMARY_SCHEMA_VERSION:
+    if not isinstance(summary, dict) or summary.get("schema_version") not in {"0.2.1", SUMMARY_SCHEMA_VERSION}:
         raise ProjectError(f"Revision {label!r} has an unsupported summary schema.")
     metadata = summary.get("metadata")
     identity = summary.get("source_identity")

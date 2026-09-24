@@ -40,7 +40,7 @@ def test_profiles_resolve_expected_graphs():
     assert len(_keys(GraphSelection(profile="minimal"))) == 4
     assert len(_keys(GraphSelection(profile="compact"))) == 4
     assert len(_keys(GraphSelection(profile="standard"))) == 14
-    assert len(_keys(GraphSelection(profile="full"))) == 17
+    assert len(_keys(GraphSelection(profile="full"))) == 18
 
 
 def test_minimal_alias_preserves_spelling_and_matches_compact_graphs():

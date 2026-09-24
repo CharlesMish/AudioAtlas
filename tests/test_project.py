@@ -264,3 +264,20 @@ def test_project_cli_init_and_build(tmp_path: Path) -> None:
     rebuilt = runner.invoke(main, ["project", "build", str(project)])
     assert rebuilt.exit_code == 0, rebuilt.output
     assert "song project rebuilt" in rebuilt.output
+
+
+def test_historical_full_summary_remains_readable_without_lr_balance(tmp_path):
+    project = tmp_path / "historical"
+    init_project(project, name="Historical", graphs_profile="compact")
+    revision = add_project_revision(project, FIXTURE, label="Old")
+    path = project / revision["report"] / "summary.json"
+    summary = json.loads(path.read_text())
+    summary["schema_version"] = "0.2.1"
+    summary.pop("lr_balance")
+    summary.pop("analysis_execution")
+    path.write_text(json.dumps(summary))
+    build_project(project)
+    saved = json.loads(path.read_text())
+    assert "lr_balance" not in saved
+    payload = json.loads((project / "project.json").read_text())
+    assert "lr_balance" not in json.dumps(payload)

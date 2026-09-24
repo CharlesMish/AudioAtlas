@@ -39,6 +39,7 @@ class AnalysisConfig:
     welch_nperseg: int = 8192
     max_plot_points: int = 250_000
     correlation_min_rms_dbfs: float = -80.0
+    lr_balance_min_rms_dbfs: float = -80.0
     onset_density_window_seconds: float = 1.0
     short_term_lufs_window_seconds: float = 3.0
     short_term_lufs_hop_seconds: float = 0.1
@@ -93,6 +94,11 @@ class AnalysisConfig:
             raise ValueError("db_floor must be negative")
         if not 0 < near_clipping_threshold < clipping_threshold <= 1.0:
             raise ValueError("Expected 0 < near_clipping_threshold < clipping_threshold <= 1.0")
+        balance_floor = _require_finite_number(
+            "lr_balance_min_rms_dbfs", self.lr_balance_min_rms_dbfs
+        )
+        if balance_floor > 0 or 10.0 ** (balance_floor / 20.0) == 0:
+            raise ValueError("lr_balance_min_rms_dbfs must be <= 0 with a positive linear floor")
         if correlation_floor > 0:
             raise ValueError("correlation_min_rms_dbfs must be <= 0")
         if onset_window <= 0:

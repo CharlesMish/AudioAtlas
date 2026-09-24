@@ -23,7 +23,7 @@ the mode's default. Enable/disable selections apply afterward.
 | stereo, mid_side | computed | Existing stereo metrics and localized finding inputs |
 | spectral_shape | computed | Retained section/catalog spectral summaries |
 | spectrogram | computed | Required by the default four-plot selection |
-| crest, short_term, average_spectrum, band_power, onset, chroma | skipped | Restored by any selected graph requiring them |
+| crest, short_term, average_spectrum, band_power, onset, chroma, lr_balance | skipped | Restored by any selected graph requiring them |
 
 All current finding rules retain their complete inputs (levels, peak ranges,
 stereo and mid/side, plus unchanged metadata/configuration). Their content,
@@ -33,8 +33,9 @@ There is no reduction in resolution, duration, channel fidelity or true-peak
 oversampling, and no streaming/chunked DSP change.
 
 The plan is measured through the existing memoizing `AnalysisBundle`; graph
-adapters reuse the same objects. Standard/full graph selections restore all
-families, so they do not save DSP work. A skipped block is absent, never zero.
+adapters reuse the same objects. Standard graph selections restore the older
+optional families but leave L/R balance skipped; full graph selections restore
+all families. A skipped block is absent, never zero.
 A computed but undefined measurement retains its existing null/warning semantics.
 
 ## Contracts reconciled from the older prototype
@@ -43,14 +44,16 @@ The prototype authority was `e3ad9a221cb4cb861a31a4475e14c728a131c946`.
 This port starts at `879c57358e307b7da7696daecc57de1562acf97b`.
 Its patch was inspected as a reference, not applied to the modern source.
 
-- Full summaries keep `0.2.1` and their complete existing JSON shape.
-- Compact summaries use `0.3.0`, including when all optional graphs are restored.
+- Full summaries use `0.4.0`, including L/R RMS balance and execution coverage.
+- Compact summaries use `0.4.0`, including when all optional graphs are restored.
+- L/R RMS balance is skipped by default in compact; explicitly enabling `lr_balance` restores it once.
 - Findings stay `0.2.0`; compact findings add execution coverage, without changing rules.
 - Catalogs stay `0.2.0` with additive per-track coverage and mixed-coverage counts.
 - Canonical `band_power_timeline` and deprecated `band_energy_timeline` appear
   together only when that family is computed; mean-power semantics are retained.
-- Measurement/configuration/environment fingerprints remain unchanged. They
-  describe retained measurement comparability, not completeness. Compact
+- Full and compact share measurement/configuration/environment fingerprints
+  within one implementation. The new family changes fingerprints from the prior
+  implementation; exact old-family parity is established separately by tests. Compact
   provenance records the compact summary schema; execution coverage describes
   breadth. Revision deltas already leave absent operands/deltas null.
 - Batch and sections propagate the mode without bypassing output transactions,
@@ -68,7 +71,8 @@ Compact/Minimal action. `app_core.analyze_for_app` explicitly selects Standard
 graphs and keeps default full computation. A later bounded UI change could add
 an explicit computation choice, carry it through the controller request and
 `app_core`, and select the four-plot profile for compact. Merely passing compact
-mode alongside the app's current Standard profile restores all computations.
+mode alongside the app's current Standard profile restores the older optional
+computations, while L/R balance stays skipped.
 No native UI or default policy is changed here.
 
 ## Reproducible timing

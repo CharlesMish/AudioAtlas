@@ -27,6 +27,7 @@ CORE_SUMMARIES = {
     "spectral_shape",
 }
 OMITTED = {
+    "lr_balance": "lr_balance",
     "crest": "crest_factor_timeline",
     "short_term": "short_term_lufs",
     "average_spectrum": "average_spectrum",
@@ -73,7 +74,7 @@ def _fake_run(out_dir: Path) -> SimpleNamespace:
     )
 
 
-def test_compact_default_really_skips_six_analyses(tmp_path, monkeypatch):
+def test_compact_default_really_skips_seven_analyses(tmp_path, monkeypatch):
     def forbidden(*args, **kwargs):
         pytest.fail("An analysis omitted by compact mode was executed")
 
@@ -83,7 +84,7 @@ def test_compact_default_really_skips_six_analyses(tmp_path, monkeypatch):
         _write_audio(tmp_path / "asymmetric.wav"), tmp_path / "compact", analysis_mode="compact"
     )
 
-    assert result.summary["schema_version"] == "0.3.0"
+    assert result.summary["schema_version"] == "0.4.0"
     assert result.summary["graphs"]["profile"] == "compact"
     assert result.summary["graphs"]["selected"] == MINIMAL_GRAPHS
     assert {path.name for path in result.plot_paths} == {f"{name}.png" for name in MINIMAL_GRAPHS}
@@ -133,7 +134,7 @@ def test_selected_extensions_restore_dependencies_once(tmp_path, monkeypatch):
     assert all(count == 1 for count in calls.values())
     assert set(calls) == set(result.summary["analysis_execution"]["computed"])
     assert set(result.summary["analysis_execution"]["skipped"]) == {
-        "crest", "average_spectrum", "band_power", "onset"
+        "crest", "average_spectrum", "band_power", "onset", "lr_balance"
     }
 
 
@@ -146,7 +147,7 @@ def test_compact_retains_exact_measurements_and_findings(tmp_path, kind):
         path, tmp_path / "compact", selection=HISTOGRAM_ONLY, analysis_mode="compact"
     )
 
-    assert full.summary["schema_version"] == "0.2.1"
+    assert full.summary["schema_version"] == "0.4.0"
     assert set(OMITTED.values()) <= full.summary.keys()
     for key in CORE_SUMMARIES | {"metadata", "analysis_config"}:
         assert compact.summary[key] == full.summary[key], key
@@ -159,7 +160,7 @@ def test_compact_retains_exact_measurements_and_findings(tmp_path, kind):
         assert full.summary["levels"]["clipped_samples"] > 0
         assert full.findings["count"] > 0
     assert set(compact.summary["analysis_execution"]["skipped"]) == set(OMITTED) | {"spectrogram"}
-    assert "analysis_execution" not in full.summary
+    assert full.summary["analysis_execution"]["mode"] == "full"
     for signature in ("measurement_code_sha256", "finding_rule_code_sha256",
                       "analysis_config_sha256", "compatible_analysis_sha256", "exact_environment_sha256"):
         assert compact.summary["analysis_provenance"][signature] == full.summary["analysis_provenance"][signature]
@@ -248,6 +249,7 @@ def test_invalid_analysis_mode_fails_before_loading_or_creating_output(tmp_path,
     ("band_energy_timeline", "band_power", "band_power_timeline"),
     ("onset_density", "onset", "onset_density"),
     ("chroma_cqt", "chroma", "chroma_cqt"),
+    ("lr_balance", "lr_balance", "lr_balance"),
 ])
 def test_each_optional_graph_restores_exact_family_once(tmp_path, monkeypatch, graph, family, block):
     calls = Counter()
@@ -269,15 +271,15 @@ def test_each_optional_graph_restores_exact_family_once(tmp_path, monkeypatch, g
         assert result.summary["band_energy_timeline"] == result.summary[block]
 
 
-def test_compact_standard_restores_all_and_preserves_owned_output(tmp_path):
+def test_compact_standard_restores_graph_dependencies_and_preserves_owned_output(tmp_path):
     path = _write_audio(tmp_path / "source.wav")
     output = tmp_path / "report"
     full = pipeline.analyze_file(path, output)
     (output / "listener-notes.txt").write_text("keep my notes", encoding="utf-8")
     extended = pipeline.analyze_file(path, tmp_path / "extended", analysis_mode="compact",
                                      selection=GraphSelection(profile="standard"))
-    assert extended.summary["analysis_execution"]["skipped"] == []
-    for key in set(full.summary) - {"schema_version", "analysis_provenance"}:
+    assert extended.summary["analysis_execution"]["skipped"] == ["lr_balance"]
+    for key in set(full.summary) - {"schema_version", "analysis_provenance", "analysis_execution", "lr_balance"}:
         assert extended.summary[key] == full.summary[key], key
     compact = pipeline.analyze_file(path, output, analysis_mode="compact")
     assert {p.name for p in output.glob("*.png")} == {p.name for p in compact.plot_paths}

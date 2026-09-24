@@ -13,6 +13,7 @@ from audioatlas.analysis.levels import (
     compute_scalar_levels,
 )
 from audioatlas.analysis.loudness import compute_short_term_lufs
+from audioatlas.analysis.lr_balance import compute_lr_balance
 from audioatlas.analysis.spectral import (
     compute_average_spectrum,
     compute_band_power_timeline,
@@ -40,6 +41,7 @@ _COMPUTE: dict[str, AnalysisCompute] = {
     "chroma": compute_chroma_cqt,
     "stereo": compute_stereo_correlation,
     "mid_side": compute_mid_side_energy,
+    "lr_balance": compute_lr_balance,
 }
 
 

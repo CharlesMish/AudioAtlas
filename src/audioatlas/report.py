@@ -85,6 +85,7 @@ ANALYSIS_LABELS = {
     "spectral_shape": "spectral shape", "band_power": "relative mean band power timeline",
     "onset": "onset density", "chroma": "chroma CQT",
     "stereo": "stereo correlation", "mid_side": "mid/side energy",
+    "lr_balance": "L/R RMS balance",
 }
 
 
@@ -543,6 +544,14 @@ def write_report_md(
         for warning in warnings:
             lines.append(f"- warning: {warning}")
         lines.append("")
+
+    balance = summary.get("lr_balance")
+    if isinstance(balance, dict):
+        lines.extend(["## L/R RMS balance", "", measurement_note("lr-balance"), ""])
+        for key, value in balance.items():
+            if key != "timeline":
+                lines.append(f"- {key}: {_fmt_value(value)}")
+        lines.extend(["", "Per-frame operands and undefined reasons are in summary.json.", ""])
 
     if onset_density:
         lines.append("## Onset / transient density summary\n")

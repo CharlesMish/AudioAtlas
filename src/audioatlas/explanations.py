@@ -11,7 +11,24 @@ RANGE_TIME_NOTE = (
     "add the source start time to locate the same point in the original file."
 )
 
+LR_BALANCE_CAPTION = (
+    "Signed channel RMS difference over time: positive means Left higher RMS; "
+    "negative means Right higher RMS. Gaps are undefined frames. "
+    "This does not directly represent pan position or perceived balance."
+)
+
 GLOSSARY: list[tuple[str, str, str]] = [
+    (
+        "lr-balance", "L/R RMS balance",
+        "20 log10(L_RMS / R_RMS), in dB, for exactly two channels. Positive means higher left "
+        "RMS amplitude, negative means higher right RMS, and zero means equal RMS. Complete "
+        "unwindowed frames use 4096 samples and hop 1024 by default; times mark frame centers "
+        "relative to the analyzed audio. Each channel must meet the configured RMS floor "
+        "(default -80 dBFS); otherwise the ratio is undefined with a channel-specific reason. "
+        "The floor is an analysis limit, not a quality threshold. Mono and multichannel inputs "
+        "are not applicable. Statistics exclude undefined frames. This does not establish pan "
+        "position, perceived image position, loudness, a defect, or whether asymmetry is intentional.",
+    ),
     (
         'lufs',
         'LUFS',

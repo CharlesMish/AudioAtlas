@@ -37,6 +37,7 @@ TECHNICAL_BLOCKS: list[tuple[str, str]] = [
     ("Level metrics", "levels"),
     ("Crest factor timeline", "crest_factor_timeline"),
     ("Stereo metrics", "stereo_correlation"),
+    ("L/R RMS balance", "lr_balance"),
     ("Spectrum metrics", "average_spectrum"),
     ("Spectral shape", "spectral_shape"),
     ("Relative mean band power timeline", "band_power_timeline"),
@@ -175,6 +176,7 @@ def write_report_html(
         _delivery_context_html(levels),
         "</section>",
         _findings_section(findings, report_max_time_ranges, plot_files),
+        _lr_balance_section(summary),
         _plots_section(plot_files, summary, findings),
         _glossary_section(),
         _technical_section(summary),
@@ -194,6 +196,27 @@ def write_report_html(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8")
     return out
+
+
+def _lr_balance_section(summary: dict[str, Any]) -> str:
+    block = summary.get("lr_balance")
+    if not isinstance(block, dict):
+        return ""
+    status = {
+        "not_applicable_mono": "Not applicable: mono audio.",
+        "not_applicable_multichannel": "Not applicable: no semantic L/R mapping for multichannel audio.",
+        "insufficient_samples": "No complete analysis frames.",
+    }.get(block.get("status"), "")
+    median = _fmt_value(block.get("balance_db_median"))
+    return (
+        '<section id="lr-balance"><h2>L/R RMS balance</h2>'
+        '<p>Positive means Left higher RMS; negative means Right higher RMS. '
+        'This does not directly represent pan position or perceived balance.</p>'
+        f'<p>Median: {_h(median)} dB · Defined frames: {_h(block.get("defined_frames"))} '
+        f'of {_h(block.get("frames"))}. {_h(status)}</p>'
+        '<p>Statistics use defined frames only. Undefined frames are gaps, not zero. '
+        '<a href="#glossary-lr-balance">Measurement definition and limits</a></p></section>'
+    )
 
 
 def _h(value: Any) -> str:
@@ -561,6 +584,9 @@ def _technical_section(summary: dict[str, Any]) -> str:
             lines.append("<details>")
             lines.append(f"<summary>{_h(label)}</summary>")
             lines.append('<div class="details-body">')
+            if key == "lr_balance":
+                lines.append("<p>Per-frame operands and undefined reasons are in summary.json.</p>")
+                block = {k: v for k, v in block.items() if k != "timeline"}
             lines.append(_dict_table(block))
             lines.append("</div>")
             lines.append("</details>")
@@ -701,6 +727,7 @@ h3 { margin: 0; }
 .chip { display: inline-flex; gap: 6px; background: var(--chip-bg); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; color: var(--text-muted); }
 .chip strong { color: var(--text); font-weight: 550; }
 .top-nav { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13.5px; margin: 10px 0 26px; padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+#lr-balance a { color: var(--accent); text-underline-offset: 3px; }
 .top-nav a { color: var(--accent); text-decoration: none; font-weight: 550; }
 .top-nav a:hover { text-decoration: underline; }
 .top-nav span { color: var(--text-soft); }

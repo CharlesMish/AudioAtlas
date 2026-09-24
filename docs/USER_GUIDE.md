@@ -142,7 +142,7 @@ Choose a report depth for `analyze`, `batch`, or `sections`:
 |---|---|---|---|
 | `overview` | Compact | Compact | Key current measurements, all current finding checks, 4 plots |
 | `standard` | Full | Standard | All measurements, 14 plots; default |
-| `detailed` | Full | Full | All measurements, 17 plots |
+| `detailed` | Full | Full | All measurements, 18 plots |
 
 ```bash
 audioatlas analyze song.wav --report-depth overview
@@ -192,7 +192,7 @@ profile still takes precedence over YAML profile and enable/disable lists merge.
 | `compact` | 4 | Friendly compact view |
 | `minimal` | 4 | Legacy alias kept for compatibility |
 | `standard` | 14 | Default |
-| `full` | 17 | Adds distribution/detail plots |
+| `full` | 18 | Adds distribution/detail plots |
 
 ```bash
 audioatlas analyze song.wav --graphs-profile compact
@@ -432,3 +432,26 @@ python -m build
 See the architecture, schema, compatibility, and finding-rule documents for the
 more technical contracts, including the dedicated
 [song-project schema](PROJECT_SCHEMA.md).
+
+### L/R RMS balance
+
+Full analysis measures signed channel RMS difference. Positive values mean the
+left channel has higher RMS amplitude; negative values mean the right channel
+does. Zero means equal RMS in that frame. It does not establish pan position,
+perceived balance, or a mixing defect, and creates no finding.
+
+Standard includes its summary; Detailed adds a full-width signed timeline
+(18 plots total). Overview remains 4 plots and skips this measurement. Advanced
+users can request the plot independently with `--enable lr_balance`; in compact
+mode this restores just the required measurement once. Omit a fixed
+`--report-depth` preset when customizing plots.
+
+```bash
+audioatlas analyze song.wav --analysis-mode compact --enable lr_balance
+```
+
+Only exactly two channels apply. Complete frames use 4096 samples and hop 1024
+by default. Gaps mean at least one channel falls below the analysis floor
+(default -80 dBFS RMS per channel), not equal channel RMS. The floor is not a
+quality threshold. Summary JSON retains the per-frame operands and reasons;
+plot times are frame centers relative to the analyzed file or selected range.

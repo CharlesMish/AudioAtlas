@@ -59,6 +59,7 @@ PLOT_FILENAMES = frozenset(
         "peak_vs_rms.png",
         "rms_histogram.png",
         "stereo_correlation_histogram.png",
+        "lr_balance.png",
     }
 )
 ALL_GENERATED_FILENAMES = frozenset(ROOT_GENERATED_FILENAMES | PLOT_FILENAMES)

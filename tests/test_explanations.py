@@ -84,7 +84,8 @@ def test_range_time_origin_matches_standalone_slice_for_all_families(tmp_path: P
                 blocks[i][SUMMARY_BLOCKS[name]] = (
                     result.to_dict() if name == "levels" else result.to_summary_dict()
                 )
-    assert len(time_families) == 11
+    assert len(time_families) == 12
+    assert "lr_balance" in time_families
     findings = [generate_findings(block).to_dict() for block in blocks]
     assert findings[0] == findings[1]
     ranges = [region for finding in findings[0]["findings"]

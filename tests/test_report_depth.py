@@ -59,7 +59,7 @@ def invoke(command, inputs, out, flags):
 @pytest.mark.parametrize("depth,mode,profile,count", [
     ("overview", "compact", "compact", 4),
     ("standard", "full", "standard", 14),
-    ("detailed", "full", "full", 17),
+    ("detailed", "full", "full", 18),
     (None, "full", "standard", 14),
 ])
 def test_presets_and_default_propagate(command, depth, mode, profile, count,
@@ -195,5 +195,5 @@ def test_documented_depth_contract():
     guide = (Path(__file__).parents[1] / "docs/USER_GUIDE.md").read_text()
     assert "Key current measurements, all current finding checks, 4 plots" in guide
     assert "All measurements, 14 plots; default" in guide
-    assert "All measurements, 17 plots" in guide
+    assert "All measurements, 18 plots" in guide
     assert "report-depth persistence needs a" in guide

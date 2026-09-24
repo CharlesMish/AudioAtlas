@@ -174,10 +174,10 @@ def _analyze_file_impl(
             "selected_filenames": selected_filenames,
         },
         }
+        summary["analysis_execution"] = plan.coverage(tuple(results))
         if analysis_mode == "compact":
             summary["schema_version"] = COMPACT_SUMMARY_SCHEMA_VERSION
             summary["analysis_provenance"]["summary_schema_version"] = COMPACT_SUMMARY_SCHEMA_VERSION
-            summary["analysis_execution"] = plan.coverage(tuple(results))
         findings = generate_findings(summary).to_dict()
         if analysis_mode == "compact":
             findings["analysis_execution"] = summary["analysis_execution"]

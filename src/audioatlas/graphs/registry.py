@@ -9,6 +9,7 @@ from pathlib import Path
 
 from audioatlas.analysis.bundle import _COMPUTE, AnalysisBundle
 from audioatlas.config import AnalysisConfig
+from audioatlas.explanations import LR_BALANCE_CAPTION
 from audioatlas.graphs import adapters
 
 RenderAdapter = Callable[[AnalysisBundle, Path, AnalysisConfig], Path]
@@ -50,6 +51,14 @@ _STANDARD_PROFILES = frozenset({"minimal", "standard", "full"})
 _DEFAULT_PROFILES = frozenset({"standard", "full"})
 
 GRAPHS: tuple[GraphSpec, ...] = (
+    GraphSpec(
+        key="lr_balance", display_name="L/R RMS Balance Timeline",
+        filename="lr_balance.png", order=18, requires=("lr_balance",),
+        render=adapters.render_lr_balance, cost_tier=CostTier.CHEAP,
+        enabled_by_default=False, profiles=frozenset({"full"}),
+        report_note=LR_BALANCE_CAPTION, html_caption=LR_BALANCE_CAPTION,
+        wide=True, summary_key="lr_balance",
+    ),
     GraphSpec(
         key="waveform_rms",
         display_name="Waveform + RMS Envelope",
@@ -392,8 +401,8 @@ def validate_registry() -> None:
     keys = [graph.key for graph in GRAPHS]
     filenames = [graph.filename for graph in GRAPHS]
     orders = [graph.order for graph in GRAPHS]
-    if len(GRAPHS) != 17:
-        raise ValueError(f"Expected 17 graphs, found {len(GRAPHS)}")
+    if len(GRAPHS) != 18:
+        raise ValueError(f"Expected 18 graphs, found {len(GRAPHS)}")
     if len(set(keys)) != len(keys):
         raise ValueError("Graph keys must be unique")
     if len(set(filenames)) != len(filenames):

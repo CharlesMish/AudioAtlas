@@ -29,6 +29,7 @@ EXPECTED_KEYS = [
     "peak_vs_rms",
     "rms_histogram",
     "stereo_correlation_histogram",
+    "lr_balance",
 ]
 
 EXPECTED_FILENAMES = [
@@ -49,6 +50,7 @@ EXPECTED_FILENAMES = [
     "peak_vs_rms.png",
     "rms_histogram.png",
     "stereo_correlation_histogram.png",
+    "lr_balance.png",
 ]
 
 EXPECTED_STANDARD_FILENAMES = [
@@ -69,6 +71,7 @@ EXPECTED_STANDARD_FILENAMES = [
 ]
 
 EXPECTED_WIDE_FILENAMES = {
+    "lr_balance.png",
     "log_spectrogram.png",
     "average_spectrum.png",
     "band_energy_timeline.png",
@@ -85,13 +88,13 @@ def test_registry_integrity_and_current_contract():
     keys = [graph.key for graph in graphs]
     filenames = [graph.filename for graph in graphs]
 
-    assert len(graphs) == 17
+    assert len(graphs) == 18
     assert keys == EXPECTED_KEYS
     assert filenames == EXPECTED_FILENAMES
     assert frozenset(filenames) == PLOT_FILENAMES
     assert len(set(keys)) == len(keys)
     assert len(set(filenames)) == len(filenames)
-    assert [graph.order for graph in graphs] == list(range(1, 18))
+    assert [graph.order for graph in graphs] == list(range(1, 19))
     assert {graph.filename for graph in graphs if graph.wide} == EXPECTED_WIDE_FILENAMES
 
     for graph in graphs:

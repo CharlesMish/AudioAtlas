@@ -118,7 +118,7 @@ def main() -> None:
 @click.option("--report-depth", type=click.Choice(tuple(REPORT_DEPTHS)), default=None,
               help="Overview: key measurements, all current finding checks, 4 plots; "
                    "Standard: all measurements, 14 plots (default); "
-                   "Detailed: all measurements, 17 plots.")
+                   "Detailed: all measurements, 18 plots.")
 @click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default=None,
               help="Advanced computation breadth. Defaults to full unless --report-depth sets it.")
 def analyze(
@@ -261,7 +261,7 @@ def analyze(
 @click.option("--report-depth", type=click.Choice(tuple(REPORT_DEPTHS)), default=None,
               help="Overview: key measurements, all current finding checks, 4 plots; "
                    "Standard: all measurements, 14 plots (default); "
-                   "Detailed: all measurements, 17 plots.")
+                   "Detailed: all measurements, 18 plots.")
 @click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default=None,
               help="Advanced computation breadth. Defaults to full unless --report-depth sets it.")
 def batch(
@@ -422,7 +422,7 @@ def batch(
 @click.option("--report-depth", type=click.Choice(tuple(REPORT_DEPTHS)), default=None,
               help="Overview: key measurements, all current finding checks, 4 plots; "
                    "Standard: all measurements, 14 plots (default); "
-                   "Detailed: all measurements, 17 plots.")
+                   "Detailed: all measurements, 18 plots.")
 @click.option("--analysis-mode", type=click.Choice(ANALYSIS_MODES), default=None,
               help="Advanced computation breadth. Defaults to full unless --report-depth sets it.")
 def sections(

@@ -112,14 +112,15 @@ def test_cli_analyze_graphs_profile_full_renders_extension_pack(tmp_path):
 
     assert result.exit_code == 0, result.output
     summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
-    assert len(summary["plots"]) == 17
-    assert summary["plots"][-4:] == [
+    assert len(summary["plots"]) == 18
+    assert summary["plots"][-5:] == [
         "peak_timeline.png",
         "peak_vs_rms.png",
         "rms_histogram.png",
         "stereo_correlation_histogram.png",
+        "lr_balance.png",
     ]
-    assert len(list(out_dir.glob("*.png"))) == 17
+    assert len(list(out_dir.glob("*.png"))) == 18
 
 
 def test_cli_analyze_minimal_can_enable_full_only_graph(tmp_path):

@@ -5,8 +5,8 @@ AudioAtlas `0.2.0a8`.
 
 | Artifact | Schema version | Purpose |
 |---|---:|---|
-| `summary.json` | `0.2.1` | Canonical measurements, identity assertion, and run provenance for one analyzed range. |
-| Compact `summary.json` | `0.3.0` | Explicit partial computation; absent optional blocks are declared in execution coverage. |
+| `summary.json` | `0.4.0` | Canonical measurements, identity assertion, and run provenance for one analyzed range. |
+| Compact `summary.json` | `0.4.0` | Explicit partial computation; absent optional blocks are declared in execution coverage. |
 | `findings.json` | `0.2.0` | Rule-based checks derived from the summary. |
 | `catalog_summary.json` | `0.2.0` | Neutral folder-level index of successful and skipped files. |
 | `revision_diff.json` | `0.1.0` | Guarded descriptive deltas between two asserted revisions of one track. |
@@ -16,9 +16,9 @@ Schema constants live in `src/audioatlas/release.py`.
 
 ## Compact computation extension
 
-Full remains the default and preserves the `0.2.1` contract. Explicit compact
-runs use `0.3.0` and add `analysis_execution` to summary and findings:
-`format_version: 1`, `mode: compact`, ordered `computed`/`skipped` family names,
+Full remains the default. Schema `0.4.0` adds `lr_balance` when computed and
+`analysis_execution` in both modes; compact findings also retain execution metadata:
+`format_version: 1`, `mode: full|compact`, ordered `computed`/`skipped` family names,
 `summary_blocks` actually emitted, and `findings_coverage: complete`. Complete
 findings coverage means every currently-defined finding rule has all required
 inputs; it does not mean full analysis mode or complete summary measurement
@@ -66,7 +66,7 @@ Top-level shape:
 
 ```jsonc
 {
-  "schema_version": "0.2.1",
+  "schema_version": "0.4.0",
   "metadata": {},
   "source_identity": {},
   "analysis_config": {},
@@ -84,6 +84,8 @@ Top-level shape:
   "short_term_lufs": {},
   "stereo_correlation": {},
   "mid_side_energy": {},
+  "lr_balance": {},
+  "analysis_execution": {},
   "plots": [],
   "graphs": {}
 }
@@ -336,3 +338,56 @@ finding-rule implementation fingerprints, rule identities/versions, visibility,
 changed fields, and ruleset versions. It omits filenames, audio
 paths, report paths, and audio content. It replays finding logic only; it does
 not reopen audio, re-run measurements, or replace human listening labels.
+
+## L/R RMS balance and summary 0.4.0
+
+Schema `0.4.0` supersedes full `0.2.1` and compact `0.3.0`. Both computation
+modes now serialize execution coverage; the mode is not inferred from the
+schema version. Existing measurement blocks retain their numerical meaning.
+New `lr_balance` is present whenever computed, including not-applicable results;
+it is absent when skipped and declared in `analysis_execution.skipped`.
+Consumers must distinguish historical absence, skipped, not applicable,
+insufficient samples, and computed-but-undefined from a measured zero.
+Projects continue reading historical full `0.2.1` reports. Revision comparison
+and project/catalog headline metric lists remain unchanged: L/R balance is not
+implicitly added as a zero or a new revision-difference metric. Provenance
+fingerprints honestly change; old and new implementations do not claim identical
+measurement identities. Finding schema/rules and thresholds are unchanged.
+
+The `lr_balance` block contains:
+
+| Field | Type / meaning |
+|---|---|
+| `status` | `computed`, `not_applicable_mono`, `not_applicable_multichannel`, or `insufficient_samples` |
+| `frame_length`, `hop_length` | Configured sample counts; defaults 4096 / 1024 |
+| `min_rms_dbfs` | Per-channel floor, default -80 dBFS; no quality implication |
+| `frames`, `defined_frames` | Candidate complete stereo frames and defined subset |
+| `defined_frame_coverage` | Defined/candidate fraction; null if no candidate frames |
+| `balance_db_median`, `balance_db_p10`, `balance_db_p90` | Defined-frame-only statistics, in signed dB; null if none |
+| `undefined_reason_counts` | Counts for `left_below_floor`, `right_below_floor`, `both_below_floor` |
+| `timeline.times_seconds` | Frame centers `(start + frame_length/2)/sample_rate`, relative to analyzed slice |
+| `timeline.left_rms_linear`, `timeline.right_rms_linear` | Unweighted RMS amplitude relative to decoded full scale; no clamping or DC removal |
+| `timeline.balance_db` | Signed finite dB or JSON null; never infinity or a substituted zero |
+| `timeline.status` | Aligned `defined` or one of the three floor reason codes |
+
+All timeline arrays have the same length. Nonapplicable and too-short results
+have empty arrays, zero candidate/defined counts, and null coverage/statistics.
+Silence has candidate frames, zero coverage, null statistics, and
+`both_below_floor` reasons. Partial trailing frames are excluded, not padded.
+Percentiles use NumPy's default linear interpolation. Coverage is a fraction of
+complete frames, not a fraction of source duration.
+
+Exactly two decoded channels are interpreted as stereo L/R. Arbitrary
+multichannel input has no trusted semantic channel mapping in the current loader,
+so it is not applicable; channels 0/1 are never silently selected.
+
+The numeric rule is `20 log10(L_RMS/R_RMS)`, evaluated as a difference of
+logarithms for exact channel-swap antisymmetry. Both operands must satisfy
+`RMS >= 10 ** (lr_balance_min_rms_dbfs / 20)`. The independent setting shares
+the existing correlation floor's default (-80 dBFS) but does not couple the
+measurements. The report display floor and EPS clamping are not ratio-validity
+rules. Near the floor, decisions apply to actual decoded float32 samples, not
+rounded printed dB values. Common gain preserves defined ratios only while
+both operands remain above the floor; arbitrary float32 gain can introduce
+rounding differences. This is not pan position, hearing-weighted loudness,
+perceived image position, or an asymmetry verdict.
