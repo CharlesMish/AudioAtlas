@@ -162,7 +162,7 @@ jobs:
           assert required <= {path.name for path in out.iterdir()}
           assert len(list(out.glob('*.png'))) == 4
           summary = json.loads((out / 'summary.json').read_text(encoding='utf-8'))
-          assert summary['schema_version'] == '0.2.1'
+          assert summary['schema_version'] == '0.4.0'
           assert summary['graphs']['profile'] == 'compact'
           assert summary['metadata']['path_kind'] == 'basename'
           assert len(summary['analysis_provenance']['compatible_analysis_sha256']) == 64
@@ -233,7 +233,7 @@ jobs:
           assert len(list(out.glob('*.png'))) == 4
           summary = json.loads((out / 'summary.json').read_text(encoding='utf-8'))
           assert summary['metadata']['path_kind'] == 'basename'
-          assert summary['schema_version'] == '0.2.1'
+          assert summary['schema_version'] == '0.4.0'
           assert summary['graphs']['profile'] == 'compact'
           assert len(summary['analysis_provenance']['compatible_analysis_sha256']) == 64
           assert len(summary['source_identity']['track_id_sha256']) == 64
