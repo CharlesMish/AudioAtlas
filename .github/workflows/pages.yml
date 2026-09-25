@@ -135,7 +135,7 @@ jobs:
           assert 'href="compact/"' in landing
           assert 'href="full/"' in landing
           assert "measurements, not grades" in landing
-          profiles = {"compact": 4, "full": 17}
+          profiles = {"compact": 4, "full": 18}
           for profile, plot_count in profiles.items():
               report = site / profile
               summary = json.loads((report / "summary.json").read_text(encoding="utf-8"))

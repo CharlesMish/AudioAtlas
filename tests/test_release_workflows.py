@@ -49,7 +49,7 @@ def test_live_demo_deploys_only_from_main_or_manual_dispatch() -> None:
     assert "--theme default" in text
     assert "--presentation studio" in text
     assert 'summary["metadata"]["filename"] == "audioatlas_demo.wav"' in text
-    assert 'profiles = {"compact": 4, "full": 17}' in text
+    assert 'profiles = {"compact": 4, "full": 18}' in text
     assert 'href="compact/"' in text
     assert 'href="full/"' in text
     assert ".github/pages-assets/audioatlas-0.2.0a8-release-hero.png" in text
