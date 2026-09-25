@@ -43,7 +43,7 @@ jobs:
       source_commit: ${{ steps.package.outputs.source_commit }}
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && 'bab9802e786caadfeb2bb609a49a062a0a93c074' || github.sha }}
@@ -167,7 +167,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.prepare.outputs.source_commit }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -472,7 +472,7 @@ jobs:
       publish_needed: ${{ steps.index.outputs.publish_needed }}
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.prepare.outputs.source_commit }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -642,7 +642,7 @@ jobs:
         with:
           name: audioatlas-python-dist
           path: dist
-      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
         if: needs.index-state.outputs.publish_needed == 'true'
 
   verify-index:
@@ -652,7 +652,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.prepare.outputs.source_commit }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -695,7 +695,7 @@ jobs:
             python-version: "3.14"
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.prepare.outputs.source_commit }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
