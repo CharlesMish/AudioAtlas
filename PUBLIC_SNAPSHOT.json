@@ -26,7 +26,7 @@
     },
     {
       "path": ".github/workflows/pages.yml",
-      "sha256": "c0bc5e843c8893f3459c8bc421d6b399a1088f7a0fd1a04a04a98f6c720b203b"
+      "sha256": "c7ab063e07adc8cf61c2f193798a9ee21e756040c366ed1d2b095ad79f163a42"
     },
     {
       "path": ".github/workflows/release.yml",
@@ -730,7 +730,7 @@
     },
     {
       "path": "tests/test_release_workflows.py",
-      "sha256": "5c2f14970e59c9339b3e9b51f65735eb8e77ad1a319ac605feb4ec0999971dbc"
+      "sha256": "598af4e04464a13415f2d559d09b675aa6375ad8703225dd43f58f81e200284d"
     },
     {
       "path": "tests/test_report.py",
@@ -796,6 +796,6 @@
   "format_version": 1,
   "included_file_count": 198,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "3486739da20f4f615a7d461d6106e96e112a85e96d2f62654778292e53f79025",
-  "source_commit": "65ff8907ac1a81bc47ae07360110bd29e9477ecd"
+  "public_tree_sha256": "333f85dd4d93d69d99568ea2d7e8a987ecddae72e34fe06b9f2ede72488e5756",
+  "source_commit": "77d8701b2d4102544bc0729520d61843c24f07bf"
 }
