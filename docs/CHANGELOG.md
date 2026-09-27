@@ -5,6 +5,10 @@ tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
+- Refined Detailed evidence navigation into neutral family lanes and fixed
+  start-time links, with the complete chronological ledger in optional local
+  companion HTML/Markdown files; measurement and range generation are unchanged.
+
 - Added a Detailed-report chronological index of existing evidence ranges, with
   original boundaries, support context, and local graph links; no new detections.
 

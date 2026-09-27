@@ -8,6 +8,14 @@ from pathlib import Path
 from typing import Any
 
 from audioatlas.alt_text import plot_alt_text
+from audioatlas.evidence_navigator import (
+    CSS as NAVIGATOR_CSS,
+)
+from audioatlas.evidence_navigator import (
+    LEDGER_HTML,
+    extent,
+    navigator_html,
+)
 from audioatlas.explanations import (
     ANALYZED_SCOPE_NOTE,
     GLOSSARY,
@@ -24,7 +32,7 @@ from audioatlas.presentation import (
 )
 from audioatlas.range_index import RangeIndex, build_range_index, index_enabled
 from audioatlas.range_index_report import CSS as RANGE_INDEX_CSS
-from audioatlas.range_index_report import range_index_html
+from audioatlas.range_index_report import navigation_step, range_index_html
 from audioatlas.release import RELEASE_LABEL
 from audioatlas.report import (
     RELATIVE_DB_NOTE,
@@ -67,9 +75,12 @@ def write_report_html(
     presentation_mode: str | None = None,
     show_range_index: bool | None = None,
     evidence_index: RangeIndex | None = None,
+    navigator_layout: str = "companion",
 ) -> Path:
     """Write a static, local report.html."""
 
+    if navigator_layout not in {"companion", "inline"}:
+        raise ValueError("navigator_layout must be companion or inline")
     selected_theme = validate_theme_name(theme_name or default_theme_name())
     selected_presentation = validate_presentation_mode(presentation_mode)
     metadata = summary.get("metadata") if isinstance(summary.get("metadata"), dict) else {}
@@ -103,6 +114,21 @@ def write_report_html(
     include_index = index_enabled(summary, show_range_index)
     index = evidence_index or (build_range_index(summary, findings) if include_index else None)
 
+    navigation = ""
+    ledger = ""
+    if include_index and index is not None:
+        step = navigation_step(extent(index, summary))
+        ledger = range_index_html(
+            index, plot_files,
+            report_prefix="report.html" if navigator_layout == "companion" else "",
+            expanded=True, step=step,
+        )
+        navigation = navigator_html(
+            index, summary, plot_files, companion=navigator_layout == "companion"
+        )
+        if navigator_layout == "inline":
+            navigation += ledger
+
     lines = [
         "<!DOCTYPE html>",
         '<html lang="en">',
@@ -112,7 +138,7 @@ def write_report_html(
         f"<title>AudioAtlas Report - {_h(filename)}</title>",
         "<style>",
         _css(selected_theme),
-        RANGE_INDEX_CSS if include_index else "",
+        RANGE_INDEX_CSS + NAVIGATOR_CSS if include_index else "",
         "</style>",
         "</head>",
         f'<body data-presentation="{_h(selected_presentation)}">',
@@ -144,7 +170,7 @@ def write_report_html(
         '<a href="#metrics">Key metrics</a><span aria-hidden="true">·</span>',
         '<a href="#findings">Findings</a><span aria-hidden="true">·</span>',
         *(
-            ['<a href="#evidence-index">Evidence ranges</a><span aria-hidden="true">·</span>']
+            ['<a href="#evidence-index">Evidence navigator</a><span aria-hidden="true">·</span>']
             if include_index else []
         ),
         '<a href="#plots">Plots</a><span aria-hidden="true">·</span>',
@@ -196,7 +222,7 @@ def write_report_html(
         "</section>",
         _findings_section(findings, report_max_time_ranges, plot_files),
         _lr_balance_section(summary),
-        range_index_html(index, plot_files) if include_index and index is not None else "",
+        navigation,
         _plots_section(plot_files, summary, findings),
         _glossary_section(),
         _technical_section(summary),
@@ -215,6 +241,19 @@ def write_report_html(
     out = Path(out_dir) / "report.html"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8")
+    if include_index and navigator_layout == "companion":
+        companion = (
+            '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            '<title>AudioAtlas — existing evidence ranges</title><style>'
+            + _css(selected_theme) + RANGE_INDEX_CSS + '</style></head><body><main class="container">'
+            '<h1>Existing evidence ranges</h1><p><a href="report.html#evidence-index">'
+            'Back to evidence navigator</a> · <a href="evidence_ranges.md">Markdown ledger</a></p>'
+            '<p>Times are relative to the analyzed audio. For a selected range, add its source '
+            'start time to locate the same point in the original file; see the report for the offset.</p>'
+            + ledger + '</main></body></html>'
+        )
+        (out.parent / LEDGER_HTML).write_text(companion, encoding="utf-8")
     return out
 
 

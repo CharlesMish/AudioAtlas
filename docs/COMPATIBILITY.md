@@ -183,3 +183,21 @@ independent within-view normalization. This is additive: existing numerical rows
 and comparison decisions keep their meanings. Consumers may ignore unknown
 fields. Historical artifacts lacking the object remain readable and must not be
 interpreted as supporting absolute/full-scale band comparison.
+
+
+## Optional Detailed evidence companions
+
+Detailed outputs can own `evidence_ranges.html` and `evidence_ranges.md` as
+optional single-track report artifacts. The output-manifest schema remains 1:
+its existing `generated_files` list explicitly declares the files. Core report
+filenames remain required as before. The current publisher reads historical
+manifests without companions, removes only explicitly owned stale companions,
+and refuses to overwrite an unowned same-named file. A writer failure retains
+the prior report through the existing staged-publication transaction.
+
+Older AudioAtlas publishers whose filename allowlist predates these companions
+may refuse to overwrite the new output directory. Use the current reader/writer
+or a fresh output destination; do not hand-edit ownership manifests. Historical
+project/catalog report links still target `report.html`; new companions stay
+inside the same owned report directory, including selected-range reports.
+Summary/findings/revision schemas and numerical semantics are unchanged.

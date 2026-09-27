@@ -42,7 +42,14 @@ centroid range is note pitch or an EQ instruction; onset is not event count.
   excluded with reasons in the internal index audit. Zero-duration labels do not
   establish an interval; no guessed duration is assigned.
 
-## Product placement and presentation
+## v0.1 presentation and v0.2 successor
+
+The extraction contract below remains unchanged. The current Detailed writer
+uses the navigator and companion-ledger presentation described in
+[EVIDENCE_NAVIGATOR.md](EVIDENCE_NAVIGATOR.md). The following describes the
+original v0.1 presentation used as the comparison baseline.
+
+### Original product placement and presentation
 
 Initial placement is full computation + full graph profile (Detailed), including
 legacy commands with that same pair. Overview and Standard remain unchanged.

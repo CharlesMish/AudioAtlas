@@ -24,6 +24,7 @@ from audioatlas.graphs.selection import GraphSelection
 from audioatlas.html_report import write_report_html
 from audioatlas.io import compute_source_binding, load_audio
 from audioatlas.output import (
+    EVIDENCE_REPORT_FILENAMES,
     OUTPUT_MARKER_FILENAME,
     SINGLE_REPORT_FILENAMES,
     SourceBinding,
@@ -186,6 +187,8 @@ def _analyze_file_impl(
         # This constrains only the current staged report. Stale-file authority is
         # derived later from the destination's validated ownership manifest.
         staged_file_allowlist = set(SINGLE_REPORT_FILENAMES) | set(selected_filenames)
+        companion_files = EVIDENCE_REPORT_FILENAMES if index_enabled(summary) else frozenset()
+        staged_file_allowlist.update(companion_files)
         graph_total = len(selected_graphs)
         _emit_progress(
             progress_callback,
@@ -234,6 +237,7 @@ def _analyze_file_impl(
             generated_files=[
                 *selected_filenames,
                 *SINGLE_REPORT_FILENAMES,
+                *companion_files,
                 OUTPUT_MARKER_FILENAME,
             ],
             source_binding=audio.source_binding,

@@ -16,22 +16,22 @@ INTRO = (
 )
 
 CSS = """
-#evidence-index { margin: 28px 0; }
-#evidence-index summary { cursor: pointer; overflow-wrap: anywhere; }
-#evidence-index a { color: var(--accent); }
-#evidence-index .range-bucket { margin: 8px 0; padding: 10px 14px; }
-#evidence-index .range-row { display: grid; grid-template-columns: 11rem minmax(0,1fr);
+:is(#evidence-index, #evidence-ledger) { margin: 28px 0; }
+:is(#evidence-index, #evidence-ledger) summary { cursor: pointer; overflow-wrap: anywhere; }
+:is(#evidence-index, #evidence-ledger) a { color: var(--accent); }
+:is(#evidence-index, #evidence-ledger) .range-bucket { margin: 8px 0; padding: 10px 14px; }
+:is(#evidence-index, #evidence-ledger) .range-row { display: grid; grid-template-columns: 11rem minmax(0,1fr);
   gap: 10px; padding: 12px 0; border-top: 1px solid var(--border); }
-#evidence-index .range-time { font-variant-numeric: tabular-nums; color: var(--text); }
-#evidence-index .range-row ul { margin: 0; padding-left: 18px; }
-#evidence-index .range-context { color: var(--text-muted); font-size: .88rem; }
-#evidence-index .range-context p { margin: 6px 0; }
-#evidence-index .range-context details { padding: 8px; margin-top: 6px; }
-#evidence-index .range-row:target { outline: 2px solid var(--accent); outline-offset: 2px; }
-#evidence-index .range-row, #evidence-index li { overflow-wrap: anywhere; min-width: 0; }
+:is(#evidence-index, #evidence-ledger) .range-time { font-variant-numeric: tabular-nums; color: var(--text); }
+:is(#evidence-index, #evidence-ledger) .range-row ul { margin: 0; padding-left: 18px; }
+:is(#evidence-index, #evidence-ledger) .range-context { color: var(--text-muted); font-size: .88rem; }
+:is(#evidence-index, #evidence-ledger) .range-context p { margin: 6px 0; }
+:is(#evidence-index, #evidence-ledger) .range-context details { padding: 8px; margin-top: 6px; }
+:is(#evidence-index, #evidence-ledger) .range-row:target { outline: 2px solid var(--accent); outline-offset: 2px; }
+:is(#evidence-index, #evidence-ledger) .range-row, :is(#evidence-index, #evidence-ledger) li { overflow-wrap: anywhere; min-width: 0; }
 @media (max-width: 600px) {
-  #evidence-index .range-row { grid-template-columns: minmax(0,1fr); gap: 6px; }
-  #evidence-index .range-bucket { padding: 9px; }
+  :is(#evidence-index, #evidence-ledger) .range-row { grid-template-columns: minmax(0,1fr); gap: 6px; }
+  :is(#evidence-index, #evidence-ledger) .range-bucket { padding: 9px; }
 }
 """
 
@@ -49,6 +49,33 @@ def buckets(index: RangeIndex):
     return groups.items()
 
 
+def family_name(source) -> str:
+    return {
+        "peaks": "Level / peak",
+        "spectral_shape": "Spectral shape",
+        "band_power": "Spectral bands",
+        "stereo": "Stereo",
+        "mid_side": "Stereo",
+        "onset": "Activity / onset",
+        "finding": "Findings",
+    }[source.family]
+
+
+def navigation_step(duration: float) -> int:
+    """A deterministic navigation scale, never a detected section boundary."""
+    step = 10
+    while duration > step * 12:
+        step *= 2
+    return step
+
+
+def time_groups(index: RangeIndex, step: int):
+    groups = defaultdict(list)
+    for i, row in enumerate(index.rows):
+        groups[int(row.start // step) * step].append((i, row))
+    return groups.items()
+
+
 def _graphs(plot_files):
     available = {}
     for filename in plot_files:
@@ -60,10 +87,17 @@ def _graphs(plot_files):
     return available
 
 
-def range_index_html(index: RangeIndex, plot_files: list[str]) -> str:
+def range_index_html(
+    index: RangeIndex,
+    plot_files: list[str],
+    *,
+    report_prefix: str = "",
+    expanded: bool = False,
+    step: int = 10,
+) -> str:
     graphs = _graphs(plot_files)
     lines = [
-        '<section id="evidence-index"><h2>Evidence range index</h2>',
+        '<section id="evidence-ledger"><h2>Evidence range index</h2>',
         f'<p class="section-intro">{escape(INTRO)}</p>',
         f"<p>{index.original_count} original ranges · {len(index.rows)} chronological rows. "
         "Only exactly equal label intervals share a row. Open a start-time group to browse.</p>",
@@ -75,10 +109,13 @@ def range_index_html(index: RangeIndex, plot_files: list[str]) -> str:
         )
     if not index.rows:
         lines.append("<p>No existing time ranges are available in this report.</p>")
-    for bucket, rows in buckets(index):
+    for start, rows in time_groups(index, step):
+        names = " · ".join(sorted({family_name(o.source) for _, row in rows for o in row.origins}))
+        heading = f"Starts {clock(start)}–{clock(start + step)} · {escape(names)}"
         lines.append(
-            f'<details class="range-bucket"><summary>Starts {clock(bucket * 10)}–'
-            f"{clock((bucket + 1) * 10)} · {len(rows)} rows</summary>"
+            f'<section class="range-bucket" id="evidence-start-{start}"><h3>{heading}</h3>'
+            if expanded
+            else f'<details class="range-bucket" id="evidence-start-{start}"><summary>{heading}</summary>'
         )
         for i, row in rows:
             lines.append(
@@ -88,9 +125,13 @@ def range_index_html(index: RangeIndex, plot_files: list[str]) -> str:
             for origin in row.origins:
                 source = origin.source
                 target = (
-                    f"#plot-{source.graph}"
+                    f"{report_prefix}#plot-{source.graph}"
                     if source.graph in graphs
-                    else ("#findings" if source.family == "finding" else "#technical")
+                    else (
+                        f"{report_prefix}#findings"
+                        if source.family == "finding"
+                        else f"{report_prefix}#technical"
+                    )
                 )
                 lines.append(f'<li><a href="{escape(target)}">{escape(source.label)}</a></li>')
             lines.append('</ul><div class="range-context">')
@@ -124,11 +165,11 @@ def range_index_html(index: RangeIndex, plot_files: list[str]) -> str:
                     f"<code>{escape(origin.path)}</code></p>"
                 )
             lines.append("</details></div></div></article>")
-        lines.append("</details>")
+        lines.append("</section>" if expanded else "</details>")
     return "\n".join(lines + ["</section>"])
 
 
-def range_index_markdown(index: RangeIndex, plot_files: list[str]) -> str:
+def range_index_markdown(index: RangeIndex, plot_files: list[str], *, step: int = 10) -> str:
     graphs = _graphs(plot_files)
     lines = [
         "## Evidence range index",
@@ -150,12 +191,12 @@ def range_index_markdown(index: RangeIndex, plot_files: list[str]) -> str:
             ]
         )
     # Native details are optional: a plain Markdown reader can still read every row.
-    for bucket, rows in buckets(index):
+    for start, rows in time_groups(index, step):
+        names = " · ".join(sorted({family_name(o.source) for _, row in rows for o in row.origins}))
         lines.extend(
             [
                 "<details>",
-                f"<summary>Starts {clock(bucket * 10)}–{clock((bucket + 1) * 10)} "
-                f"· {len(rows)} rows</summary>",
+                f"<summary>Starts {clock(start)}–{clock(start + step)} · {names}</summary>",
                 "",
                 "| Original labels | Existing evidence / inspect | Overlapping rows |",
                 "|---|---|---:|",

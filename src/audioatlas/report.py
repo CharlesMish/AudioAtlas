@@ -13,6 +13,7 @@ from typing import Any
 
 from audioatlas import __version__
 from audioatlas.alt_text import plot_alt_text
+from audioatlas.evidence_navigator import LEDGER_MD, extent, navigator_markdown
 from audioatlas.explanations import (
     ANALYZED_SCOPE_NOTE,
     RANGE_TIME_NOTE,
@@ -22,7 +23,7 @@ from audioatlas.explanations import (
 from audioatlas.graphs.registry import RELATIVE_DB_NOTE, graph_by_filename
 from audioatlas.markdown import markdown_text
 from audioatlas.range_index import RangeIndex, build_range_index, index_enabled
-from audioatlas.range_index_report import range_index_markdown
+from audioatlas.range_index_report import navigation_step, range_index_markdown
 from audioatlas.release import RELEASE_LABEL
 from audioatlas.utils import mmss
 
@@ -343,6 +344,7 @@ def write_report_md(
     *,
     show_range_index: bool | None = None,
     evidence_index: RangeIndex | None = None,
+    navigator_layout: str = "companion",
 ) -> Path:
     """Write a deliberately simple Markdown report.
 
@@ -709,7 +711,20 @@ def write_report_md(
 
     if index_enabled(summary, show_range_index):
         index = evidence_index or build_range_index(summary, findings)
-        lines.append(range_index_markdown(index, plot_files))
+        ledger = range_index_markdown(index, plot_files, step=navigation_step(extent(index, summary)))
+        if navigator_layout == "companion":
+            lines.append(navigator_markdown(index, summary, plot_files))
+            (Path(out_dir) / LEDGER_MD).write_text(
+                "[Back to report](report.md) · [Static navigator](report.html#evidence-index)\n\n"
+                "Times are relative to the analyzed audio; add the selected range's source start "
+                "time to locate them in the original file. The report records that offset.\n\n"
+                + ledger, encoding="utf-8",
+            )
+        elif navigator_layout == "inline":
+            lines.append(navigator_markdown(index, summary, plot_files, companion=False))
+            lines.append(ledger)
+        else:
+            raise ValueError("navigator_layout must be companion or inline")
 
     lines.append("## Plots\n")
     for filename in plot_files:

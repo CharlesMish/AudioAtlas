@@ -235,18 +235,28 @@ audioatlas themes
 audioatlas analyze song.wav --theme midnight_studio
 ```
 
-### Evidence range index (Detailed)
+### Evidence navigator (Detailed)
 
-Detailed reports include a chronological index of ranges already measured and
-reported by AudioAtlas. Open a start-time group, then follow an evidence label
-to its plot. The groups are navigation aids, not detected song sections. Exactly
-equal label intervals share a row; near-equal ranges remain separate.
+Detailed reports include a static navigator of ranges AudioAtlas already emits.
+The horizontal marks use original time labels; each links to its chronological
+ledger row. Each spectral band keeps its own lane. Marks are opaque and equal
+height: overlap does not encode importance or independent corroboration.
 
-Overlapping labels do not establish simultaneous events or a common cause.
-Expand the support notes to see contributing frame context and measurement
-references. The index assigns no score, severity, or listening priority. Times
-remain relative to the analyzed audio, including a selected source range.
-Overview and Standard reports keep their existing layout.
+Use the measurement links to inspect a graph, or open **Meaning & limits** for
+its reference and interpretation boundary. **Browse by start time** lists family
+names in fixed navigation groups, not detected song sections. Narrow screens
+can scroll each lane; the text ledger is an alternative for exact times and
+keyboard navigation. Very short marks can be subpixel at the overview scale.
+
+The complete ledger lives beside the report in `evidence_ranges.html` and
+`evidence_ranges.md`. Keep these files with the report when sharing the full
+output folder. The main report remains useful without opening them. All files
+are static and local; the navigator requires no JavaScript. Every original
+source range remains recoverable, including exactly equal intervals sharing a
+ledger row. Times remain relative to the analyzed audio or selected slice.
+
+Overview and Standard retain their existing layouts. Plot counts remain
+4 / 14 / 18. No new measurement, finding, score, or range detector is added.
 
 ### Source ranges
 

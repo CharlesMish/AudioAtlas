@@ -207,6 +207,6 @@ def test_selected_range_keeps_slice_labels_and_source_guidance(tmp_path, monkeyp
     assert origins[0].footprint_seconds[0] <= 1 < origins[0].footprint_seconds[1]
     for report in [result.report_path, result.html_report_path]:
         text = report.read_text()
-        assert "Evidence range index" in text
+        assert "Evidence navigator" in text
         assert "relative to this analyzed range" in text
     assert len(result.plot_paths) == 18
