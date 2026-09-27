@@ -174,3 +174,12 @@ Any compatibility-affecting patch must update, in the same change:
 - focused migration/round-trip tests;
 - `docs/CHANGELOG.md`;
 - package/release verification notes.
+
+
+## Additive revision reference metadata
+
+Revision-diff 0.1.0 permits the optional `band_power_reference` object documenting
+independent within-view normalization. This is additive: existing numerical rows
+and comparison decisions keep their meanings. Consumers may ignore unknown
+fields. Historical artifacts lacking the object remain readable and must not be
+interpreted as supporting absolute/full-scale band comparison.

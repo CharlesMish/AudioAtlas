@@ -5,6 +5,9 @@ tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
+- Added machine-readable reference semantics to revision-diff 0.1.0 without
+  changing existing relative band deltas or comparison eligibility.
+
 ## `0.2.0a8` — 2026-07-20
 
 ### Public alpha release positioning

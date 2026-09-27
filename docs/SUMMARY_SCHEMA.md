@@ -410,3 +410,25 @@ Summary 0.4.0 and revision-diff 0.1.0 field meanings remain unchanged.
 
 Internal support/reference metadata is documented in `EVIDENCE_ALIGNMENT.md`;
 it is not a new serialized summary block.
+
+
+### Additive revision-band reference metadata
+
+New revision-diff 0.1.0 artifacts include `band_power_reference`:
+
+```json
+{
+  "reference_system": "within_analysis_relative",
+  "normalization_scope": "each_analyzed_view_independently",
+  "comparison_semantics": "b_minus_a_of_relative_band_medians",
+  "absolute_level_change_supported": false,
+  "absolute_full_scale_comparison": "unavailable",
+  "interpretation_boundary": "These deltas compare independently normalized views, not absolute band levels. A changing normalization reference can reverse the sign of a delta; the difference does not establish that a band's source level rose or fell."
+}
+```
+
+This describes `band_power_median_deltas`; no existing field, value or comparison
+eligibility changes. The additive-field policy permits retaining 0.1.0. Historical
+artifacts without this object retain their original relative semantics; absence
+must never be taken as permission to infer absolute band-level change. Renderers
+continue to accept historical artifacts without this metadata.

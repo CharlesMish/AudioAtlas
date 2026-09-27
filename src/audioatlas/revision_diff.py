@@ -155,6 +155,14 @@ def generate_revision_diff(
         "source_context": _source_context(first, second),
         "metric_deltas": metric_deltas,
         "band_power_median_deltas": band_deltas,
+        "band_power_reference": {
+            "reference_system": "within_analysis_relative",
+            "normalization_scope": "each_analyzed_view_independently",
+            "comparison_semantics": "b_minus_a_of_relative_band_medians",
+            "absolute_level_change_supported": False,
+            "absolute_full_scale_comparison": "unavailable",
+            "interpretation_boundary": RELATIVE_BAND_DELTA_NOTE,
+        },
         "finding_changes": finding_changes,
         "interpretation_boundary": (
             "Deltas are descriptive measurements. A positive or negative value does not "
