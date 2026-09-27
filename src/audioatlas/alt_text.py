@@ -50,6 +50,9 @@ def plot_alt_text(filename: str, summary: dict[str, Any]) -> str:
     if graph_metadata is None:
         return filename.rsplit(".", maxsplit=1)[0].replace("_", " ").title()
     key, title = graph_metadata
+    if key in {"log_spectrogram", "average_spectrum", "spectral_shape",
+               "band_energy_timeline", "onset_density", "chroma_cqt"}:
+        title += " (arithmetic-average mono downmix)"
 
     duration = _number(_block(summary, "levels").get("duration_seconds"))
     duration_text = f" across {_fmt(duration, 2)} seconds" if duration is not None else ""

@@ -258,6 +258,8 @@ def test_revision_diff_writes_static_owned_report_and_cli_uses_guardrails(tmp_pa
     assert 'aria-label="revision delta sections"' in html
     assert 'role="region" aria-label="scalar measurement deltas"' in html
     for text in (markdown, html):
+        assert "independently normalized views" in text
+        assert "does not establish" in text
         for forbidden in ("better", "worse", "winner", "leaderboard"):
             assert forbidden not in text
 

@@ -391,3 +391,22 @@ rounded printed dB values. Common gain preserves defined ratios only while
 both operands remain above the floor; arbitrary float32 gain can introduce
 rounding differences. This is not pan position, hearing-weighted loudness,
 perceived image position, or an asymmetry verdict.
+
+### Evidence reference clarification (no schema change)
+
+Spectral shape, spectrogram, average spectrum, band power, onset, and chroma
+use the arithmetic-average mono downmix. Opposing channel content may cancel
+there while the decoded source channels still carry energy. Spectral undefined
+frame warnings refer to the mono-downmix analysis floor, not source silence.
+The existing thresholds, values, and public time labels are unchanged.
+
+`band_power_timeline.bands.*.median_db` (and the historical
+`band_energy_timeline` alias) uses an analyzed-view maximum reference.
+Revision-diff `band_power_median_deltas` contains differences between these
+independently normalized medians. A moving reference can reverse the sign:
+these deltas do not establish absolute band-level change. The average-spectrum
+bands use a separate within-view Welch reference and are not current diff inputs.
+Summary 0.4.0 and revision-diff 0.1.0 field meanings remain unchanged.
+
+Internal support/reference metadata is documented in `EVIDENCE_ALIGNMENT.md`;
+it is not a new serialized summary block.

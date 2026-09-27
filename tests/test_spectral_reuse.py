@@ -29,7 +29,7 @@ def _independent_transform_reference(y, sr, cfg):
     valid = rms > EPS
     warnings = []
     if not np.all(valid):
-        warnings.append("one or more silent frames; spectral shape values are undefined there")
+        warnings.append("one or more frames have mono-downmix energy below the analysis floor; spectral shape values are undefined there")
     for arr in (centroid, rolloff_85, rolloff_95, bandwidth):
         arr[~valid] = np.nan
     times = librosa.frames_to_time(

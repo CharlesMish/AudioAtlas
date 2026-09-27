@@ -13,7 +13,12 @@ from typing import Any
 
 from audioatlas import __version__
 from audioatlas.alt_text import plot_alt_text
-from audioatlas.explanations import ANALYZED_SCOPE_NOTE, RANGE_TIME_NOTE, measurement_note
+from audioatlas.explanations import (
+    ANALYZED_SCOPE_NOTE,
+    RANGE_TIME_NOTE,
+    SPECTRAL_CHANNEL_NOTE,
+    measurement_note,
+)
 from audioatlas.graphs.registry import RELATIVE_DB_NOTE, graph_by_filename
 from audioatlas.markdown import markdown_text
 from audioatlas.release import RELEASE_LABEL
@@ -404,7 +409,7 @@ def write_report_md(
         lines.append(f"- Comparable-analysis SHA-256: `{compatible_hash}`")
     lines.append("")
 
-    lines.extend([ANALYZED_SCOPE_NOTE, ""])
+    lines.extend([ANALYZED_SCOPE_NOTE, "", SPECTRAL_CHANNEL_NOTE, ""])
     if source_range is not None:
         lines.extend([RANGE_TIME_NOTE, ""])
 

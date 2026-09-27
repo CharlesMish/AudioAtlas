@@ -11,6 +11,16 @@ RANGE_TIME_NOTE = (
     "add the source start time to locate the same point in the original file."
 )
 
+SPECTRAL_CHANNEL_NOTE = (
+    "Spectral, onset, and chroma views describe the arithmetic-average mono downmix. "
+    "Opposing channels can cancel in this view even when the source channels carry energy."
+)
+RELATIVE_BAND_DELTA_NOTE = (
+    "These deltas compare independently normalized views, not absolute band levels. "
+    "A changing normalization reference can reverse the sign of a delta; "
+    "the difference does not establish that a band's source level rose or fell."
+)
+
 LR_BALANCE_CAPTION = (
     "Signed channel RMS difference over time: positive means Left higher RMS; "
     "negative means Right higher RMS. Gaps are undefined frames. "
@@ -39,7 +49,9 @@ GLOSSARY: list[tuple[str, str, str]] = [
         'short-term-lufs',
         'Short-term LUFS',
         'Short-term LUFS is a time-varying K-weighted loudness measurement using the configured '
-        'window (3 seconds by default). Points mark window ends. It is distinct from RMS and '
+        'window (3 seconds by default). Points mark window ends: each value integrates the preceding '
+        'block of K-weighted audio; a final block may be truncated. Filter state also depends on '
+        'earlier samples. It is distinct from RMS and '
         'integrated loudness.',
     ),
     (
@@ -130,8 +142,9 @@ GLOSSARY: list[tuple[str, str, str]] = [
     (
         'relative-band-power',
         'Relative mean band power',
-        'This view averages spectral power per included FFT bin in each broad frequency band, then '
-        'normalizes values within the file. It is not integrated total band energy and does not '
+        'This mono-downmix view averages spectral power per included FFT bin in each broad frequency band, then '
+        'normalizes values within the analyzed view. Between-view differences do not establish absolute '
+        'band-level changes. It is not integrated total band energy and does not '
         'indicate absolute dBFS level.',
     ),
     (

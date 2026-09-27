@@ -25,7 +25,7 @@ def _require_finite_number(name: str, value: object) -> float:
 class AnalysisConfig:
     """Global analysis defaults.
 
-    Keep frame and hop settings centralized so time-series plots align.
+    Centralize frame and hop settings; families retain distinct time anchors and supports.
     """
 
     n_fft: int = 4096

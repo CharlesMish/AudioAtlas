@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from audioatlas.alt_text import plot_alt_text
-from audioatlas.explanations import ANALYZED_SCOPE_NOTE, GLOSSARY, RANGE_TIME_NOTE
+from audioatlas.explanations import (
+    ANALYZED_SCOPE_NOTE,
+    GLOSSARY,
+    RANGE_TIME_NOTE,
+    SPECTRAL_CHANNEL_NOTE,
+)
 from audioatlas.graphs.registry import graph_by_filename, graph_by_key
 from audioatlas.presentation import (
     presentation_controls_html,
@@ -143,6 +148,7 @@ def write_report_html(
         "<p>This report provides descriptive context, not professional mastering approval "
         "or a universal pass/fail result.</p>",
         f"<p>{_h(ANALYZED_SCOPE_NOTE)}</p>",
+        f"<p>{_h(SPECTRAL_CHANNEL_NOTE)}</p>",
         *([f"<p>{_h(RANGE_TIME_NOTE)}</p>"] if source_range is not None else []),
         f"<p>{_h(RELATIVE_DB_NOTE)}</p>",
         "<p>Check before delivery / worth a listen / for reference indicate priority, not quality.</p>",
