@@ -22,6 +22,9 @@ from audioatlas.presentation import (
     skip_link_html,
     validate_presentation_mode,
 )
+from audioatlas.range_index import RangeIndex, build_range_index, index_enabled
+from audioatlas.range_index_report import CSS as RANGE_INDEX_CSS
+from audioatlas.range_index_report import range_index_html
 from audioatlas.release import RELEASE_LABEL
 from audioatlas.report import (
     RELATIVE_DB_NOTE,
@@ -62,6 +65,8 @@ def write_report_html(
     *,
     theme_name: str | None = None,
     presentation_mode: str | None = None,
+    show_range_index: bool | None = None,
+    evidence_index: RangeIndex | None = None,
 ) -> Path:
     """Write a static, local report.html."""
 
@@ -95,6 +100,9 @@ def write_report_html(
     profile_label = _profile_label(summary)
     scope_note = compact_analysis_note(summary)
 
+    include_index = index_enabled(summary, show_range_index)
+    index = evidence_index or (build_range_index(summary, findings) if include_index else None)
+
     lines = [
         "<!DOCTYPE html>",
         '<html lang="en">',
@@ -104,6 +112,7 @@ def write_report_html(
         f"<title>AudioAtlas Report - {_h(filename)}</title>",
         "<style>",
         _css(selected_theme),
+        RANGE_INDEX_CSS if include_index else "",
         "</style>",
         "</head>",
         f'<body data-presentation="{_h(selected_presentation)}">',
@@ -134,6 +143,10 @@ def write_report_html(
         '<a href="#how-to-read">Overview</a><span aria-hidden="true">·</span>',
         '<a href="#metrics">Key metrics</a><span aria-hidden="true">·</span>',
         '<a href="#findings">Findings</a><span aria-hidden="true">·</span>',
+        *(
+            ['<a href="#evidence-index">Evidence ranges</a><span aria-hidden="true">·</span>']
+            if include_index else []
+        ),
         '<a href="#plots">Plots</a><span aria-hidden="true">·</span>',
         '<a href="#glossary">Understanding these numbers</a><span aria-hidden="true">·</span>',
         '<a href="#technical">Technical details</a><span aria-hidden="true">·</span>',
@@ -183,6 +196,7 @@ def write_report_html(
         "</section>",
         _findings_section(findings, report_max_time_ranges, plot_files),
         _lr_balance_section(summary),
+        range_index_html(index, plot_files) if include_index and index is not None else "",
         _plots_section(plot_files, summary, findings),
         _glossary_section(),
         _technical_section(summary),

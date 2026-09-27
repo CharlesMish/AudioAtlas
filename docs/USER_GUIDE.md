@@ -235,6 +235,19 @@ audioatlas themes
 audioatlas analyze song.wav --theme midnight_studio
 ```
 
+### Evidence range index (Detailed)
+
+Detailed reports include a chronological index of ranges already measured and
+reported by AudioAtlas. Open a start-time group, then follow an evidence label
+to its plot. The groups are navigation aids, not detected song sections. Exactly
+equal label intervals share a row; near-equal ranges remain separate.
+
+Overlapping labels do not establish simultaneous events or a common cause.
+Expand the support notes to see contributing frame context and measurement
+references. The index assigns no score, severity, or listening priority. Times
+remain relative to the analyzed audio, including a selected source range.
+Overview and Standard reports keep their existing layout.
+
 ### Source ranges
 
 ```bash

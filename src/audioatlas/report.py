@@ -21,6 +21,8 @@ from audioatlas.explanations import (
 )
 from audioatlas.graphs.registry import RELATIVE_DB_NOTE, graph_by_filename
 from audioatlas.markdown import markdown_text
+from audioatlas.range_index import RangeIndex, build_range_index, index_enabled
+from audioatlas.range_index_report import range_index_markdown
 from audioatlas.release import RELEASE_LABEL
 from audioatlas.utils import mmss
 
@@ -338,6 +340,9 @@ def write_report_md(
     plot_files: list[str],
     out_dir: str | Path,
     findings: dict[str, Any] | None = None,
+    *,
+    show_range_index: bool | None = None,
+    evidence_index: RangeIndex | None = None,
 ) -> Path:
     """Write a deliberately simple Markdown report.
 
@@ -701,6 +706,10 @@ def write_report_md(
                 "- No prioritized findings surfaced. The plots and technical details "
                 "still describe the track's measured shape.\n"
             )
+
+    if index_enabled(summary, show_range_index):
+        index = evidence_index or build_range_index(summary, findings)
+        lines.append(range_index_markdown(index, plot_files))
 
     lines.append("## Plots\n")
     for filename in plot_files:

@@ -5,6 +5,9 @@ tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
+- Added a Detailed-report chronological index of existing evidence ranges, with
+  original boundaries, support context, and local graph links; no new detections.
+
 - Added machine-readable reference semantics to revision-diff 0.1.0 without
   changing existing relative band deltas or comparison eligibility.
 
