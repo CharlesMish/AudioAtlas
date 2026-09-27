@@ -47,6 +47,25 @@ dB values from different analyzed views do not establish source-level change.
 The existing per-view relative numbers are preserved; no absolute spectral-band
 estimator or new revision-diff field is introduced here.
 
+## Evidence lanes and grid
+
+`AnalysisBundle.computed_results` provides a read-only snapshot of its cache;
+`evidence_lanes` never calls `get`. Thus adapting Overview cannot restore skipped
+families. Lanes copy existing scalar timelines, retain unit/reference/channel
+basis, source identity, valid mask and reason codes, support and caveats.
+RMS, sample peak, crest, short-term LUFS, correlation, M/S ratio, L/R balance,
+centroid, each relative band-power series, and smoothed onset can be adapted.
+Legacy finite floor values and mono conventions are retained and noted, not
+reclassified as physical zero or accurate measurements below the floor.
+
+`aligned_cells` yields sparse indices into original lanes whose integration
+footprints intersect each half-open grid interval. It does not synthesize a
+value, interpolate through a gap, count evidence, or rank cells. A 3-second
+LUFS window can occur in several cells but remains the same original frame
+with its 3-second support. Whole-view references and filter history remain
+separate from the integration footprint. Memory is linear in lane frames plus
+the current cell; callers who collect every cell pay for repeated indices.
+
 The spectral warning floor is the existing numerical validity rule, not a new
 dBFS gate: spectral shape uses mono frame RMS > `EPS`; band power uses summed
 STFT frame power > `EPS` and also requires an available band/reference. These
