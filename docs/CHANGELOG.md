@@ -5,6 +5,10 @@ tracked separately in `src/audioatlas/release.py`.
 
 ## Unreleased
 
+- Prototype a Detailed evidence navigator combining binary time/family presence
+  with unchanged original-range geometry and the complete companion ledger.
+  No DSP, range generation, graph counts or evidence semantics change.
+
 - Refined Detailed evidence navigation into neutral family lanes and fixed
   start-time links, with the complete chronological ledger in optional local
   companion HTML/Markdown files; measurement and range generation are unchanged.

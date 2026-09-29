@@ -79,8 +79,8 @@ def write_report_html(
 ) -> Path:
     """Write a static, local report.html."""
 
-    if navigator_layout not in {"companion", "inline"}:
-        raise ValueError("navigator_layout must be companion or inline")
+    if navigator_layout != "companion":
+        raise ValueError("Only the companion-ledger architecture is supported")
     selected_theme = validate_theme_name(theme_name or default_theme_name())
     selected_presentation = validate_presentation_mode(presentation_mode)
     metadata = summary.get("metadata") if isinstance(summary.get("metadata"), dict) else {}
@@ -121,13 +121,11 @@ def write_report_html(
         ledger = range_index_html(
             index, plot_files,
             report_prefix="report.html" if navigator_layout == "companion" else "",
-            expanded=True, step=step,
+            expanded=True, step=step, duration=extent(index, summary),
         )
         navigation = navigator_html(
-            index, summary, plot_files, companion=navigator_layout == "companion"
+            index, summary, plot_files
         )
-        if navigator_layout == "inline":
-            navigation += ledger
 
     lines = [
         "<!DOCTYPE html>",

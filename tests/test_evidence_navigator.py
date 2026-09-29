@@ -65,7 +65,7 @@ def test_reference_descriptions_pointer_shortcuts_and_keyboard_alternative():
     text = navigator_html(index, s, [])
     dom = DOM(text)
     ids = {a["id"] for _, a in dom.tags if "id" in a}
-    segments = [a for tag, a in dom.tags if tag == "a" and "aria-describedby" in a]
+    segments = [a for tag, a in dom.tags if tag == "a" and a.get("tabindex") == "-1"]
     assert len(segments) == index.original_count
     for a in segments:
         assert a["aria-describedby"] in ids
@@ -77,7 +77,8 @@ def test_reference_descriptions_pointer_shortcuts_and_keyboard_alternative():
     assert "not" in text and "keyboard navigation" in text
     assert "<script" not in text
     assert "min-width: 720px" in CSS and "overflow-x: auto" in CSS
-    assert "<span>Level / peak" in text  # neutral group family names
+    assert "Continues from earlier" not in text and "Active:" not in text
+    assert "Evidence by time window" in text and "Exact original intervals" in text
     assert "rows</" not in text  # no multiplicity-as-importance headers
 
 

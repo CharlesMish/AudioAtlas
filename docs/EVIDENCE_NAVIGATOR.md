@@ -1,67 +1,85 @@
-# Evidence Navigator v0.2 — local presentation candidate
+# Evidence Navigator v0.4 — Refinement C candidate
 
-The navigator reads the unchanged `RangeIndex`; it adds no ranges or thresholds.
-Detailed-only placement is unchanged: full computation + full graph profile.
-Overview and Standard have no navigator/companions. No CLI flag, schema field,
-graph-registry entry, or DSP dependency is added.
+The accepted companion-ledger architecture remains Detailed-only. This candidate
+combines the presence matrix and exact geometry; it does not add a graph, CLI
+option, schema field, detector or evidence range. Overview/Standard remain
+unchanged, with graph counts 4 / 14 / 18. The exhaustive inline writer option is
+retired; no public toggle restores it.
 
-## Geometry and identity
+## Three levels of precision
 
-One opaque, equal-height SVG rectangle is emitted per original source record,
-including every origin of an exact-geometry ledger row. Its x and width are the
-original start and end-minus-start in seconds. The domain includes legacy end
-labels that extend beyond decoded duration; no mark is clipped or retimed.
-There is no minimum data width, blend, opacity, intensity, or stacking-height
-encoding of multiplicity. Short intervals can be subpixel; exact times remain
-in the accessible chronological ledger and original JSON.
+1. **Evidence by time window:** six navigation families × deterministic buckets.
+   Every Present cell has equal visual weight. It indicates label overlap only,
+   including ranges beginning earlier, never count, duration, severity, strength,
+   corroboration or importance. Family links lead to precise lanes/definitions;
+   presence links lead to companion time/family context.
+2. **Exact original intervals:** one opaque equal-height SVG mark per original
+   source interval. No union, snapping, retiming, minimum width or multiplicity
+   encoding. Each spectral band keeps its own lane; correlation and mid/side
+   remain separate. Source references and interpretation limits appear once in
+   each lane's Meaning & limits disclosure. No active/starts/continues prose is
+   repeated in the primary navigator.
+3. **Complete evidence ledger:** `evidence_ranges.html` and `evidence_ranges.md`
+   contain all canonical records, source identities and technical context.
 
-Navigation groups are Level / peak, Spectral shape, Spectral bands, Stereo,
-Activity / onset and Findings. These names imply neither independence nor equal
-importance. Each of the seven spectral bands keeps a separate lane; correlation
-and M/S have separate stereo lanes. Source/type identities survive in accessible
-labels and shared reference/support descriptions. Coincident marks can occlude
-one another visually, but every original remains in the ledger and source JSON.
+## Label overlap and geometry
 
-## Interaction without JavaScript
+`NavigationBucket` contains original row IDs, not new evidence intervals. Buckets
+are half-open: a row is present when `start < bucket.end` and `end > bucket.start`.
+Original integration footprints are not consulted. Empty and continuation-only
+windows are retained. The scale starts at 10 seconds and doubles until the
+complete label domain fits within twelve buckets. It depends on duration, not
+signal values. Legacy ends beyond decoded duration remain in that domain.
 
-A pointer segment links directly to a chronological ledger row. Native graph
-links bypass the ledger for measurement context. Native details expose reference
-systems and interpretation limits. Segment links have accessible time/type labels
-and `aria-describedby` references, but `tabindex=-1` avoids thousands of keyboard
-stops; a normally focusable ledger link and chronological start-group links are
-the keyboard route to every original range. Scrollable lanes are keyboard
-focusable, use a 720px minimum time-axis width, and wrap labels on narrow screens.
-This requires owner visual/assistive-technology acceptance, not just DOM checks.
+A 3–25 s interval produces one geometry mark and one canonical source record,
+with presence in 0–10, 10–20 and 20–30 s. A 25 ms range retains its true width,
+even if subpixel, and contributes the same binary presence as any other range.
+No original label coordinates change. Exact-geometry row grouping is inherited
+unchanged from v0.1; all origins remain individually recoverable.
 
-Fixed start groups use 10 seconds up to 120 seconds of domain, then double the
-step until no more than twelve temporal groups cover the domain. Empty groups
-are omitted. Headers name families with ranges *starting* in the group; longer
-ranges can start earlier. Groups are navigation, never detected musical sections.
-This calculation depends only on duration, not signal values or range density.
+The matrix is a categorical table: equal-width columns are navigation windows,
+not a proportional time axis. Geometry lanes share the exact 0-to-domain time
+scale. The final matrix column may represent a shorter window; its label states
+that interval. Neither layer converts the other into new evidence.
 
-## Two architectures
+## Native navigation and accessibility
 
-- Inline navigator + ledger: graph/row shortcuts above the expanded ledger in
-  the same report. Preserves one-file reading but keeps the full ledger payload.
-- Companion candidate (default): the main report contains the navigator and
-  concise Markdown equivalent. `evidence_ranges.html` / `evidence_ranges.md`
-  hold all original rows, reference notes and source links. HTML rows have no
-  collapsed ancestors, so fragment destinations are visible without JavaScript.
-  Backlinks return to the navigator and associated plots. The main report's
-  plots, findings, references and ordinary navigation remain self-contained.
+Matrix cells use scoped table headers, accessible names and a shared boundary.
+The matrix has at most 72 presence links (six families × twelve buckets).
+A cell opens companion time/family context; a native disclosure reveals exact
+source links; selecting one reaches its canonical record (three activations).
+Geometry pointer shortcuts reach a record in one activation. They use
+`tabindex=-1` so thousands of marks do not become sequential tab stops. Their
+names retain source/type and displayed times, with reference/support descriptions.
+The matrix/ledger route supplies keyboard-accessible exact text.
 
-`navigator_layout` is a report-writer keyword for comparison harnesses, not a
-new CLI option. Both prototypes use identical `RangeIndex` objects. Exact equal
-interval grouping and all source records remain unchanged from v0.1.
+Table and geometry scroll horizontally on narrow screens. Every geometry lane
+uses the same domain and 720px minimum axis width. Native graph/report backlinks
+and disclosures work without JavaScript or remote assets. Markdown provides a
+concise window/family table and links to exact geometry and both ledgers, without
+repeating active/start/continuation columns.
 
-Companions are optional explicitly owned outputs in the existing transactional
-publisher. They never claim arbitrary same-named files; switching away from
-Detailed removes only previously owned companions. Report paths remain local
-relative filenames, with no embedded source filesystem paths. Older historical
-reports lacking companions remain readable. See COMPATIBILITY.md.
+## Companion behavior and ownership
 
-## Acceptance boundary
+Shared v0.3 navigation helpers and ledger context are reused as source changes,
+not as ancestry. Canonical records appear once beneath their original start
+window. Multiple navigation references may point to a long range, without
+copying/clipping it into new records. Context distinguishes starts/continuations
+only in the detail surface. Sticky headings, target outlines and scroll margins
+retain location; print disables sticky behavior.
 
-Static DOM, geometry, contrast, ownership and numerical parity checks are
-necessary but do not establish visual usability or assistive-technology behavior.
-Owner review remains required if browser policy prevents local-file inspection.
+Companions retain the existing transactional output ownership contract. No new
+filename or schema is added. Switching away from Detailed removes only owned
+companions; unrelated files are never claimed. Relative local links contain no
+source filesystem paths. Historical reports without companions remain readable.
+Selected-range time labels remain slice-relative.
+
+## Candidate history and review boundary
+
+Parent is exact `cb1fd72e5bb3d5ea8137fa19d5c38a5ac67ae8f5`.
+The alternative v0.3 commit `eb26d0a1cef5704e0051d9f82b77149e74467a6c`
+is preserved separately. Its matrix-first default is not a prerequisite.
+
+Static checks and exact parity establish technical validity, not visual approval.
+The owner must judge whether combining matrix and geometry earns the additional
+vertical/payload cost. No promotion is implied by this local prototype.

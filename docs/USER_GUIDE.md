@@ -237,26 +237,30 @@ audioatlas analyze song.wav --theme midnight_studio
 
 ### Evidence navigator (Detailed)
 
-Detailed reports include a static navigator of ranges AudioAtlas already emits.
-The horizontal marks use original time labels; each links to its chronological
-ledger row. Each spectral band keeps its own lane. Marks are opaque and equal
-height: overlap does not encode importance or independent corroboration.
+Detailed reports navigate existing ranges at three levels:
 
-Use the measurement links to inspect a graph, or open **Meaning & limits** for
-its reference and interpretation boundary. **Browse by start time** lists family
-names in fixed navigation groups, not detected song sections. Narrow screens
-can scroll each lane; the text ledger is an alternative for exact times and
-keyboard navigation. Very short marks can be subpixel at the overview scale.
+- **Evidence by time window:** a Present cell means an original range from that
+  family overlaps the window, including a range beginning earlier. Cells have
+  equal weight; presence does not express amount, importance or corroboration.
+- **Exact original intervals:** horizontal marks retain original start/end
+  labels. Each spectral band keeps its own lane. A mark links to its ledger
+  record; Meaning & limits explains the source and links to its measurement plot.
+- **Complete evidence ledger:** `evidence_ranges.html` and `evidence_ranges.md`
+  preserve every exact original record and technical context.
 
-The complete ledger lives beside the report in `evidence_ranges.html` and
-`evidence_ranges.md`. Keep these files with the report when sharing the full
-output folder. The main report remains useful without opening them. All files
-are static and local; the navigator requires no JavaScript. Every original
-source range remains recoverable, including exactly equal intervals sharing a
-ledger row. Times remain relative to the analyzed audio or selected slice.
+Presence cells lead to time/family context in the companion. Open its original
+range links to inspect exact text, including ranges that began in an earlier
+window. This is also the keyboard route: tiny geometry marks are pointer
+shortcuts, not thousands of tab stops. Short marks keep their true durations,
+even when subpixel. Overlap does not establish simultaneous events or a shared
+cause. Navigation windows are not detected musical sections.
 
-Overview and Standard retain their existing layouts. Plot counts remain
-4 / 14 / 18. No new measurement, finding, score, or range detector is added.
+On narrow screens, the matrix and geometry scroll horizontally. The matrix
+columns are categorical windows; the geometry uses a proportional time axis.
+Keep the companion files with the report when sharing the output folder. The
+main report remains useful without opening them. Navigation is static, local
+and needs no JavaScript. Times remain relative to the analyzed audio or selected
+slice. Overview/Standard layouts and 4 / 14 / 18 plot counts remain unchanged.
 
 ### Source ranges
 

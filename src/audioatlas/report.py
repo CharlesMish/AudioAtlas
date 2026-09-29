@@ -353,6 +353,8 @@ def write_report_md(
     See docs/ALPHA_LIMITATIONS.md for the rationale.
     """
 
+    if navigator_layout != "companion":
+        raise ValueError("Only the companion-ledger architecture is supported")
     metadata = summary.get("metadata", {})
     analysis_config = (
         summary.get("analysis_config") if isinstance(summary.get("analysis_config"), dict) else {}
@@ -711,7 +713,8 @@ def write_report_md(
 
     if index_enabled(summary, show_range_index):
         index = evidence_index or build_range_index(summary, findings)
-        ledger = range_index_markdown(index, plot_files, step=navigation_step(extent(index, summary)))
+        ledger = range_index_markdown(index, plot_files, step=navigation_step(extent(index, summary)),
+                                      duration=extent(index, summary))
         if navigator_layout == "companion":
             lines.append(navigator_markdown(index, summary, plot_files))
             (Path(out_dir) / LEDGER_MD).write_text(
@@ -720,11 +723,7 @@ def write_report_md(
                 "time to locate them in the original file. The report records that offset.\n\n"
                 + ledger, encoding="utf-8",
             )
-        elif navigator_layout == "inline":
-            lines.append(navigator_markdown(index, summary, plot_files, companion=False))
-            lines.append(ledger)
-        else:
-            raise ValueError("navigator_layout must be companion or inline")
+
 
     lines.append("## Plots\n")
     for filename in plot_files:

@@ -8,6 +8,7 @@ from html import escape
 from audioatlas.graphs.registry import graph_by_filename
 from audioatlas.markdown import markdown_text
 from audioatlas.range_index import RangeIndex, reference_text
+from audioatlas.range_navigation import FAMILIES, active_buckets, family_key, family_rows
 
 INTRO = (
     "Existing evidence, ordered by its original time labels. These are not ranked listening "
@@ -29,6 +30,13 @@ CSS = """
 :is(#evidence-index, #evidence-ledger) .range-context details { padding: 8px; margin-top: 6px; }
 :is(#evidence-index, #evidence-ledger) .range-row:target { outline: 2px solid var(--accent); outline-offset: 2px; }
 :is(#evidence-index, #evidence-ledger) .range-row, :is(#evidence-index, #evidence-ledger) li { overflow-wrap: anywhere; min-width: 0; }
+#evidence-ledger .range-heading { position: sticky; top: 0; z-index: 1;
+  background: var(--surface); padding: 8px; border-bottom: 1px solid var(--border); }
+#evidence-ledger .range-row, #evidence-ledger .window-family { scroll-margin-top: 6rem; }
+#evidence-ledger .window-family:target { outline: 2px solid var(--accent); outline-offset: 2px; }
+#evidence-ledger .window-family details { padding: 6px; }
+#evidence-ledger .range-reference { overflow-wrap: anywhere; }
+@media print { #evidence-ledger .range-heading { position: static; } }
 @media (max-width: 600px) {
   :is(#evidence-index, #evidence-ledger) .range-row { grid-template-columns: minmax(0,1fr); gap: 6px; }
   :is(#evidence-index, #evidence-ledger) .range-bucket { padding: 9px; }
@@ -94,13 +102,15 @@ def range_index_html(
     report_prefix: str = "",
     expanded: bool = False,
     step: int = 10,
+    duration: float | None = None,
 ) -> str:
     graphs = _graphs(plot_files)
     lines = [
         '<section id="evidence-ledger"><h2>Evidence range index</h2>',
         f'<p class="section-intro">{escape(INTRO)}</p>',
         f"<p>{index.original_count} original ranges · {len(index.rows)} chronological rows. "
-        "Only exactly equal label intervals share a row. Open a start-time group to browse.</p>",
+        "Only exactly equal label intervals share a record. Window context below links to original records; "
+        "it does not duplicate or clip them.</p>",
     ]
     if index.exclusions:
         lines.append(
@@ -109,14 +119,58 @@ def range_index_html(
         )
     if not index.rows:
         lines.append("<p>No existing time ranges are available in this report.</p>")
-    for start, rows in time_groups(index, step):
-        names = " · ".join(sorted({family_name(o.source) for _, row in rows for o in row.origins}))
-        heading = f"Starts {clock(start)}–{clock(start + step)} · {escape(names)}"
+    domain = duration if duration is not None else max((r.end for r in index.rows), default=0)
+    for bucket in active_buckets(index, domain, step):
+        start = bucket.start
+        rows = [(i, index.rows[i]) for i in bucket.starting]
+        heading = f"{clock(start)}–{clock(bucket.end)} · existing label context"
         lines.append(
-            f'<section class="range-bucket" id="evidence-start-{start}"><h3>{heading}</h3>'
-            if expanded
-            else f'<details class="range-bucket" id="evidence-start-{start}"><summary>{heading}</summary>'
+            f'<section class="range-bucket" id="evidence-start-{start}">'
+            f'<h3 class="range-heading">{heading} · '
+            f'<a href="{report_prefix}#evidence-index">Navigator</a></h3>'
         )
+        lines.append(
+            "<p>Presence means an original label interval overlaps this window, "
+            "not simultaneous source events. References below may point to records that began earlier.</p>"
+        )
+        for family, label in FAMILIES:
+            ids = family_rows(index, bucket.active, family)
+            if not ids:
+                continue
+            carried = family_rows(index, bucket.continuing, family)
+            begun = family_rows(index, bucket.starting, family)
+            state = (
+                "Starts here and continues from earlier"
+                if carried and begun
+                else "Continues from earlier"
+                if carried
+                else "Starts here"
+            )
+            lines.append(
+                f'<div class="window-family" id="evidence-window-{start}-{family}" tabindex="-1">'
+                f"<h4>{escape(label)} · {state}</h4><details><summary>Show original range links</summary><ul>"
+            )
+            for i in ids:
+                row = index.rows[i]
+                labels = list(
+                    dict.fromkeys(
+                        o.source.label for o in row.origins if family_key(o.source) == family
+                    )
+                )
+                state = "continues from earlier" if i in carried else "starts here"
+                lines.append(
+                    f'<li><a class="range-reference" href="#evidence-range-{i}">'
+                    f"{escape('; '.join(labels))}: {row.start!r}–{row.end!r} s</a> "
+                    f"({state}; original labels)</li>"
+                )
+            lines.append("</ul></details></div>")
+        if not bucket.active:
+            lines.append(
+                "<p>No indexed label intervals overlap this window. This does not establish silence.</p>"
+            )
+        lines.append("<h4>Canonical records beginning in this window</h4>")
+        if not rows:
+            lines.append("<p>No original records begin here; use continuing references above.</p>")
         for i, row in rows:
             lines.append(
                 f'<article class="range-row" id="evidence-range-{i}">'
@@ -165,11 +219,13 @@ def range_index_html(
                     f"<code>{escape(origin.path)}</code></p>"
                 )
             lines.append("</details></div></div></article>")
-        lines.append("</section>" if expanded else "</details>")
+        lines.append("</section>")
     return "\n".join(lines + ["</section>"])
 
 
-def range_index_markdown(index: RangeIndex, plot_files: list[str], *, step: int = 10) -> str:
+def range_index_markdown(
+    index: RangeIndex, plot_files: list[str], *, step: int = 10, duration: float | None = None
+) -> str:
     graphs = _graphs(plot_files)
     lines = [
         "## Evidence range index",
@@ -190,13 +246,33 @@ def range_index_markdown(index: RangeIndex, plot_files: list[str], *, step: int 
                 "",
             ]
         )
-    # Native details are optional: a plain Markdown reader can still read every row.
-    for start, rows in time_groups(index, step):
-        names = " · ".join(sorted({family_name(o.source) for _, row in rows for o in row.origins}))
+    domain = duration if duration is not None else max((r.end for r in index.rows), default=0)
+    for bucket in active_buckets(index, domain, step):
+        start = bucket.start
+        rows = [(i, index.rows[i]) for i in bucket.starting]
+        lines.extend([f"### {clock(start)}–{clock(bucket.end)}", "", "Existing label context:", ""])
+        for family, label in FAMILIES:
+            if family_rows(index, bucket.active, family):
+                begun = bool(family_rows(index, bucket.starting, family))
+                carried = bool(family_rows(index, bucket.continuing, family))
+                state = (
+                    "starts here and continues from earlier"
+                    if begun and carried
+                    else "continues from earlier"
+                    if carried
+                    else "starts here"
+                )
+                lines.append(
+                    f"- [{label} — {state}](evidence_ranges.html#evidence-window-{start}-{family})"
+                )
+        if not bucket.active:
+            lines.append(
+                "No indexed label intervals overlap this window; this does not establish silence."
+            )
         lines.extend(
             [
-                "<details>",
-                f"<summary>Starts {clock(start)}–{clock(start + step)} · {names}</summary>",
+                "",
+                "Canonical records beginning here (original labels):",
                 "",
                 "| Original labels | Existing evidence / inspect | Overlapping rows |",
                 "|---|---|---:|",
@@ -211,7 +287,7 @@ def range_index_markdown(index: RangeIndex, plot_files: list[str], *, step: int 
             lines.append(
                 f"| {clock(row.start)}–{clock(row.end)} | {'; '.join(labels)} | {row.overlaps} |"
             )
-        lines.extend(["", "</details>", ""])
+        lines.append("")
     lines.extend(
         [
             "### Reading range support and references",
