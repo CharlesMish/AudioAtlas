@@ -71,8 +71,9 @@ uv sync
 uv run audioatlas analyze song.wav
 ```
 
-This local source prototype adds report-depth presets; these examples do not
-claim availability in the published `0.2.0a8` package:
+This local source prototype adds report-depth presets and compact computation.
+The `--report-depth` and `--analysis-mode` options are not available in the
+published `0.2.0a8` package:
 
 ```bash
 uv run audioatlas analyze song.wav --report-depth overview
@@ -80,11 +81,23 @@ uv run audioatlas analyze song.wav --report-depth overview
 
 Overview includes key current measurements, all current finding checks, and four
 plots. Standard (the default) includes all measurements and fourteen plots;
-`--report-depth detailed` includes all measurements and seventeen plots. Compact
+`--report-depth detailed` includes all measurements and eighteen plots. Compact
 computation reduces measurement breadth, not numerical fidelity. Advanced users
 can still control computation and graphs independently; see the
 [report-depth guide](docs/USER_GUIDE.md#report-depth).
 
+Computation breadth is a separate, explicit choice: `--analysis-mode compact`
+retains headline measurements and all current finding checks while skipping
+optional analysis families unless selected plots need them. It defaults to four
+plots; explicit CLI/YAML graph profiles still take precedence. Full computation
+remains the default, including when `--graphs-profile compact` is used alone.
+Compact reports identify their omissions and use a distinct summary schema.
+See [Compact computation](docs/COMPACT_COMPUTATION.md) for coverage and timings.
+
+```bash
+# Source checkout only: narrower computation, with the same measurement fidelity
+uv run audioatlas analyze song.wav --analysis-mode compact --out reports/compact-computation
+```
 
 The first analysis in a fresh environment may take a little longer while the
 scientific libraries initialize. Lightweight commands such as `--version`,
@@ -124,7 +137,9 @@ fixtures or threshold-calibration evidence.
 ## Choose how much you want to see
 
 AudioAtlas has one analysis engine. The choices below change report depth and
-presentation, not the underlying measurements.
+presentation, not the underlying measurements. The table describes the published
+`0.2.0a8` package, whose Full profile has seventeen plots. The current source
+checkout has eighteen plots in its Full profile.
 
 | Experience | Command | What changes |
 |---|---|---|
@@ -163,23 +178,12 @@ about the same track.
 
 ## Useful recipes
 
-Computation breadth is a separate, explicit choice: `--analysis-mode compact`
-retains headline measurements and all current finding checks while skipping
-optional analysis families unless selected plots need them. It defaults to four
-plots; explicit CLI/YAML graph profiles still take precedence. Full computation
-remains the default, including when `--graphs-profile compact` is used alone.
-Compact reports identify their omissions and use a distinct summary schema.
-See [Compact computation](docs/COMPACT_COMPUTATION.md) for coverage and timings.
-
 ```bash
 # Pick an output folder
 audioatlas analyze song.wav --out reports/song
 
 # Compact first read
 audioatlas analyze song.wav --graphs-profile compact
-
-# Explicitly narrower computation, with the same measurement fidelity
-audioatlas analyze song.wav --analysis-mode compact --out reports/compact-computation
 
 # Restrained opening presentation
 audioatlas analyze song.wav --presentation focus
