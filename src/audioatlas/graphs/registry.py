@@ -118,7 +118,7 @@ GRAPHS: tuple[GraphSpec, ...] = (
         enabled_by_default=True,
         profiles=frozenset({"minimal", "standard", "full"}),
         html_caption=(
-            "What this shows: frequency content over time on a log-frequency axis. "
+            "What this shows: mono-downmix frequency content over time on a log-frequency axis. "
             + RELATIVE_DB_NOTE
         ),
         wide=True,
@@ -278,7 +278,7 @@ GRAPHS: tuple[GraphSpec, ...] = (
             "The dashed reference line (when present) is the track integrated LUFS."
         ),
         html_caption=(
-            "What this shows: K-weighted short-term loudness in 3 s windows over time. "
+            "What this shows: K-weighted short-term loudness in 3 s windows, labeled at window ends. "
             "This is distinct from the RMS timeline and from integrated LUFS. "
             "It is descriptive context, not a delivery pass/fail result."
         ),

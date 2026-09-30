@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from types import MappingProxyType
 from typing import Any
 
 from audioatlas.analysis.dynamics import compute_onset_density
@@ -52,6 +53,11 @@ class AnalysisBundle:
         self.audio = audio
         self.config = config
         self._cache: dict[str, object] = {}
+
+    @property
+    def computed_results(self) -> Mapping[str, object]:
+        """Read-only snapshot of completed results; never restores skipped families."""
+        return MappingProxyType(dict(self._cache))
 
     def get(self, name: str) -> object:
         """Return a named analysis result, computing it on first access.

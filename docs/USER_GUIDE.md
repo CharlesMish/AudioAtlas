@@ -235,6 +235,33 @@ audioatlas themes
 audioatlas analyze song.wav --theme midnight_studio
 ```
 
+### Evidence navigator (Detailed)
+
+Detailed reports navigate existing ranges at three levels:
+
+- **Evidence by time window:** a Present cell means an original range from that
+  family overlaps the window, including a range beginning earlier. Cells have
+  equal weight; presence does not express amount, importance or corroboration.
+- **Exact original intervals:** horizontal marks retain original start/end
+  labels. Each spectral band keeps its own lane. A mark links to its ledger
+  record; Meaning & limits explains the source and links to its measurement plot.
+- **Complete evidence ledger:** `evidence_ranges.html` and `evidence_ranges.md`
+  preserve every exact original record and technical context.
+
+Presence cells lead to time/family context in the companion. Open its original
+range links to inspect exact text, including ranges that began in an earlier
+window. This is also the keyboard route: tiny geometry marks are pointer
+shortcuts, not thousands of tab stops. Short marks keep their true durations,
+even when subpixel. Overlap does not establish simultaneous events or a shared
+cause. Navigation windows are not detected musical sections.
+
+On narrow screens, the matrix and geometry scroll horizontally. The matrix
+columns are categorical windows; the geometry uses a proportional time axis.
+Keep the companion files with the report when sharing the output folder. The
+main report remains useful without opening them. Navigation is static, local
+and needs no JavaScript. Times remain relative to the analyzed audio or selected
+slice. Overview/Standard layouts and 4 / 14 / 18 plot counts remain unchanged.
+
 ### Source ranges
 
 ```bash

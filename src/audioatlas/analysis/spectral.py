@@ -373,7 +373,7 @@ def compute_band_power_timeline(
     valid_frames = frame_power > EPS
     warnings: list[str] = []
     if not np.all(valid_frames):
-        warnings.append("one or more silent frames; band mean-power values are undefined there")
+        warnings.append("one or more frames have mono-downmix energy below the analysis floor; band mean-power values are undefined there")
 
     band_linear: dict[str, NDArray[np.float64]] = {}
     for name, low_hz, high_hz in BANDS:
@@ -428,7 +428,7 @@ def compute_spectral_shape(
     """Compute time-varying spectral shape features from a mono channel average.
 
     Spectral centroid is a frequency-distribution statistic, not a definitive
-    brightness judgment. Silent frames are represented as ``NaN`` and excluded
+    brightness judgment. Frames below the mono-downmix analysis floor are ``NaN`` and excluded
     from summary statistics.
     """
 
@@ -495,7 +495,7 @@ def compute_spectral_shape(
     valid = rms > EPS
     warnings: list[str] = []
     if not np.all(valid):
-        warnings.append("one or more silent frames; spectral shape values are undefined there")
+        warnings.append("one or more frames have mono-downmix energy below the analysis floor; spectral shape values are undefined there")
     for arr in (centroid, rolloff_85, rolloff_95, bandwidth):
         arr[~valid] = np.nan
     times = librosa.frames_to_time(

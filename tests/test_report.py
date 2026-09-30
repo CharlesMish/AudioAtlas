@@ -1395,3 +1395,15 @@ def test_git_revision_label_is_bound_to_audioatlas_repo_and_marks_dirty(tmp_path
     tracked.write_text("changed\n", encoding="utf-8")
     assert git_revision_label(repo) == f"{clean}+dirty"
     assert git_revision_label(tmp_path / "not-a-repo") is None
+
+
+def test_shared_spectral_channel_note_reaches_both_reports(tmp_path):
+    from audioatlas.explanations import SPECTRAL_CHANNEL_NOTE
+
+    summary = _make_summary()
+    md = tmp_path / "report.md"
+    html = tmp_path / "report.html"
+    write_report_md(summary, [], tmp_path)
+    write_report_html(summary, [], tmp_path)
+    assert SPECTRAL_CHANNEL_NOTE in md.read_text()
+    assert SPECTRAL_CHANNEL_NOTE in html.read_text()

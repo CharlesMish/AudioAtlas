@@ -24,6 +24,7 @@ from audioatlas.graphs.selection import GraphSelection
 from audioatlas.html_report import write_report_html
 from audioatlas.io import compute_source_binding, load_audio
 from audioatlas.output import (
+    EVIDENCE_REPORT_FILENAMES,
     OUTPUT_MARKER_FILENAME,
     SINGLE_REPORT_FILENAMES,
     SourceBinding,
@@ -34,6 +35,7 @@ from audioatlas.output import (
 )
 from audioatlas.plot_theme import matplotlib_theme_rc
 from audioatlas.provenance import build_analysis_provenance, track_identity_block
+from audioatlas.range_index import build_range_index, index_enabled
 from audioatlas.release import COMPACT_SUMMARY_SCHEMA_VERSION, SUMMARY_SCHEMA_VERSION
 from audioatlas.report import write_findings_json, write_report_md, write_summary_json
 from audioatlas.run_contract import (
@@ -185,6 +187,8 @@ def _analyze_file_impl(
         # This constrains only the current staged report. Stale-file authority is
         # derived later from the destination's validated ownership manifest.
         staged_file_allowlist = set(SINGLE_REPORT_FILENAMES) | set(selected_filenames)
+        companion_files = EVIDENCE_REPORT_FILENAMES if index_enabled(summary) else frozenset()
+        staged_file_allowlist.update(companion_files)
         graph_total = len(selected_graphs)
         _emit_progress(
             progress_callback,
@@ -210,7 +214,12 @@ def _analyze_file_impl(
         token.raise_if_cancelled()
         write_findings_json(findings, staging)
         token.raise_if_cancelled()
-        write_report_md(summary, selected_filenames, staging, findings)
+        evidence_index = (
+            build_range_index(summary, findings, bundle) if index_enabled(summary) else None
+        )
+        write_report_md(
+            summary, selected_filenames, staging, findings, evidence_index=evidence_index
+        )
         token.raise_if_cancelled()
         write_report_html(
             summary,
@@ -219,6 +228,7 @@ def _analyze_file_impl(
             findings,
             theme_name=theme_name,
             presentation_mode=presentation_mode,
+            evidence_index=evidence_index,
         )
         token.raise_if_cancelled()
         write_output_manifest(
@@ -227,6 +237,7 @@ def _analyze_file_impl(
             generated_files=[
                 *selected_filenames,
                 *SINGLE_REPORT_FILENAMES,
+                *companion_files,
                 OUTPUT_MARKER_FILENAME,
             ],
             source_binding=audio.source_binding,

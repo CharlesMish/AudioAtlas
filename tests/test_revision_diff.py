@@ -258,6 +258,8 @@ def test_revision_diff_writes_static_owned_report_and_cli_uses_guardrails(tmp_pa
     assert 'aria-label="revision delta sections"' in html
     assert 'role="region" aria-label="scalar measurement deltas"' in html
     for text in (markdown, html):
+        assert "independently normalized views" in text
+        assert "does not establish" in text
         for forbidden in ("better", "worse", "winner", "leaderboard"):
             assert forbidden not in text
 
@@ -295,3 +297,27 @@ def test_diff_cli_refuses_to_overwrite_either_source_report(tmp_path: Path) -> N
     assert (report_a / "summary.json").read_bytes() == original_summary
     assert (report_a / "findings.json").read_bytes() == original_findings
     assert not (report_a / "revision_diff.json").exists()
+
+
+def test_band_reference_metadata_is_additive_and_historical_diff_still_renders(tmp_path):
+    from audioatlas.explanations import RELATIVE_BAND_DELTA_NOTE
+
+    a = _write_report(tmp_path / "a", summary=_summary("a.wav", band_median=-7), all_findings=[])
+    b = _write_report(tmp_path / "b", summary=_summary("b.wav", band_median=-13), all_findings=[])
+    payload = generate_revision_diff(a, b)
+    assert payload["schema_version"] == "0.1.0"
+    assert payload["band_power_reference"] == {
+        "reference_system": "within_analysis_relative",
+        "normalization_scope": "each_analyzed_view_independently",
+        "comparison_semantics": "b_minus_a_of_relative_band_medians",
+        "absolute_level_change_supported": False,
+        "absolute_full_scale_comparison": "unavailable",
+        "interpretation_boundary": RELATIVE_BAND_DELTA_NOTE,
+    }
+    assert payload["band_power_median_deltas"][0]["delta_b_minus_a_db"] == -6
+    historical = deepcopy(payload)
+    del historical["band_power_reference"]
+    paths = write_revision_diff(historical, tmp_path / "historical")
+    assert json.loads(paths["json"].read_text()) == historical
+    assert "independently normalized views" in paths["html"].read_text()
+    assert historical["comparability"] == payload["comparability"]
