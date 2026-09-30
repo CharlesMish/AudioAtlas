@@ -18,6 +18,7 @@ from audioatlas.app_core import (
     friendly_error_message,
     inspect_app_input,
     preflight_app_output,
+    validate_app_report_depth,
 )
 from audioatlas.desktop_runtime import configure_desktop_logger
 from audioatlas.errors import AnalysisCancelled, AudioAtlasError
@@ -92,7 +93,11 @@ class DesktopRunController:
             return self._input_info
 
     def start(
-        self, source: str | Path, output_parent: str | Path | None = None
+        self,
+        source: str | Path,
+        output_parent: str | Path | None = None,
+        *,
+        report_depth: str = "standard",
     ) -> None:
         """Start one managed non-daemon run and return without blocking."""
 
@@ -100,6 +105,7 @@ class DesktopRunController:
         with self._lock:
             if self._worker is not None and self._worker.is_alive():
                 raise DesktopBusyError("AudioAtlas is already analyzing a track.")
+            report_depth = validate_app_report_depth(report_depth)
             self._token = CancellationToken()
             self._confirmation_event = threading.Event()
             self._confirmation = None
@@ -115,7 +121,11 @@ class DesktopRunController:
             )
             self._worker = threading.Thread(
                 target=self._run,
-                args=(source_path, None if output_parent is None else Path(output_parent)),
+                args=(
+                    source_path,
+                    None if output_parent is None else Path(output_parent),
+                    report_depth,
+                ),
                 daemon=False,
                 name="AudioAtlas analysis",
             )
@@ -173,7 +183,7 @@ class DesktopRunController:
         worker.join(timeout)
         return not worker.is_alive()
 
-    def _run(self, source: Path, output_parent: Path | None) -> None:
+    def _run(self, source: Path, output_parent: Path | None, report_depth: str) -> None:
         token = self._require_token()
         try:
             self._publish(
@@ -226,6 +236,7 @@ class DesktopRunController:
             result = self._analyzer(
                 source,
                 output_parent=output_parent,
+                report_depth=report_depth,
                 _preflighted_output_dir=preflighted_output_dir,
                 progress_callback=self._on_progress,
                 cancellation_token=token,
