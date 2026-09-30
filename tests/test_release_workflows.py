@@ -32,6 +32,20 @@ def _package_script():
     return module
 
 
+def test_all_native_routes_check_report_depth_before_packaging() -> None:
+    for name in ("macos-app.yml", "macos-demo-candidate.yml", "release.yml"):
+        text = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
+        assert "scripts/check_desktop_report_depth.py" in text
+        assert "--app dist/macos/AudioAtlas.app/Contents/MacOS/AudioAtlas" in text
+        assert text.index("uv run python scripts/build_macos_app.py") < text.index(
+            "uv run python scripts/check_desktop_report_depth.py"
+        )
+        if name != "macos-app.yml":
+            assert text.index("uv run python scripts/check_desktop_report_depth.py") < text.index(
+                "python scripts/package_macos_dmg.py"
+            )
+
+
 def test_live_demo_deploys_only_from_main_or_manual_dispatch() -> None:
     workflow = _workflow("pages.yml")
 

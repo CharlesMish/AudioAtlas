@@ -28,6 +28,7 @@ from audioatlas.output import (
     read_output_manifest,
     staged_output_directory,
 )
+from audioatlas.report_depth import REPORT_DEPTHS
 
 SUPPORTED_AUDIO_EXTENSIONS = frozenset(
     {".wav", ".wave", ".flac", ".ogg", ".aif", ".aiff", ".mp3"}
@@ -39,6 +40,14 @@ _MAX_REPORT_COMPONENT_BYTES = 240
 
 class AppInputError(ValueError):
     """An input that the desktop app cannot submit for analysis."""
+
+
+def validate_app_report_depth(report_depth: str) -> str:
+    """Validate a desktop preset before inspection or output preparation."""
+
+    if not isinstance(report_depth, str) or report_depth not in REPORT_DEPTHS:
+        raise AppInputError("Choose Overview, Standard, or Detailed report depth.")
+    return report_depth
 
 
 @dataclass(frozen=True)
@@ -177,6 +186,7 @@ def prepare_and_analyze_for_app(
     input_path: str | Path,
     *,
     output_parent: str | Path | None = None,
+    report_depth: str = "standard",
     input_info: AppInputInfo | None = None,
     large_file_confirmed: bool = False,
     preparation_callback: Callable[[AppPreparationProgress], None] | None = None,
@@ -187,6 +197,7 @@ def prepare_and_analyze_for_app(
 ) -> AnalysisRunResult:
     """Inspect, confirm, initialize, and analyze entirely on a managed worker."""
 
+    report_depth = validate_app_report_depth(report_depth)
     source = Path(input_path).expanduser()
     if input_info is None:
         _emit_preparation(
@@ -223,6 +234,7 @@ def prepare_and_analyze_for_app(
     return analyze_for_app(
         source,
         output_parent=output_parent,
+        report_depth=report_depth,
         progress_callback=progress_callback,
         cancellation_token=cancellation_token,
     )
@@ -232,12 +244,15 @@ def analyze_for_app(
     input_path: str | Path,
     *,
     output_parent: str | Path | None = None,
+    report_depth: str = "standard",
     _preflighted_output_dir: str | Path | AppOutputPreflight | None = None,
     progress_callback: Callable[[AnalysisProgress], None] | None = None,
     cancellation_token: CancellationToken | None = None,
 ) -> AnalysisRunResult:
-    """Run the desktop app's fixed, low-decision analysis configuration."""
+    """Run one report-depth preset with the desktop's fixed visual defaults."""
 
+    report_depth = validate_app_report_depth(report_depth)
+    analysis_mode, graph_profile = REPORT_DEPTHS[report_depth]
     from audioatlas.graphs.selection import GraphSelection
 
     source = validate_app_input(input_path)
@@ -260,7 +275,8 @@ def analyze_for_app(
         out_dir,
         theme_name="default",
         presentation_mode="studio",
-        selection=GraphSelection(profile="standard"),
+        selection=GraphSelection(profile=graph_profile),
+        analysis_mode=analysis_mode,
         include_local_paths=False,
         progress_callback=progress_callback,
         cancellation_token=cancellation_token,
