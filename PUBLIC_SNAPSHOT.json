@@ -18,7 +18,7 @@
     },
     {
       "path": ".github/workflows/macos-app.yml",
-      "sha256": "617c854e30b8fc97302d99b019a4fafdbb20a80393af174739ce53cb6c45d260"
+      "sha256": "26eae036395ba655c2656d5b400a115472f4f3df5366e335eba07ba7f52db134"
     },
     {
       "path": ".github/workflows/macos-demo-candidate.yml",
@@ -868,6 +868,6 @@
   "format_version": 1,
   "included_file_count": 216,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "c07e25fa8bd2c431f74a813475d79b67b5d062048444f8726fe9a45821a37572",
-  "source_commit": "ab0d65580ba5b0f9394be866e751ee88be0257e8"
+  "public_tree_sha256": "d6411de74b4f43d96b51690205981a1923837fe1ff6928a2393aca4672b9e381",
+  "source_commit": "0cf7132e68ee1d41a00642228633ce59369041fa"
 }
