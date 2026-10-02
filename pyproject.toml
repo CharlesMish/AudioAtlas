@@ -41,6 +41,7 @@ dependencies = [
   # Security floors for dependencies imported through Matplotlib and librosa.
   "Pillow>=12.3.0",
   "msgpack>=1.2.1",
+  "urllib3>=2.8.0",
   "filelock>=3.16,<4",
   "platformdirs>=4.3,<5",
 ]
