@@ -25,6 +25,7 @@ PROJECT_CONFIG_FILENAME = "audioatlas-project.yaml"
 SINGLE_REPORT_FILENAMES = frozenset(
     {"summary.json", "findings.json", "report.md", "report.html"}
 )
+EVIDENCE_REPORT_FILENAMES = frozenset({"evidence_ranges.html", "evidence_ranges.md"})
 CATALOG_FILENAMES = frozenset(
     {"catalog_summary.json", "catalog.md", "catalog.html"}
 )
@@ -35,7 +36,7 @@ PROJECT_FILENAMES = frozenset(
     {PROJECT_CONFIG_FILENAME, "project.json", "project.md", "project.html"}
 )
 ROOT_GENERATED_FILENAMES = frozenset(
-    SINGLE_REPORT_FILENAMES | CATALOG_FILENAMES | REVISION_DIFF_FILENAMES | PROJECT_FILENAMES
+    SINGLE_REPORT_FILENAMES | EVIDENCE_REPORT_FILENAMES | CATALOG_FILENAMES | REVISION_DIFF_FILENAMES | PROJECT_FILENAMES
 )
 # Kept lightweight so report publication and the diff command can clean stale
 # plots without importing Matplotlib. ``tests/test_graph_registry.py`` locks
@@ -68,7 +69,7 @@ SOURCE_BINDING_VERSION = 1
 SOURCE_BINDING_ALGORITHM = "sha256"
 _SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 _GENERATED_FILENAMES_BY_KIND = {
-    "single-track-report": frozenset(SINGLE_REPORT_FILENAMES | PLOT_FILENAMES),
+    "single-track-report": frozenset(SINGLE_REPORT_FILENAMES | EVIDENCE_REPORT_FILENAMES | PLOT_FILENAMES),
     "batch-catalog": CATALOG_FILENAMES,
     "same-track-revision-diff": REVISION_DIFF_FILENAMES,
     "song-project": PROJECT_FILENAMES,

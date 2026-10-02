@@ -16,6 +16,7 @@ from typing import Any
 
 from audioatlas import __version__
 from audioatlas.errors import RevisionDiffError
+from audioatlas.explanations import RELATIVE_BAND_DELTA_NOTE
 from audioatlas.output import (
     OUTPUT_MARKER_FILENAME,
     REVISION_DIFF_FILENAMES,
@@ -154,6 +155,14 @@ def generate_revision_diff(
         "source_context": _source_context(first, second),
         "metric_deltas": metric_deltas,
         "band_power_median_deltas": band_deltas,
+        "band_power_reference": {
+            "reference_system": "within_analysis_relative",
+            "normalization_scope": "each_analyzed_view_independently",
+            "comparison_semantics": "b_minus_a_of_relative_band_medians",
+            "absolute_level_change_supported": False,
+            "absolute_full_scale_comparison": "unavailable",
+            "interpretation_boundary": RELATIVE_BAND_DELTA_NOTE,
+        },
         "finding_changes": finding_changes,
         "interpretation_boundary": (
             "Deltas are descriptive measurements. A positive or negative value does not "
@@ -651,7 +660,7 @@ def _write_diff_markdown(payload: dict[str, Any], path: Path) -> None:
     for reason in rule_assessment.get("reasons", []):
         lines.append(f"- Finding-rule note: {reason}")
     lines.extend(["", "## Scalar measurement deltas", "", _markdown_metric_table(payload), ""])
-    lines.extend(["## Relative mean band-power median deltas", "", _markdown_band_table(payload), ""])
+    lines.extend(["## Relative mean band-power median deltas", "", RELATIVE_BAND_DELTA_NOTE, "", _markdown_band_table(payload), ""])
     lines.extend(_markdown_findings(payload["finding_changes"]))
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
@@ -813,7 +822,7 @@ ul {{ padding-left: 20px; }}
 <nav class="top-nav" aria-label="Revision delta sections"><a href="#scalar-deltas">Scalar deltas</a><span aria-hidden="true">·</span><a href="#band-deltas">Band deltas</a><span aria-hidden="true">·</span><a href="#prompt-changes">Prompt changes</a></nav>
 <section id="scalar-deltas"><h2>Scalar measurement deltas</h2>
 <div class="table-scroll" role="region" aria-label="Scalar measurement deltas" tabindex="0"><table><thead><tr><th scope="col">Metric</th><th scope="col">{escape(str(labels['a']))}</th><th scope="col">{escape(str(labels['b']))}</th><th scope="col">Δ B−A</th><th scope="col">Unit</th></tr></thead><tbody>{''.join(rows) or '<tr><td colspan="5">No shared scalar measurements.</td></tr>'}</tbody></table></div></section>
-<section id="band-deltas"><h2>Relative mean band-power median deltas</h2><p class="small">Mean spectral power per included FFT bin, normalized within each file. These are not integrated band-energy values.</p>
+<section id="band-deltas"><h2>Relative mean band-power median deltas</h2><p class="small">Mean spectral power per included FFT bin, normalized within each file. These are not integrated band-energy values. {escape(RELATIVE_BAND_DELTA_NOTE)}</p>
 <div class="table-scroll" role="region" aria-label="Relative band-power median deltas" tabindex="0"><table><thead><tr><th scope="col">Band</th><th scope="col">{escape(str(labels['a']))}</th><th scope="col">{escape(str(labels['b']))}</th><th scope="col">Δ B−A</th></tr></thead><tbody>{''.join(band_rows) or '<tr><td colspan="4">No shared band-power medians.</td></tr>'}</tbody></table></div></section>
 <section id="prompt-changes"><h2>Review-prompt changes</h2><p class="small">Attribution: {escape(str(changes.get('attribution', 'unknown')))}.</p><div class="columns">
 {_finding_html_column('Appeared in B', changes.get('appeared', []))}
