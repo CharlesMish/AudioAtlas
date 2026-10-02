@@ -210,7 +210,7 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "7fba6f32bb040f56485b2fb64c506a164572ff8924ed6962584c9f8a07d29a34"
+      "sha256": "f512d5125bc8b91469a99d918bef2730ac06851ee0d633b49ea0f16d2c17469e"
     },
     {
       "path": "scripts/__init__.py",
@@ -850,12 +850,12 @@
     },
     {
       "path": "uv.lock",
-      "sha256": "7e621ab9f4e80036ae2674f9e3c8939380f7a830dd1f9143aa5c90c68ade2264"
+      "sha256": "0409bdf901d68a7025fc1841e4554cb15e8e793d39fda8ff7f6999929759d899"
     }
   ],
   "format_version": 1,
   "included_file_count": 213,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "47563d0c064fd203125b18d41cfaebce65f71aab08da6ed2b1a0519720819fc1",
-  "source_commit": "fa5431718d6a486cc9ccc651897afdf6a8049025"
+  "public_tree_sha256": "1d7b145aaba993ec3816cbe0e70730e05aeb1c2da6f93122b3df66757cfe76f1",
+  "source_commit": "ab31a8f58a1ad8d7be265e8d62559afcd3001830"
 }
