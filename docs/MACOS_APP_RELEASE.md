@@ -16,6 +16,9 @@ On an Apple Silicon Mac with Python 3.11 and `uv`:
 ```bash
 uv sync --locked --extra dev --extra app-build
 uv run python scripts/build_macos_app.py
+uv run python scripts/check_desktop_report_depth.py \
+  --app dist/macos/AudioAtlas.app/Contents/MacOS/AudioAtlas \
+  --output-parent /tmp/audioatlas-depth-parity
 dist/macos/AudioAtlas.app/Contents/MacOS/AudioAtlas \
   --smoke-analyze tests/fixtures/sine_1k_-6dbfs_2s.wav \
   --output-parent /tmp/audioatlas-app-smoke
@@ -25,6 +28,13 @@ codesign --verify --deep --strict --verbose=2 dist/macos/AudioAtlas.app
 The `macOS app` workflow repeats this build and smoke, enforces a 275 MiB
 installed / 110 MiB compressed ceiling, and uploads an ad-hoc-signed ZIP for
 owner testing. Do not present that artifact as the friend-ready download.
+
+The app's **Report Depth** selector defaults to **Standard**. Overview uses
+compact analysis and four plots; Standard uses full analysis and 14 plots;
+Detailed uses full analysis and 18 plots, including the evidence navigator and
+companion ledgers. All-depth source/frozen parity and owned companion cleanup
+are checked by the shared smoke script. The selector is disabled while a run
+is active, including confirmation and alternate-destination prompts.
 
 ## Private friend demo candidate
 

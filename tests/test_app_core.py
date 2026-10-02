@@ -20,6 +20,7 @@ from audioatlas.app_core import (
     prepare_and_analyze_for_app,
     safe_report_directory,
     validate_app_input,
+    validate_app_report_depth,
 )
 from audioatlas.errors import AnalysisCancelled, AudioLoadError
 from audioatlas.io import compute_source_binding
@@ -51,8 +52,17 @@ def test_validate_app_input_rejects_multiple_non_audio_shapes(tmp_path: Path):
         validate_app_input(tmp_path)
 
 
-def test_analyze_for_app_uses_fixed_friend_facing_defaults(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    "depth,mode,profile",
+    [
+        (None, "full", "standard"),
+        ("overview", "compact", "compact"),
+        ("standard", "full", "standard"),
+        ("detailed", "full", "full"),
+    ],
+)
+def test_analyze_for_app_uses_report_depth_with_fixed_presentation_defaults(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, depth: str | None, mode: str, profile: str
 ):
     source = tmp_path / "song.wav"
     source.touch()
@@ -65,7 +75,7 @@ def test_analyze_for_app_uses_fixed_friend_facing_defaults(
 
     monkeypatch.setattr(app_core, "_analyze_file", fake_analyze)
 
-    result = app_core.analyze_for_app(source)
+    result = app_core.analyze_for_app(source, **({"report_depth": depth} if depth else {}))
 
     assert result is sentinel
     args, kwargs = calls[0]
@@ -73,8 +83,54 @@ def test_analyze_for_app_uses_fixed_friend_facing_defaults(
     assert kwargs["theme_name"] == "default"
     assert kwargs["presentation_mode"] == "studio"
     assert kwargs["include_local_paths"] is False
-    assert kwargs["selection"].profile == "standard"
+    assert kwargs["analysis_mode"] == mode
+    assert kwargs["selection"].profile == profile
     assert kwargs["source_binding"] == compute_source_binding(source)
+
+
+@pytest.mark.parametrize("depth", ["overview", "standard", "detailed"])
+def test_validate_app_report_depth_accepts_only_existing_presets(depth: str):
+    assert validate_app_report_depth(depth) == depth
+
+
+@pytest.mark.parametrize("depth", ["", "unknown", "full", "Detailed", " standard "])
+@pytest.mark.parametrize("prepare", [False, True])
+def test_invalid_report_depth_fails_before_inspection_or_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, depth: str, prepare: bool
+):
+    source = tmp_path / "song.wav"
+    source.touch()
+    output_parent = tmp_path / "reports"
+    monkeypatch.setattr(
+        app_core,
+        "inspect_app_input",
+        lambda *args, **kwargs: pytest.fail("invalid depth must not inspect audio"),
+    )
+    monkeypatch.setattr(
+        app_core,
+        "compute_app_source_binding",
+        lambda *args, **kwargs: pytest.fail("invalid depth must not initialize output"),
+    )
+    monkeypatch.setattr(
+        app_core,
+        "_analyze_file",
+        lambda *args, **kwargs: pytest.fail("invalid depth must not start analysis"),
+    )
+
+    with pytest.raises(AppInputError):
+        validate_app_report_depth(depth)
+    with pytest.raises(AppInputError):
+        if prepare:
+            prepare_and_analyze_for_app(
+                source,
+                report_depth=depth,
+                output_parent=output_parent,
+                cancellation_token=CancellationToken(),
+            )
+        else:
+            app_core.analyze_for_app(source, report_depth=depth, output_parent=output_parent)
+
+    assert not output_parent.exists()
 
 
 def test_analyze_for_app_can_retry_under_selected_parent(
@@ -314,8 +370,9 @@ def _input_info(source: Path, *, large: bool = False) -> AppInputInfo:
     )
 
 
+@pytest.mark.parametrize("depth", [None, "overview", "standard", "detailed"])
 def test_prepare_and_analyze_inspects_initializes_and_runs_once(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, depth: str | None
 ):
     source = tmp_path / "song.wav"
     source.touch()
@@ -333,11 +390,13 @@ def test_prepare_and_analyze_inspects_initializes_and_runs_once(
         source,
         preparation_callback=updates.append,
         cancellation_token=CancellationToken(),
+        **({"report_depth": depth} if depth else {}),
     )
 
     assert result == "result"
     assert [update.stage for update in updates] == ["inspecting", "initializing"]
     assert len(analyses) == 1
+    assert analyses[0][1]["report_depth"] == (depth or "standard")
 
 
 def test_prepare_and_analyze_waits_for_large_file_acceptance(
@@ -479,22 +538,30 @@ def test_prepare_and_analyze_reuses_inspection_and_confirmation_on_location_retr
     source = tmp_path / "large.wav"
     source.touch()
     inspected = _input_info(source, large=True)
+    analyses = []
     monkeypatch.setattr(
         app_core,
         "inspect_app_input",
         lambda path: pytest.fail("metadata should not be inspected twice"),
     )
-    monkeypatch.setattr(app_core, "analyze_for_app", lambda *args, **kwargs: "result")
+    monkeypatch.setattr(
+        app_core,
+        "analyze_for_app",
+        lambda *args, **kwargs: analyses.append(kwargs) or "result",
+    )
 
     assert (
         prepare_and_analyze_for_app(
             source,
             input_info=inspected,
             large_file_confirmed=True,
+            report_depth="detailed",
             cancellation_token=CancellationToken(),
         )
         == "result"
     )
+    assert len(analyses) == 1
+    assert analyses[0]["report_depth"] == "detailed"
 
 
 def test_preparation_can_block_on_worker_without_blocking_caller(

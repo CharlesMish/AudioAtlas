@@ -61,6 +61,7 @@ def test_controller_runs_complete_lifecycle_on_managed_worker(tmp_path: Path) ->
     caller_thread = threading.get_ident()
 
     def analyze(path: Path, **kwargs: object) -> AnalysisRunResult:
+        assert kwargs["report_depth"] == "standard"
         callback = kwargs["progress_callback"]
         assert callable(callback)
         callback(AnalysisProgress("loading", "Loading audio"))
@@ -96,6 +97,7 @@ def test_controller_rejects_second_start_and_invalid_responses(tmp_path: Path) -
     source.touch()
     entered = threading.Event()
     release = threading.Event()
+    depths = []
 
     def inspect(path: Path) -> AppInputInfo:
         entered.set()
@@ -103,16 +105,48 @@ def test_controller_rejects_second_start_and_invalid_responses(tmp_path: Path) -
         return _info(source)
 
     controller = DesktopRunController(
-        logger=_logger(), inspector=inspect, analyzer=lambda *args, **kwargs: _result(tmp_path)
+        logger=_logger(),
+        inspector=inspect,
+        analyzer=lambda *args, **kwargs: depths.append(kwargs["report_depth"]) or _result(tmp_path),
     )
     assert not controller.respond_to_large_file(True)
     assert not controller.provide_output_parent(tmp_path)
-    controller.start(source)
+    controller.start(source, report_depth="detailed")
     assert entered.wait(1)
     with pytest.raises(DesktopBusyError):
-        controller.start(source)
+        controller.start(source, report_depth="overview")
     release.set()
     assert controller.wait(2)
+    assert depths == ["detailed"]
+    controller.start(source, report_depth="overview")
+    assert controller.wait(2)
+    assert depths == ["detailed", "overview"]
+
+
+@pytest.mark.parametrize("depth", ["", "unknown", "full", "Detailed"])
+def test_controller_rejects_invalid_depth_before_starting_worker(
+    tmp_path: Path, depth: str
+) -> None:
+    source = tmp_path / "song.wav"
+    source.touch()
+    destination = tmp_path / "reports"
+    states = []
+    controller = DesktopRunController(
+        states.append,
+        logger=_logger(),
+        inspector=lambda *args: pytest.fail("invalid depth must not inspect input"),
+        output_preflight=lambda *args, **kwargs: pytest.fail("invalid depth must not touch output"),
+        analyzer=lambda *args, **kwargs: pytest.fail("invalid depth must not start analysis"),
+    )
+    before = controller.state
+
+    with pytest.raises(AppInputError):
+        controller.start(source, destination, report_depth=depth)
+
+    assert controller.state is before
+    assert controller.wait(0)
+    assert not states
+    assert not destination.exists()
 
 
 @pytest.mark.parametrize("accepted", [True, False])
@@ -182,10 +216,19 @@ def test_controller_retries_permission_with_selected_parent_without_reinspection
     preflight_bindings = []
     analysis_destinations = []
     waiting = threading.Event()
+    confirming = threading.Event()
+    states = []
+
+    def state_changed(state: object) -> None:
+        states.append(state.phase)
+        if state.phase is DesktopRunPhase.AWAITING_CONFIRMATION:
+            confirming.set()
+        if state.phase is DesktopRunPhase.AWAITING_OUTPUT_LOCATION:
+            waiting.set()
 
     def inspect(path: Path) -> AppInputInfo:
         inspections.append(path)
-        return _info(source)
+        return _info(source, large=True)
 
     def preflight(path: Path, **kwargs: object) -> Path:
         preflight_parents.append(kwargs["output_parent"])
@@ -196,30 +239,82 @@ def test_controller_retries_permission_with_selected_parent_without_reinspection
 
     def analyze(path: Path, **kwargs: object) -> AnalysisRunResult:
         analysis_destinations.append(
-            (kwargs["output_parent"], kwargs["_preflighted_output_dir"])
+            (kwargs["output_parent"], kwargs["_preflighted_output_dir"], kwargs["report_depth"])
         )
         return _result(tmp_path)
 
     controller = DesktopRunController(
-        lambda state: waiting.set()
-        if state.phase is DesktopRunPhase.AWAITING_OUTPUT_LOCATION
-        else None,
+        state_changed,
         logger=_logger(),
         inspector=inspect,
         output_preflight=preflight,
         analyzer=analyze,
     )
-    controller.start(source)
+    controller.start(source, report_depth="detailed")
+    assert confirming.wait(1)
+    with pytest.raises(DesktopBusyError):
+        controller.start(source, report_depth="overview")
+    assert controller.respond_to_large_file(True)
     assert waiting.wait(1)
     alternate = tmp_path / "reports"
+    with pytest.raises(DesktopBusyError):
+        controller.start(source, report_depth="standard")
     assert controller.provide_output_parent(alternate)
     assert controller.wait(2)
     assert inspections == [source]
     assert preflight_parents == [None, alternate]
     assert preflight_bindings[0] is preflight_bindings[1]
-    assert analysis_destinations == [(alternate, tmp_path / "report")]
+    assert analysis_destinations == [(alternate, tmp_path / "report", "detailed")]
+    assert states.count(DesktopRunPhase.AWAITING_CONFIRMATION) == 1
     assert controller.state.previous_result == _result(tmp_path)
     assert controller.state.phase is DesktopRunPhase.SUCCEEDED
+
+
+@pytest.mark.parametrize(
+    "cancel_phase",
+    [DesktopRunPhase.AWAITING_CONFIRMATION, DesktopRunPhase.AWAITING_OUTPUT_LOCATION],
+)
+def test_controller_cancelling_new_depth_preserves_previous_success(
+    tmp_path: Path, cancel_phase: DesktopRunPhase
+) -> None:
+    source = tmp_path / "song.wav"
+    source.touch()
+    prior = _result(tmp_path, "first")
+    prior.out_dir.mkdir()
+    prior.html_report_path.write_bytes(b"previous successful report\x00")
+    entered = threading.Event()
+    analysis_depths = []
+    inspections = 0
+
+    def inspect(path: Path) -> AppInputInfo:
+        nonlocal inspections
+        inspections += 1
+        large = inspections > 1 and cancel_phase is DesktopRunPhase.AWAITING_CONFIRMATION
+        return _info(source, large=large)
+
+    def preflight(*args: object, **kwargs: object) -> Path:
+        if inspections > 1:
+            raise PermissionError(errno.EACCES, "location unavailable")
+        return prior.out_dir
+
+    controller = DesktopRunController(
+        lambda state: entered.set() if state.phase is cancel_phase else None,
+        logger=_logger(),
+        inspector=inspect,
+        output_preflight=preflight,
+        analyzer=lambda *args, **kwargs: analysis_depths.append(kwargs["report_depth"]) or prior,
+    )
+    controller.start(source)
+    assert controller.wait(2)
+    controller.start(source, report_depth="detailed")
+    assert entered.wait(1)
+    assert controller.cancel()
+    assert controller.wait(2)
+
+    assert controller.state.phase is DesktopRunPhase.CANCELLED
+    assert controller.state.previous_result is prior
+    assert prior.html_report_path.read_bytes() == b"previous successful report\x00"
+    assert analysis_depths == ["standard"]
 
 
 @pytest.mark.parametrize(
