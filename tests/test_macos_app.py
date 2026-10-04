@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -80,6 +81,55 @@ def test_cocoa_submission_starts_worker_before_metadata_inspection() -> None:
     )
     assert "daemon=False" in controller
     assert "Starting the local analysis engine…" in controller
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="native Cocoa depth control")
+def test_cocoa_depth_control_captures_picker_drop_and_open_choices() -> None:
+    pytest.importorskip("AppKit")
+    # A subprocess owns the Cocoa class/window, isolating UI state and ObjC registrations.
+    subprocess.run([sys.executable, "-c", """
+from pathlib import Path
+from types import SimpleNamespace
+import AppKit
+from audioatlas.run_contract import DesktopRunState
+
+source = Path('tests/fixtures/sine_1k_-6dbfs_2s.wav').resolve()
+class Panel:
+    def setCanChooseFiles_(self, value): pass
+    def setCanChooseDirectories_(self, value): pass
+    def setAllowsMultipleSelection_(self, value): pass
+    def setAllowedFileTypes_(self, value): pass
+    def runModal(self): return 1
+    def URL(self): return SimpleNamespace(path=lambda: str(source))
+AppKit.NSOpenPanel = SimpleNamespace(openPanel=lambda: Panel())
+from audioatlas.macos_app import _make_app_delegate
+app = AppKit.NSApplication.sharedApplication()
+delegate = _make_app_delegate()
+delegate.applicationDidFinishLaunching_(None)
+delegate.window.orderOut_(None)
+calls = []
+delegate.controller = SimpleNamespace(state=DesktopRunState(),
+    start=lambda path, **kwargs: calls.append((path, kwargs['report_depth'])))
+control = delegate.depth_control
+assert [str(item.title()) for item in control.itemArray()] == ['Overview', 'Standard', 'Detailed']
+assert str(control.titleOfSelectedItem()) == 'Standard'
+assert str(control.accessibilityLabel()) == 'Report Depth'
+delegate.chooseAudio_(None)
+assert calls[-1] == (source, 'standard')
+assert not control.isEnabled()
+control.selectItemWithTitle_('Detailed')
+delegate._setBusy_(False)
+assert control.isEnabled()
+delegate.window.contentView().on_file(source)
+assert calls[-1] == (source, 'detailed')
+control.selectItemWithTitle_('Overview')
+delegate._setBusy_(False)
+delegate.application_openFiles_(SimpleNamespace(replyToOpenOrPrint_=lambda value: None), [str(source)])
+assert calls[-1] == (source, 'overview')
+assert not control.isEnabled()
+delegate.window.setDelegate_(None)
+delegate.window.close()
+"""], cwd=ROOT, check=True, timeout=30)
 
 
 def test_bundle_contract_is_arm64_macos_14_and_has_no_openmp_pool() -> None:

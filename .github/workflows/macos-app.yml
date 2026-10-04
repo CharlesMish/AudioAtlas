@@ -8,9 +8,12 @@ name: macOS app
       - "packaging/macos/**"
       - "packaging/common/**"
       - "scripts/build_macos_app.py"
+      - "scripts/check_desktop_report_depth.py"
       - "tests/test_app_core.py"
       - "tests/test_desktop_controller.py"
       - "tests/test_desktop_runtime.py"
+      - "tests/test_desktop_report_depth.py"
+      - "tests/test_desktop_smoke.py"
       - "tests/test_macos_app.py"
       - "tests/test_macos_native_audit.py"
       - "pyproject.toml"
@@ -43,10 +46,16 @@ jobs:
         run: uv sync --locked --extra dev --extra app-build
 
       - name: Test app contract
-        run: uv run pytest tests/test_app_core.py tests/test_desktop_controller.py tests/test_desktop_runtime.py tests/test_macos_app.py tests/test_pipeline.py
+        run: uv run pytest tests/test_app_core.py tests/test_desktop_controller.py tests/test_desktop_runtime.py tests/test_desktop_report_depth.py tests/test_desktop_smoke.py tests/test_macos_app.py tests/test_pipeline.py
 
       - name: Build Apple Silicon app
         run: uv run python scripts/build_macos_app.py
+
+      - name: Verify all frozen report-depth presets
+        run: |
+          uv run python scripts/check_desktop_report_depth.py \
+            --app dist/macos/AudioAtlas.app/Contents/MacOS/AudioAtlas \
+            --output-parent /tmp/audioatlas-depth-parity
 
       - name: Exercise the real macOS native dependency audit
         env:

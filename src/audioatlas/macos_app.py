@@ -142,6 +142,7 @@ def _make_app_delegate() -> Any:
         NSOpenPanel,
         NSPasteboardTypeFileURL,
         NSPasteboardURLReadingFileURLsOnlyKey,
+        NSPopUpButton,
         NSProgressIndicator,
         NSTerminateLater,
         NSTerminateNow,
@@ -204,23 +205,23 @@ def _make_app_delegate() -> Any:
                 | NSWindowStyleMaskMiniaturizable
             )
             self.window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
-                NSMakeRect(0, 0, 560, 390), style, NSBackingStoreBuffered, False
+                NSMakeRect(0, 0, 560, 430), style, NSBackingStoreBuffered, False
             )
             self.window.setTitle_("AudioAtlas")
             self.window.setDelegate_(self)
             self.window.center()
 
-            content = DropView.alloc().initWithFrame_(NSMakeRect(0, 0, 560, 390))
+            content = DropView.alloc().initWithFrame_(NSMakeRect(0, 0, 560, 430))
             content.on_file = self.submitFile_
             self.window.setContentView_(content)
 
-            title = _label("AudioAtlas", NSMakeRect(36, 310, 488, 42), 30, bold=True)
+            title = _label("AudioAtlas", NSMakeRect(36, 350, 488, 42), 30, bold=True)
             title.setAlignment_(1)
             content.addSubview_(title)
 
             subtitle = _label(
                 "Drop one track here to make a local listening map.",
-                NSMakeRect(36, 274, 488, 26),
+                NSMakeRect(36, 314, 488, 26),
                 15,
             )
             subtitle.setAlignment_(1)
@@ -228,7 +229,7 @@ def _make_app_delegate() -> Any:
 
             self.status = _label(
                 "WAV, FLAC, OGG, AIFF, or decoder-supported MP3",
-                NSMakeRect(50, 211, 460, 48),
+                NSMakeRect(50, 251, 460, 48),
                 13,
             )
             self.status.setAlignment_(1)
@@ -236,11 +237,24 @@ def _make_app_delegate() -> Any:
             content.addSubview_(self.status)
 
             self.progress = NSProgressIndicator.alloc().initWithFrame_(
-                NSMakeRect(90, 181, 380, 12)
+                NSMakeRect(90, 221, 380, 12)
             )
             self.progress.setIndeterminate_(True)
             self.progress.setDisplayedWhenStopped_(False)
             content.addSubview_(self.progress)
+
+            depth_label = _label("Report Depth", NSMakeRect(126, 181, 110, 24), 13)
+            content.addSubview_(depth_label)
+            self.depth_control = NSPopUpButton.alloc().initWithFrame_pullsDown_(
+                NSMakeRect(236, 178, 190, 28), False
+            )
+            self.depth_control.addItemsWithTitles_(["Overview", "Standard", "Detailed"])
+            self.depth_control.selectItemWithTitle_("Standard")
+            self.depth_control.setAccessibilityLabel_("Report Depth")
+            self.depth_control.setToolTip_(
+                "Overview: 4 plots. Standard: 14 plots. Detailed: 18 plots and evidence navigation."
+            )
+            content.addSubview_(self.depth_control)
 
             self.choose_button = _button(
                 "Choose Audio File", NSMakeRect(188, 126, 184, 38), self, "chooseAudio:"
@@ -325,7 +339,9 @@ def _make_app_delegate() -> Any:
         def submitFile_(self, source: Path) -> None:
             self.log_button.setHidden_(True)
             try:
-                self.controller.start(source)
+                self.controller.start(
+                    source, report_depth=str(self.depth_control.titleOfSelectedItem()).lower(),
+                )
             except DesktopBusyError:
                 return
             self.status.setStringValue_(f"Inspecting {source.name}…")
@@ -479,6 +495,7 @@ def _make_app_delegate() -> Any:
 
         @objc.python_method
         def _setBusy_(self, busy: bool) -> None:
+            self.depth_control.setEnabled_(not busy)
             self.choose_button.setEnabled_(not busy)
             self.choose_button.setHidden_(busy)
             self.cancel_button.setHidden_(not busy)

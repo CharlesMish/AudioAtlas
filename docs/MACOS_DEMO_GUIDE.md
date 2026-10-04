@@ -12,7 +12,11 @@ not upload audio, require an account, or use telemetry.
 4. Open the DMG. Do not bypass or disable macOS security checks.
 5. Drag AudioAtlas to Applications, then open it normally from Applications.
 6. Drag `audioatlas_demo.wav` onto the window or use **Choose Audio File**.
-7. Allow extra time for **Starting the local analysis engine…** on the first run.
+7. **Report Depth** starts at **Standard** (14 plots). Choose **Overview** for
+   four plots with the existing compact analysis, or **Detailed** for 18 plots
+   and evidence navigation with linked HTML and Markdown ledgers. Standard and
+   Detailed retain the full analysis. The choice is fixed until the run finishes.
+8. Allow extra time for **Starting the local analysis engine…** on the first run.
 
 The report is written beside the source as
 `AudioAtlas Report – audioatlas_demo` and opens in the default browser. AudioAtlas
@@ -52,6 +56,9 @@ Cold launch time: _______________  First report time: ______________________
 - [ ] Manifest (`macos-candidate-manifest.json`) was retained and consistent.
 - [ ] Manifest SHA-256 matched `AudioAtlas-*.dmg.sha256` and first-report timing was captured.
 - [ ] File picker and drag-and-drop each accepted one track.
+- [ ] Report Depth started at Standard; Overview, Standard, and Detailed worked.
+- [ ] Detailed's evidence navigator and companion ledgers were reachable offline.
+- [ ] Depth stayed fixed during analysis and after choosing another output location.
 - [ ] The included demo and one tester-selected track produced complete reports.
 - [ ] A source path containing spaces and Unicode produced a complete report.
 - [ ] Cancel during analysis left the previous report unchanged.
