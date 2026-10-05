@@ -66,7 +66,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "ef4270c05ae9e257792a964174b83f24801c3b03d04b84226f80360c831c05f0"
+      "sha256": "76f58628f3d6db4692ebbf0846e282d3caac3ce5b7670d389a7dad419e0f7299"
     },
     {
       "path": "README_EASY_RUN.md",
@@ -856,6 +856,6 @@
   "format_version": 1,
   "included_file_count": 213,
   "package_version": "0.2.0a8",
-  "public_tree_sha256": "1d7b145aaba993ec3816cbe0e70730e05aeb1c2da6f93122b3df66757cfe76f1",
-  "source_commit": "ab31a8f58a1ad8d7be265e8d62559afcd3001830"
+  "public_tree_sha256": "9cc90ef5167ae5f1bf4115682ccd4ff7c679e8d517fdd339fa165372507c1a47",
+  "source_commit": "943cd86cc142ff8274e35c952536c69bc6c16247"
 }
