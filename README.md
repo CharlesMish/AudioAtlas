@@ -51,12 +51,12 @@ sections, revision diffs, and song projects.
 
 ### macOS application
 
-**Optional unsigned Apple Silicon technical preview — not signed or notarized.**
-It requires Apple Silicon and macOS 14 or newer, is intended for experienced
-testers, and is not the recommended installation route. Apple cannot
-authenticate its developer or notarization status. Do not weaken or disable
-macOS security controls to run it; use the Python package if normal launch is
-blocked.
+**Desktop download not included in the published 0.2.0a8 alpha.** The
+[release assets](https://github.com/CharlesMish/AudioAtlas/releases/tag/v0.2.0a8)
+contain no macOS application or DMG. Native Apple Silicon development and local
+testing are separate from a public download; signing/notarization and acceptance
+of the exact release artifact on a clean Mac remain release gates. Use the
+recommended Python package above.
 
 ### Windows application
 
